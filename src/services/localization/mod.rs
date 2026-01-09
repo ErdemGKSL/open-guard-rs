@@ -94,7 +94,77 @@ impl LocalizationManager {
     }
 }
 
-pub fn translate(ctx: &crate::Context<'_>, key: &str, args: Option<&fluent::FluentArgs>) -> String {
-    let locale = ctx.locale().unwrap_or("en-US");
-    ctx.data().l10n.translate(locale, key, args)
+/// A proxy for translation that holds a reference to the manager and a specific locale
+pub struct L10nProxy<'a> {
+    manager: &'a LocalizationManager,
+    locale: String,
+}
+
+impl<'a> L10nProxy<'a> {
+    pub fn t(&self, key: &str, args: Option<&FluentArgs>) -> String {
+        self.manager.translate(&self.locale, key, args)
+    }
+}
+
+/// Holds localization proxies for both the user and the guild
+#[allow(unused)]
+pub struct LocalizationContext<'a> {
+    pub user: Option<L10nProxy<'a>>,
+    pub guild: Option<L10nProxy<'a>>,
+}
+
+#[allow(unused)]
+/// Helper trait to add localization to the Poise context
+pub trait ContextL10nExt {
+    fn l10n(&self) -> LocalizationContext<'_>;
+    fn l10n_guild(&self) -> L10nProxy<'_>;
+    fn l10n_user(&self) -> L10nProxy<'_>;
+    fn l10n_user_option(&self) -> Option<L10nProxy<'_>>;
+}
+
+impl ContextL10nExt for crate::Context<'_> {
+    fn l10n(&self) -> LocalizationContext<'_> {
+        // User locale is usually only available in interactions
+        let user = self.locale().map(|locale| L10nProxy {
+            manager: &self.data().l10n,
+            locale: locale.to_string(),
+        });
+
+        // Guild locale is available if we are in a guild and have its data
+        let guild = self.guild().map(|guild| L10nProxy {
+            manager: &self.data().l10n,
+            locale: guild.preferred_locale.clone(),
+        });
+
+        LocalizationContext { user, guild }
+    }
+    fn l10n_guild(&self) -> L10nProxy<'_> {
+        // if guild does not exists fall back to user with raw coding, since it will be infinite loop if we directly use l10n_user, if this also is not exists fall back to en-US
+        self.guild()
+            .map(|guild| L10nProxy {
+                manager: &self.data().l10n,
+                locale: guild.preferred_locale.clone(),
+            })
+            .or_else(|| self.l10n_user_option())
+            .unwrap_or_else(|| L10nProxy {
+                manager: &self.data().l10n,
+                locale: "en-US".to_string(),
+            })
+    }
+
+    fn l10n_user_option(&self) -> Option<L10nProxy<'_>> {
+        self.locale().map(|locale| L10nProxy {
+            manager: &self.data().l10n,
+            locale: locale.to_string(),
+        })
+    }
+
+    fn l10n_user(&self) -> L10nProxy<'_> {
+        self.locale()
+            .map(|locale| L10nProxy {
+                manager: &self.data().l10n,
+                locale: locale.to_string(),
+            })
+            .unwrap_or_else(|| self.l10n_guild())
+    }
 }

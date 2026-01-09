@@ -1,4 +1,4 @@
-use crate::{Context, Error};
+use crate::{Context, Error, services::localization::ContextL10nExt};
 use poise::serenity_prelude as serenity;
 
 /// Hello command and its subcommands
@@ -30,7 +30,12 @@ pub async fn person(
     let mut args = fluent::FluentArgs::new();
     args.set("user", u.name.clone());
 
-    let response = crate::services::localization::translate(&ctx, "hello-user", Some(&args));
+    use crate::services::localization::ContextL10nExt;
+    let l10n = ctx.l10n_user();
+
+    // Priority: User locale -> Guild locale -> Default (en-US)
+    let response = l10n.t("hello-user", Some(&args));
+
     ctx.say(response).await?;
     Ok(())
 }
@@ -38,7 +43,7 @@ pub async fn person(
 /// Greet the whole world
 #[poise::command(slash_command, prefix_command)]
 pub async fn world(ctx: Context<'_>) -> Result<(), Error> {
-    let response = crate::services::localization::translate(&ctx, "hello-world", None);
+    let response = ctx.l10n_user().t("hello-world", None);
     ctx.say(response).await?;
     Ok(())
 }
