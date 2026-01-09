@@ -22,6 +22,7 @@ struct Args {
 pub struct Data {
     pub db: DatabaseConnection,
     pub l10n: Arc<services::localization::LocalizationManager>,
+    pub logger: Arc<services::logger::LoggerService>,
     pub module_definitions: Vec<modules::ModuleDefinition>,
 }
 
@@ -57,6 +58,9 @@ async fn main() -> anyhow::Result<()> {
 
     // Initialize localization manager
     let l10n = Arc::new(services::localization::LocalizationManager::new());
+
+    // Initialize logger service
+    let logger = Arc::new(services::logger::LoggerService::new(db.clone()));
 
     // Load and translate commands
     let mut commands = modules::commands();
@@ -99,6 +103,7 @@ async fn main() -> anyhow::Result<()> {
         .data(Arc::new(Data {
             db,
             l10n,
+            logger,
             module_definitions: modules::definitions(),
         }) as _)
         .await

@@ -1,6 +1,7 @@
-hello-world = Hello, world!
-hello-user = Hello, {$user}!
-commands-hello-description = Greet a user
+module-config-name = Configuration
+module-config-description = Bot settings and module configuration.
 
-module-hello-name = General
-module-hello-description = Standard greetings and basic commands.
+module-channel-protection-name = Channel Protection
+module-channel-protection-description = Protect channels from unauthorized creation or deletion.
+
+help-title = Bot Help Menu

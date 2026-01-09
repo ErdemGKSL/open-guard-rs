@@ -1,4 +1,5 @@
-pub mod hello;
+pub mod channel_protection;
+pub mod config;
 
 use crate::{Data, Error};
 
@@ -15,7 +16,7 @@ pub struct Module {
 }
 
 pub fn get_modules() -> Vec<Module> {
-    vec![hello::module()]
+    vec![config::module(), channel_protection::module()]
 }
 
 pub fn commands() -> Vec<poise::Command<Data, Error>> {

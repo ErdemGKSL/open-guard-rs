@@ -1,6 +1,7 @@
-hello-world = Merhaba, dünya!
-hello-user = Merhaba, {$user}!
-commands-hello-description = Bir kullanıcıyı selamla
+module-config-name = Yapılandırma
+module-config-description = Bot ayarları ve modül yapılandırması.
 
-module-hello-name = Genel
-module-hello-description = Standart selamlamalar ve temel komutlar.
+module-channel-protection-name = Kanal Koruması
+module-channel-protection-description = Kanalları yetkisiz oluşturma veya silme işlemlerinden korur.
+
+help-title = Bot Yardım Menüsü
