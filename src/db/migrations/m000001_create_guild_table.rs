@@ -17,7 +17,6 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(GuildConfigs::Prefix).string().default("o!"))
                     .to_owned(),
             )
             .await
@@ -34,5 +33,4 @@ impl MigrationTrait for Migration {
 enum GuildConfigs {
     Table,
     GuildId,
-    Prefix,
 }

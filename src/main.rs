@@ -3,6 +3,7 @@ use clap::Parser as _;
 use dotenvy::dotenv;
 use poise::serenity_prelude as serenity;
 use sea_orm::DatabaseConnection;
+use std::sync::Arc;
 use tracing::info;
 
 mod db;
@@ -20,8 +21,8 @@ struct Args {
 // Custom user data passed to all command functions
 pub struct Data {
     pub db: DatabaseConnection,
-    pub prefix_cache: papaya::HashMap<u64, String>,
-    pub l10n: services::localization::LocalizationManager,
+    pub l10n: Arc<services::localization::LocalizationManager>,
+    pub module_definitions: Vec<modules::ModuleDefinition>,
 }
 
 pub type Error = anyhow::Error;
@@ -50,58 +51,49 @@ async fn main() -> anyhow::Result<()> {
         .await
         .context("Failed to run migrations")?;
 
-    let token = std::env::var("DISCORD_TOKEN").expect("missing DISCORD_TOKEN");
+    let token = serenity::Token::from_env("DISCORD_TOKEN").expect("missing DISCORD_TOKEN");
     let intents =
         serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT;
 
-    let framework = poise::Framework::builder()
-        .options(poise::FrameworkOptions {
-            commands: modules::commands(),
-            event_handler: |ctx, event, framework, data| {
-                Box::pin(services::event_manager::event_handler(
-                    ctx, event, framework, data,
-                ))
-            },
-            prefix_options: poise::PrefixFrameworkOptions {
-                prefix: Some("o!".to_string()),
-                dynamic_prefix: Some(|ctx| Box::pin(services::prefix::dynamic_prefix(ctx))),
-                ..Default::default()
-            },
-            ..Default::default()
-        })
-        .setup(move |ctx, _ready, framework| {
-            Box::pin(async move {
-                if let Some(publish_args) = args.publish {
-                    if publish_args.is_empty() {
-                        info!("Registering commands globally...");
-                        poise::builtins::register_globally(ctx, &framework.options().commands)
-                            .await?;
-                    } else {
-                        for guild_id in publish_args {
-                            info!("Registering commands in guild {}...", guild_id);
-                            poise::builtins::register_in_guild(
-                                ctx,
-                                &framework.options().commands,
-                                serenity::GuildId::new(guild_id),
-                            )
-                            .await?;
-                        }
-                    }
+    let framework_options = poise::FrameworkOptions {
+        commands: modules::commands(),
+        ..Default::default()
+    };
 
-                    std::process::exit(0);
-                }
+    // Handle command registration if requested
+    if let Some(publish_args) = args.publish {
+        let http = serenity::HttpBuilder::new(token.clone()).build();
+        let commands = &framework_options.commands;
 
-                Ok(Data {
-                    db,
-                    prefix_cache: papaya::HashMap::new(),
-                    l10n: services::localization::LocalizationManager::new(),
-                })
-            })
-        })
-        .build();
+        if publish_args.is_empty() {
+            info!("Registering commands globally...");
+            poise::builtins::register_globally(&http, commands).await?;
+        } else {
+            for guild_id in publish_args {
+                info!("Registering commands in guild {}...", guild_id);
+                poise::builtins::register_in_guild(
+                    &http,
+                    commands,
+                    serenity::GuildId::new(guild_id),
+                )
+                .await?;
+            }
+        }
+        std::process::exit(0);
+    }
 
+    // Create the poise framework
+    let framework = poise::Framework::new(framework_options);
+
+    // Build the client with both poise framework and custom event handler
     let mut client = serenity::ClientBuilder::new(token, intents)
-        .framework(framework)
+        .framework(Box::new(framework))
+        .event_handler(Arc::new(services::event_manager::Handler))
+        .data(Arc::new(Data {
+            db,
+            l10n: Arc::new(services::localization::LocalizationManager::new()),
+            module_definitions: modules::definitions(),
+        }) as _)
         .await
         .context("Failed to create client")?;
 

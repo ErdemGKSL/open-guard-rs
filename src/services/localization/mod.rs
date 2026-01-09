@@ -2,6 +2,7 @@ use fluent::{FluentArgs, FluentResource};
 use fluent_bundle::bundle::FluentBundle;
 use std::collections::HashMap;
 use std::fs;
+use std::sync::Arc;
 use tracing::{error, info};
 use unic_langid::LanguageIdentifier;
 
@@ -95,12 +96,12 @@ impl LocalizationManager {
 }
 
 /// A proxy for translation that holds a reference to the manager and a specific locale
-pub struct L10nProxy<'a> {
-    manager: &'a LocalizationManager,
+pub struct L10nProxy {
+    manager: Arc<LocalizationManager>,
     locale: String,
 }
 
-impl<'a> L10nProxy<'a> {
+impl L10nProxy {
     pub fn t(&self, key: &str, args: Option<&FluentArgs>) -> String {
         self.manager.translate(&self.locale, key, args)
     }
@@ -108,63 +109,77 @@ impl<'a> L10nProxy<'a> {
 
 /// Holds localization proxies for both the user and the guild
 #[allow(unused)]
-pub struct LocalizationContext<'a> {
-    pub user: Option<L10nProxy<'a>>,
-    pub guild: Option<L10nProxy<'a>>,
+pub struct LocalizationContext {
+    pub user: Option<L10nProxy>,
+    pub guild: Option<L10nProxy>,
 }
 
 #[allow(unused)]
 /// Helper trait to add localization to the Poise context
 pub trait ContextL10nExt {
-    fn l10n(&self) -> LocalizationContext<'_>;
-    fn l10n_guild(&self) -> L10nProxy<'_>;
-    fn l10n_user(&self) -> L10nProxy<'_>;
-    fn l10n_user_option(&self) -> Option<L10nProxy<'_>>;
+    fn l10n(&self) -> LocalizationContext;
+    fn l10n_guild(&self) -> L10nProxy;
+    fn l10n_user(&self) -> L10nProxy;
+    fn l10n_user_option(&self) -> Option<L10nProxy>;
 }
 
 impl ContextL10nExt for crate::Context<'_> {
-    fn l10n(&self) -> LocalizationContext<'_> {
+    fn l10n(&self) -> LocalizationContext {
+        let manager = self.data().l10n.clone();
+
         // User locale is usually only available in interactions
         let user = self.locale().map(|locale| L10nProxy {
-            manager: &self.data().l10n,
+            manager: manager.clone(),
             locale: locale.to_string(),
         });
 
         // Guild locale is available if we are in a guild and have its data
         let guild = self.guild().map(|guild| L10nProxy {
-            manager: &self.data().l10n,
-            locale: guild.preferred_locale.clone(),
+            manager: manager.clone(),
+            locale: guild.preferred_locale.to_string(),
         });
 
         LocalizationContext { user, guild }
     }
-    fn l10n_guild(&self) -> L10nProxy<'_> {
+
+    fn l10n_guild(&self) -> L10nProxy {
+        let manager = self.data().l10n.clone();
         // if guild does not exists fall back to user with raw coding, since it will be infinite loop if we directly use l10n_user, if this also is not exists fall back to en-US
-        self.guild()
-            .map(|guild| L10nProxy {
-                manager: &self.data().l10n,
-                locale: guild.preferred_locale.clone(),
-            })
-            .or_else(|| self.l10n_user_option())
-            .unwrap_or_else(|| L10nProxy {
-                manager: &self.data().l10n,
+        if let Some(guild) = self.guild() {
+            L10nProxy {
+                manager,
+                locale: guild.preferred_locale.to_string(),
+            }
+        } else if let Some(locale) = self.locale() {
+            L10nProxy {
+                manager,
+                locale: locale.to_string(),
+            }
+        } else {
+            L10nProxy {
+                manager,
                 locale: "en-US".to_string(),
-            })
+            }
+        }
     }
 
-    fn l10n_user_option(&self) -> Option<L10nProxy<'_>> {
+    fn l10n_user_option(&self) -> Option<L10nProxy> {
+        let manager = self.data().l10n.clone();
         self.locale().map(|locale| L10nProxy {
-            manager: &self.data().l10n,
+            manager,
             locale: locale.to_string(),
         })
     }
 
-    fn l10n_user(&self) -> L10nProxy<'_> {
-        self.locale()
-            .map(|locale| L10nProxy {
-                manager: &self.data().l10n,
+    fn l10n_user(&self) -> L10nProxy {
+        let manager = self.data().l10n.clone();
+        if let Some(locale) = self.locale() {
+            L10nProxy {
+                manager,
                 locale: locale.to_string(),
-            })
-            .unwrap_or_else(|| self.l10n_guild())
+            }
+        } else {
+            self.l10n_guild()
+        }
     }
 }
