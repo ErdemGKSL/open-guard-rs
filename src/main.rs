@@ -21,6 +21,7 @@ struct Args {
 pub struct Data {
     pub db: DatabaseConnection,
     pub prefix_cache: papaya::HashMap<u64, String>,
+    pub l10n: services::localization::LocalizationManager,
 }
 
 pub type Error = anyhow::Error;
@@ -86,11 +87,14 @@ async fn main() -> anyhow::Result<()> {
                             .await?;
                         }
                     }
+
+                    std::process::exit(0);
                 }
 
                 Ok(Data {
                     db,
                     prefix_cache: papaya::HashMap::new(),
+                    l10n: services::localization::LocalizationManager::new(),
                 })
             })
         })

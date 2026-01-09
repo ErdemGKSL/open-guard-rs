@@ -22,17 +22,23 @@ pub async fn person(
     ctx: Context<'_>,
     #[description = "The greeting to use"]
     #[autocomplete = "autocomplete_greeting"]
-    greeting: String,
+    _greeting: String,
     #[description = "Selected user"] user: Option<serenity::User>,
 ) -> Result<(), Error> {
     let u = user.as_ref().unwrap_or_else(|| ctx.author());
-    ctx.say(format!("{}, {}!", greeting, u.name)).await?;
+
+    let mut args = fluent::FluentArgs::new();
+    args.set("user", u.name.clone());
+
+    let response = crate::services::localization::translate(&ctx, "hello-user", Some(&args));
+    ctx.say(response).await?;
     Ok(())
 }
 
 /// Greet the whole world
 #[poise::command(slash_command, prefix_command)]
 pub async fn world(ctx: Context<'_>) -> Result<(), Error> {
-    ctx.say("Hello, world!").await?;
+    let response = crate::services::localization::translate(&ctx, "hello-world", None);
+    ctx.say(response).await?;
     Ok(())
 }
