@@ -1,0 +1,20 @@
+hello:
+  name: "selam"
+  description: "İnsanları selamla"
+  subcommands:
+    person:
+      name: "kişi"
+      description: "Belirli bir kişiyi selamla"
+      options:
+        greeting:
+          name: "selamlama"
+          description: "Kullanılacak selamlama"
+        user:
+          name: "kullanıcı"
+          description: "Seçilen kullanıcı"
+    world:
+      name: "dünya"
+      description: "Tüm dünyayı selamla"
+help:
+  name: "yardım"
+  description: "Yardım mesajını göster"

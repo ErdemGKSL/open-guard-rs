@@ -55,8 +55,15 @@ async fn main() -> anyhow::Result<()> {
     let intents =
         serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT;
 
+    // Initialize localization manager
+    let l10n = Arc::new(services::localization::LocalizationManager::new());
+
+    // Load and translate commands
+    let mut commands = modules::commands();
+    l10n.apply_translations(&mut commands);
+
     let framework_options = poise::FrameworkOptions {
-        commands: modules::commands(),
+        commands,
         ..Default::default()
     };
 
@@ -91,7 +98,7 @@ async fn main() -> anyhow::Result<()> {
         .event_handler(Arc::new(services::event_manager::Handler))
         .data(Arc::new(Data {
             db,
-            l10n: Arc::new(services::localization::LocalizationManager::new()),
+            l10n,
             module_definitions: modules::definitions(),
         }) as _)
         .await

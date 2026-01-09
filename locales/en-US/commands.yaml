@@ -1,0 +1,20 @@
+hello:
+  name: "hello"
+  description: "Greet people"
+  subcommands:
+    person:
+      name: "person"
+      description: "Greet a specific person"
+      options:
+        greeting:
+          name: "greeting"
+          description: "The greeting to use"
+        user:
+          name: "user"
+          description: "Selected user"
+    world:
+      name: "world"
+      description: "Greet the whole world"
+help:
+  name: "help"
+  description: "Show help message"

@@ -1,7 +1,8 @@
 use fluent::{FluentArgs, FluentResource};
 use fluent_bundle::bundle::FluentBundle;
+use include_dir::{Dir, include_dir};
+use serde::Deserialize;
 use std::collections::HashMap;
-use std::fs;
 use std::sync::Arc;
 use tracing::{error, info};
 use unic_langid::LanguageIdentifier;
@@ -9,65 +10,103 @@ use unic_langid::LanguageIdentifier;
 // We use the concurrent memoizer to ensure thread safety (Sync + Send)
 type ConcurrentBundle = FluentBundle<FluentResource, intl_memoizer::concurrent::IntlLangMemoizer>;
 
+// Embed the locales directory at compile time
+static LOCALES_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/locales");
+
+#[derive(Debug, Deserialize)]
+pub struct CommandLocale {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    #[serde(default)]
+    pub options: HashMap<String, OptionLocale>,
+    #[serde(default)]
+    pub subcommands: HashMap<String, CommandLocale>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct OptionLocale {
+    pub name: Option<String>,
+    pub description: Option<String>,
+    #[serde(default)]
+    pub choices: HashMap<String, String>,
+}
+
 pub struct LocalizationManager {
     bundles: HashMap<LanguageIdentifier, ConcurrentBundle>,
+    command_locales: HashMap<LanguageIdentifier, HashMap<String, CommandLocale>>,
 }
 
 impl LocalizationManager {
     pub fn new() -> Self {
         let mut bundles = HashMap::new();
+        let mut command_locales = HashMap::new();
 
-        // Load all locales from the locales directory
-        if let Ok(entries) = fs::read_dir("locales") {
-            for entry in entries.flatten() {
-                if let Ok(file_type) = entry.file_type() {
-                    if file_type.is_dir() {
-                        let locale_name = entry.file_name().to_string_lossy().into_owned();
-                        if let Ok(lang_id) = locale_name.parse::<LanguageIdentifier>() {
-                            let mut bundle =
-                                ConcurrentBundle::new_concurrent(vec![lang_id.clone()]);
+        // Iterate over subdirectories in the embedded locales directory
+        for entry in LOCALES_DIR.dirs() {
+            let locale_name = entry.path().to_string_lossy();
 
-                            // Load all .ftl files in the directory
-                            let path = entry.path();
-                            if let Ok(files) = fs::read_dir(path) {
-                                for file in files.flatten() {
-                                    if file.path().extension().map_or(false, |ext| ext == "ftl") {
-                                        if let Ok(content) = fs::read_to_string(file.path()) {
-                                            match FluentResource::try_new(content) {
-                                                Ok(resource) => {
-                                                    if let Err(errors) =
-                                                        bundle.add_resource(resource)
-                                                    {
-                                                        for err in errors {
-                                                            error!(
-                                                                "Error adding resource for {}: {:?}",
-                                                                locale_name, err
-                                                            );
-                                                        }
-                                                    }
-                                                }
-                                                Err((_, errors)) => {
-                                                    for err in errors {
-                                                        error!(
-                                                            "Error parsing resource for {}: {:?}",
-                                                            locale_name, err
-                                                        );
-                                                    }
-                                                }
-                                            }
+            if let Ok(lang_id) = locale_name.parse::<LanguageIdentifier>() {
+                let mut bundle = ConcurrentBundle::new_concurrent(vec![lang_id.clone()]);
+                let mut commands = HashMap::new();
+
+                // Load files in the locale directory
+                for file in entry.files() {
+                    let path = file.path();
+                    let extension = path.extension().and_then(|e| e.to_str());
+                    let file_name = path.file_name().and_then(|n| n.to_str());
+
+                    if extension == Some("ftl") {
+                        if let Some(content) = file.contents_utf8() {
+                            match FluentResource::try_new(content.to_string()) {
+                                Ok(resource) => {
+                                    if let Err(errors) = bundle.add_resource(resource) {
+                                        for err in errors {
+                                            error!(
+                                                "Error adding resource for {}: {:?}",
+                                                locale_name, err
+                                            );
                                         }
                                     }
                                 }
+                                Err((_, errors)) => {
+                                    for err in errors {
+                                        error!(
+                                            "Error parsing resource for {}: {:?}",
+                                            locale_name, err
+                                        );
+                                    }
+                                }
                             }
-                            info!("Loaded locale: {}", locale_name);
-                            bundles.insert(lang_id, bundle);
+                        }
+                    } else if file_name == Some("commands.yaml")
+                        || file_name == Some("commands.yml")
+                    {
+                        if let Some(content) = file.contents_utf8() {
+                            match serde_yaml::from_str::<HashMap<String, CommandLocale>>(content) {
+                                Ok(yaml_commands) => {
+                                    commands.extend(yaml_commands);
+                                }
+                                Err(err) => {
+                                    error!(
+                                        "Error parsing commands.yaml for {}: {:?}",
+                                        locale_name, err
+                                    );
+                                }
+                            }
                         }
                     }
                 }
+
+                info!("Loaded embedded locale: {}", locale_name);
+                bundles.insert(lang_id.clone(), bundle);
+                command_locales.insert(lang_id, commands);
             }
         }
 
-        Self { bundles }
+        Self {
+            bundles,
+            command_locales,
+        }
     }
 
     pub fn translate(&self, locale: &str, key: &str, args: Option<&FluentArgs>) -> String {
@@ -93,12 +132,92 @@ impl LocalizationManager {
 
         key.to_string()
     }
+
+    pub fn apply_translations<U, E>(&self, commands: &mut [poise::Command<U, E>]) {
+        for (lang_id, locales) in &self.command_locales {
+            let locale_str = lang_id.to_string();
+
+            for cmd in commands.iter_mut() {
+                self.apply_to_command(cmd, locales, &locale_str);
+            }
+        }
+    }
+
+    fn apply_to_command<U, E>(
+        &self,
+        cmd: &mut poise::Command<U, E>,
+        locales: &HashMap<String, CommandLocale>,
+        locale_str: &str,
+    ) {
+        if let Some(loc) = locales.get(cmd.name.as_ref()) {
+            // Command name and description localizations
+            if let Some(name) = &loc.name {
+                cmd.name_localizations
+                    .to_mut()
+                    .push((locale_str.to_string().into(), name.clone().into()));
+                // We also update the BASE name/description if it's en-US (fallback)
+                if locale_str == "en-US" {
+                    cmd.name = name.clone().into();
+                }
+            }
+            if let Some(desc) = &loc.description {
+                cmd.description_localizations
+                    .to_mut()
+                    .push((locale_str.to_string().into(), desc.clone().into()));
+                if locale_str == "en-US" {
+                    cmd.description = Some(desc.clone().into());
+                }
+            }
+
+            // Options (parameters)
+            for param in cmd.parameters.iter_mut() {
+                if let Some(opt_loc) = loc.options.get(param.name.as_ref()) {
+                    if let Some(name) = &opt_loc.name {
+                        param
+                            .name_localizations
+                            .to_mut()
+                            .push((locale_str.to_string().into(), name.clone().into()));
+                        if locale_str == "en-US" {
+                            param.name = name.clone().into();
+                        }
+                    }
+                    if let Some(desc) = &opt_loc.description {
+                        param
+                            .description_localizations
+                            .to_mut()
+                            .push((locale_str.to_string().into(), desc.clone().into()));
+                        if locale_str == "en-US" {
+                            param.description = Some(desc.clone().into());
+                        }
+                    }
+
+                    // Choices
+                    for choice in param.choices.to_mut().iter_mut() {
+                        if let Some(choice_name) = opt_loc.choices.get(choice.name.as_ref()) {
+                            choice
+                                .localizations
+                                .to_mut()
+                                .push((locale_str.to_string().into(), choice_name.clone().into()));
+                            if locale_str == "en-US" {
+                                choice.name = choice_name.clone().into();
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Subcommands (recursive search within the current command's locale config)
+            for subcommand in cmd.subcommands.iter_mut() {
+                self.apply_to_command(subcommand, &loc.subcommands, locale_str);
+            }
+        }
+    }
 }
 
 /// A proxy for translation that holds a reference to the manager and a specific locale
 pub struct L10nProxy {
-    manager: Arc<LocalizationManager>,
-    locale: String,
+    pub manager: Arc<LocalizationManager>,
+    pub locale: String,
 }
 
 impl L10nProxy {
@@ -144,7 +263,6 @@ impl ContextL10nExt for crate::Context<'_> {
 
     fn l10n_guild(&self) -> L10nProxy {
         let manager = self.data().l10n.clone();
-        // if guild does not exists fall back to user with raw coding, since it will be infinite loop if we directly use l10n_user, if this also is not exists fall back to en-US
         if let Some(guild) = self.guild() {
             L10nProxy {
                 manager,

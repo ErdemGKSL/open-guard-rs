@@ -1,7 +1,7 @@
 use crate::{Context, Error, services::localization::ContextL10nExt};
 use poise::serenity_prelude as serenity;
 
-/// Hello command and its subcommands
+/// Hello command
 #[poise::command(
     slash_command,
     subcommands("person", "world"),
@@ -25,7 +25,7 @@ async fn autocomplete_greeting<'a>(
     serenity::CreateAutocompleteResponse::new().set_choices(choices)
 }
 
-/// Greet a specific person with a custom greeting
+/// Greet a person
 #[poise::command(
     slash_command,
     install_context = "Guild|User",
@@ -33,10 +33,8 @@ async fn autocomplete_greeting<'a>(
 )]
 pub async fn person(
     ctx: Context<'_>,
-    #[description = "The greeting to use"]
-    #[autocomplete = "autocomplete_greeting"]
-    _greeting: String,
-    #[description = "Selected user"] user: Option<serenity::User>,
+    #[autocomplete = "autocomplete_greeting"] _greeting: String,
+    user: Option<serenity::User>,
 ) -> Result<(), Error> {
     let u = user.as_ref().unwrap_or_else(|| ctx.author());
 
@@ -52,7 +50,7 @@ pub async fn person(
     Ok(())
 }
 
-/// Greet the whole world
+/// Greet the world
 #[poise::command(
     slash_command,
     install_context = "Guild|User",
