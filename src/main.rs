@@ -4,7 +4,7 @@ use dotenvy::dotenv;
 use poise::serenity_prelude as serenity;
 use sea_orm::DatabaseConnection;
 use std::sync::Arc;
-use tracing::info;
+use tracing::{error, info};
 
 mod db;
 mod modules;
@@ -53,8 +53,11 @@ async fn main() -> anyhow::Result<()> {
         .context("Failed to run migrations")?;
 
     let token = serenity::Token::from_env("DISCORD_TOKEN").expect("missing DISCORD_TOKEN");
-    let intents =
-        serenity::GatewayIntents::non_privileged() | serenity::GatewayIntents::MESSAGE_CONTENT;
+    let intents = serenity::GatewayIntents::non_privileged()
+        | serenity::GatewayIntents::GUILD_MESSAGES
+        | serenity::GatewayIntents::AUTO_MODERATION_CONFIGURATION
+        | serenity::GatewayIntents::GUILD_MODERATION
+        | serenity::GatewayIntents::AUTO_MODERATION_EXECUTION;
 
     // Initialize localization manager
     let l10n = Arc::new(services::localization::LocalizationManager::new());
@@ -73,21 +76,37 @@ async fn main() -> anyhow::Result<()> {
 
     // Handle command registration if requested
     if let Some(publish_args) = args.publish {
-        let http = serenity::HttpBuilder::new(token.clone()).build();
+        let http = serenity::HttpBuilder::new(token.clone())
+            .application_id(serenity::ApplicationId::new(
+                std::env::var("APPLICATION_ID")
+                    .expect("missing APPLICATION_ID")
+                    .parse()
+                    .expect("invalid APPLICATION_ID"),
+            ))
+            .build();
         let commands = &framework_options.commands;
 
         if publish_args.is_empty() {
             info!("Registering commands globally...");
-            poise::builtins::register_globally(&http, commands).await?;
+            if let Err(e) = poise::builtins::register_globally(&http, commands).await {
+                error!("Failed to register commands globally: {}", e);
+            } else {
+                info!("Commands registered globally");
+            }
         } else {
             for guild_id in publish_args {
                 info!("Registering commands in guild {}...", guild_id);
-                poise::builtins::register_in_guild(
+                if let Err(e) = poise::builtins::register_in_guild(
                     &http,
                     commands,
                     serenity::GuildId::new(guild_id),
                 )
-                .await?;
+                .await
+                {
+                    error!("Failed to register commands in guild {}: {}", guild_id, e);
+                } else {
+                    info!("Commands registered in guild {}", guild_id);
+                }
             }
         }
         std::process::exit(0);
