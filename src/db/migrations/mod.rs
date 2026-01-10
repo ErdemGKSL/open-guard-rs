@@ -1,8 +1,16 @@
-use sea_orm_migration::prelude::*;
+#![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_variables)]
+#![allow(unused_mut)]
+#![allow(unused)]
 
 pub mod m000001_create_guild_table;
 pub mod m000002_add_log_channel;
 pub mod m000003_create_module_config;
+pub mod m000004_add_punishments;
+pub mod m000005_create_violations;
+
+use sea_orm_migration::prelude::*;
 
 pub struct Migrator;
 
@@ -13,6 +21,8 @@ impl MigratorTrait for Migrator {
             Box::new(m000001_create_guild_table::Migration),
             Box::new(m000002_add_log_channel::Migration),
             Box::new(m000003_create_module_config::Migration),
+            Box::new(m000004_add_punishments::Migration),
+            Box::new(m000005_create_violations::Migration),
         ]
     }
 }

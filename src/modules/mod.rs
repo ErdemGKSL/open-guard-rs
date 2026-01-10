@@ -1,5 +1,4 @@
 pub mod channel_protection;
-pub mod config;
 
 use crate::{Data, Error};
 
@@ -16,7 +15,7 @@ pub struct Module {
 }
 
 pub fn get_modules() -> Vec<Module> {
-    vec![config::module(), channel_protection::module()]
+    vec![channel_protection::module()]
 }
 
 pub fn commands() -> Vec<poise::Command<Data, Error>> {
@@ -30,6 +29,7 @@ pub fn commands() -> Vec<poise::Command<Data, Error>> {
         all_commands.extend(module.commands);
     }
 
+    all_commands.push(crate::services::config::config());
     all_commands.push(crate::services::help::help());
     all_commands
 }

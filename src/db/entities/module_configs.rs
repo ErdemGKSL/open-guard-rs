@@ -21,6 +21,32 @@ pub enum ModuleType {
     ChannelProtection,
 }
 
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    EnumIter,
+    DeriveActiveEnum,
+    Serialize,
+    Deserialize,
+    poise::ChoiceParameter,
+)]
+#[sea_orm(rs_type = "String", db_type = "String(StringLen::N(32))")]
+pub enum PunishmentType {
+    #[sea_orm(string_value = "none")]
+    None,
+    #[sea_orm(string_value = "unperm")]
+    Unperm,
+    #[sea_orm(string_value = "ban")]
+    Ban,
+    #[sea_orm(string_value = "kick")]
+    Kick,
+    #[sea_orm(string_value = "jail")]
+    Jail,
+}
+
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize, Eq)]
 #[sea_orm(table_name = "module_configs")]
 pub struct Model {
@@ -29,6 +55,10 @@ pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub module_type: ModuleType,
     pub log_channel_id: Option<i64>,
+    pub punishment: PunishmentType,
+    pub punishment_at: i32,
+    pub punishment_at_interval: i32,
+    pub revert: bool,
     pub config: Json,
 }
 
@@ -36,13 +66,6 @@ pub struct Model {
 pub enum Relation {}
 
 impl ActiveModelBehavior for ActiveModel {}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum ModuleSpecificConfig {
-    #[serde(rename = "channel_protection_module")]
-    ChannelProtection(ChannelProtectionModuleConfig),
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ChannelProtectionModuleConfig {

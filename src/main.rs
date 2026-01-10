@@ -23,6 +23,7 @@ pub struct Data {
     pub db: DatabaseConnection,
     pub l10n: Arc<services::localization::LocalizationManager>,
     pub logger: Arc<services::logger::LoggerService>,
+    pub punishment: Arc<services::punishment::PunishmentService>,
     pub module_definitions: Vec<modules::ModuleDefinition>,
 }
 
@@ -64,6 +65,9 @@ async fn main() -> anyhow::Result<()> {
 
     // Initialize logger service
     let logger = Arc::new(services::logger::LoggerService::new(db.clone()));
+
+    // Initialize punishment service
+    let punishment = Arc::new(services::punishment::PunishmentService::new(db.clone()));
 
     // Load and translate commands
     let mut commands = modules::commands();
@@ -123,6 +127,7 @@ async fn main() -> anyhow::Result<()> {
             db,
             l10n,
             logger,
+            punishment,
             module_definitions: modules::definitions(),
         }) as _)
         .await

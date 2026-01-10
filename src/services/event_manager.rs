@@ -35,6 +35,14 @@ impl serenity::EventHandler for Handler {
                     error!("Error handling audit log for channel protection: {:?}", e);
                 }
             }
+            serenity::FullEvent::InteractionCreate { interaction, .. } => {
+                if let serenity::Interaction::Component(component_interaction) = interaction {
+                    let data = ctx.data::<Data>();
+                    if let Err(e) = crate::services::config::handle_interaction(ctx, component_interaction, &data).await {
+                        error!("Error handling component interaction: {:?}", e);
+                    }
+                }
+            }
             _ => {}
         }
     }
