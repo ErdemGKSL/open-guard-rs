@@ -190,10 +190,6 @@ pub async fn build_module_menu(
         inner_components.extend(modules::role_permission_protection::build_ui(&rpp_config, l10n));
     }
 
-    // Whitelist Section
-    inner_components.push(serenity::CreateContainerComponent::Separator(serenity::CreateSeparator::new(true)));
-    inner_components.push(create_whitelist_section(format!("config_whitelist_view_module_{}", module), l10n));
-
     // Add back button at the very end
     inner_components.push(serenity::CreateContainerComponent::Separator(serenity::CreateSeparator::new(false)));
     inner_components.push(serenity::CreateContainerComponent::Section(

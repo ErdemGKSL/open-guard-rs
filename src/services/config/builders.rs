@@ -42,6 +42,12 @@ pub fn create_module_config_payload(
     // Module Header
     components.extend(create_header(format!("⚙️ **{}**", name), true));
 
+    // Whitelist Section (Moved to top)
+    components.push(create_whitelist_section(format!("config_whitelist_view_module_{}", module_type), l10n));
+    components.push(serenity::CreateContainerComponent::Separator(
+        serenity::CreateSeparator::new(true),
+    ));
+
     // Log Channel Section
     components.push(serenity::CreateContainerComponent::TextDisplay(
         serenity::CreateTextDisplay::new(l10n.t("config-module-log-channel-label", None)),
@@ -124,8 +130,10 @@ pub fn create_module_config_payload(
     ));
 
     // Repetition Section
+    let mut args = fluent_bundle::FluentArgs::new();
+    args.set("count", punishment_at);
     components.push(serenity::CreateContainerComponent::TextDisplay(
-        serenity::CreateTextDisplay::new(format!("**At Repetition:** {}", punishment_at)),
+        serenity::CreateTextDisplay::new(l10n.t("config-repetition-at-label", Some(&args))),
     ));
 
     components.push(serenity::CreateContainerComponent::ActionRow(serenity::CreateActionRow::Buttons(vec![
@@ -139,8 +147,10 @@ pub fn create_module_config_payload(
 
     // Interval Section
     components.push(serenity::CreateContainerComponent::Separator(serenity::CreateSeparator::new(false)));
+    let mut args = fluent_bundle::FluentArgs::new();
+    args.set("count", punishment_at_interval);
     components.push(serenity::CreateContainerComponent::TextDisplay(
-        serenity::CreateTextDisplay::new(format!("**Interval:** {} min", punishment_at_interval)),
+        serenity::CreateTextDisplay::new(l10n.t("config-repetition-interval-label", Some(&args))),
     ));
 
     components.push(serenity::CreateContainerComponent::ActionRow(serenity::CreateActionRow::Buttons(vec![

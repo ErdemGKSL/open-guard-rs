@@ -3,6 +3,7 @@ use crate::db::entities::{
     guild_configs,
     module_configs::{self, ModuleType},
 };
+use crate::services::localization::ContextL10nExt;
 use poise::serenity_prelude as serenity;
 use sea_orm::{DatabaseConnection, EntityTrait};
 
@@ -126,26 +127,23 @@ impl LoggerService {
     }
 
     /// Helper to log an event from a command context
-    pub async fn log_context<U, E>(
+    pub async fn log_context(
         &self,
-        ctx: &poise::Context<'_, U, E>,
+        ctx: &crate::Context<'_>,
         module: Option<ModuleType>,
         level: LogLevel,
         title: &str,
         description: &str,
         additional_fields: Vec<(&str, String)>,
-    ) -> Result<(), Error>
-    where
-        U: Send + Sync + 'static,
-        E: 'static,
-    {
+    ) -> Result<(), Error> {
         let guild_id = ctx
             .guild_id()
             .ok_or_else(|| anyhow::anyhow!("Audit logs are only available in guilds"))?;
 
+        let l10n = ctx.l10n_guild();
         let mut fields = vec![
-            ("User", format!("<@{}>", ctx.author().id)),
-            ("Channel", format!("<#{}>", ctx.channel_id())),
+            (l10n.t("config-log-field-user", None).leak() as &str, format!("<@{}>", ctx.author().id)),
+            (l10n.t("config-log-field-channel", None).leak() as &str, format!("<#{}>", ctx.channel_id())),
         ];
 
         fields.extend(additional_fields);

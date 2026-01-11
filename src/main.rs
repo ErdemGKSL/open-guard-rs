@@ -14,8 +14,12 @@ mod services;
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Publish commands. If no guild ID is provided, publish globally.
-    #[arg(long, num_args = 0..=1)]
+    #[arg(long, num_args = 0..)]
     publish: Option<Vec<u64>>,
+
+    /// Clear all commands instead of publishing them.
+    #[arg(long)]
+    clear: bool,
 }
 
 // Custom user data passed to all command functions
@@ -89,26 +93,43 @@ async fn main() -> anyhow::Result<()> {
 
     // Handle command registration if requested
     if let Some(publish_args) = args.publish {
+        let http = serenity::HttpBuilder::new(token.clone()).build();
+        let bot_user = http.get_current_user().await.context("Failed to fetch bot user info")?;
+        let application_id = bot_user.id;
+        
+        info!("Fetched Application ID: {}", application_id);
+
         let http = serenity::HttpBuilder::new(token.clone())
-            .application_id(serenity::ApplicationId::new(
-                std::env::var("APPLICATION_ID")
-                    .expect("missing APPLICATION_ID")
-                    .parse()
-                    .expect("invalid APPLICATION_ID"),
-            ))
+            .application_id(serenity::ApplicationId::new(application_id.get()))
             .build();
-        let commands = &framework_options.commands;
+        
+        let empty_commands = vec![];
+        let commands = if args.clear {
+            &empty_commands
+        } else {
+            &framework_options.commands
+        };
 
         if publish_args.is_empty() {
-            info!("Registering commands globally...");
+            if args.clear {
+                info!("Clearing commands globally...");
+            } else {
+                info!("Registering commands globally...");
+            }
+
             if let Err(e) = poise::builtins::register_globally(&http, commands).await {
                 error!("Failed to register commands globally: {}", e);
             } else {
-                info!("Commands registered globally");
+                info!("Global command operation successful");
             }
         } else {
             for guild_id in publish_args {
-                info!("Registering commands in guild {}...", guild_id);
+                if args.clear {
+                    info!("Clearing commands in guild {}...", guild_id);
+                } else {
+                    info!("Registering commands in guild {}...", guild_id);
+                }
+
                 if let Err(e) = poise::builtins::register_in_guild(
                     &http,
                     commands,
@@ -118,7 +139,7 @@ async fn main() -> anyhow::Result<()> {
                 {
                     error!("Failed to register commands in guild {}: {}", guild_id, e);
                 } else {
-                    info!("Commands registered in guild {}", guild_id);
+                    info!("Guild command operation successful for guild {}", guild_id);
                 }
             }
         }

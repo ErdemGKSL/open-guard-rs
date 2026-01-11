@@ -344,8 +344,13 @@ pub async fn build_manage_entry(
 
     let mut level_options = vec![];
     for level in WhitelistLevel::iter() {
+        let label = match level {
+            WhitelistLevel::Head => l10n.t("config-level-head", None),
+            WhitelistLevel::Admin => l10n.t("config-level-admin", None),
+            WhitelistLevel::Invulnerable => l10n.t("config-level-invulnerable", None),
+        };
         let mut opt = serenity::CreateSelectMenuOption::new(
-            format!("{:?}", level),
+            label,
             level.to_string().to_lowercase()
         );
         if let Some(l) = current_level {
@@ -407,6 +412,8 @@ pub async fn handle_interaction(
             match suffix {
                 "channel_protection" => Some(ModuleType::ChannelProtection),
                 "channel_permission_protection" => Some(ModuleType::ChannelPermissionProtection),
+                "role_protection" => Some(ModuleType::RoleProtection),
+                "role_permission_protection" => Some(ModuleType::RolePermissionProtection),
                 _ => None,
             }
         }
