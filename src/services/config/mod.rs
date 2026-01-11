@@ -1,12 +1,12 @@
-pub mod builders;
-pub mod modules;
-
 use crate::db::entities::{guild_configs, module_configs};
 use crate::db::entities::module_configs::{ModuleType, ChannelProtectionModuleConfig};
 use crate::services::localization::{L10nProxy, ContextL10nExt};
 use crate::{Data, Error};
 use poise::serenity_prelude as serenity;
 use sea_orm::{EntityTrait, ActiveModelTrait, Set};
+
+pub mod builders;
+pub mod modules;
 
 pub use builders::*;
 
@@ -94,6 +94,11 @@ pub async fn build_main_menu(
             "ChannelProtection",
         )
         .description(l10n.t("config-channel-protection-desc", None)),
+        serenity::CreateSelectMenuOption::new(
+            l10n.t("config-channel-permission-protection-label", None),
+            "ChannelPermissionProtection",
+        )
+        .description(l10n.t("config-channel-permission-protection-desc", None)),
     ];
 
     inner_components.push(create_select_menu_row(
@@ -153,6 +158,10 @@ pub async fn build_module_menu(
         let cp_config: ChannelProtectionModuleConfig = serde_json::from_value(m_config.config).unwrap_or_default();
         inner_components.push(serenity::CreateContainerComponent::Separator(serenity::CreateSeparator::new(true)));
         inner_components.extend(modules::channel_protection::build_ui(&cp_config, l10n));
+    } else if module == ModuleType::ChannelPermissionProtection {
+        let cpp_config: crate::db::entities::module_configs::ChannelPermissionProtectionModuleConfig = serde_json::from_value(m_config.config).unwrap_or_default();
+        inner_components.push(serenity::CreateContainerComponent::Separator(serenity::CreateSeparator::new(true)));
+        inner_components.extend(modules::channel_permission_protection::build_ui(&cpp_config, l10n));
     }
 
     // Add back button at the very end
@@ -204,6 +213,8 @@ pub async fn handle_interaction(
     // Try module-specific handlers first
     if modules::channel_protection::handle_interaction(ctx, interaction, data, guild_id).await? {
         updated_reply = Some(build_module_menu(data, guild_id, ModuleType::ChannelProtection, &l10n).await?);
+    } else if modules::channel_permission_protection::handle_interaction(ctx, interaction, data, guild_id).await? {
+        updated_reply = Some(build_module_menu(data, guild_id, ModuleType::ChannelPermissionProtection, &l10n).await?);
     } else if custom_id == "config_general_log_channel" {
         if let serenity::ComponentInteractionDataKind::ChannelSelect { values } = &interaction.data.kind {
             if let Some(channel_id) = values.first() {
@@ -247,6 +258,7 @@ pub async fn handle_interaction(
             if let Some(module_str) = values.first() {
                 let module_type = match module_str.as_str() {
                     "ChannelProtection" => ModuleType::ChannelProtection,
+                    "ChannelPermissionProtection" => ModuleType::ChannelPermissionProtection,
                     _ => return Ok(()),
                 };
                 updated_reply = Some(build_module_menu(data, guild_id, module_type, &l10n).await?);
@@ -258,6 +270,7 @@ pub async fn handle_interaction(
                 let module_str = custom_id.trim_start_matches("config_module_log_channel_");
                 let module_type = match module_str {
                     "ChannelProtection" => ModuleType::ChannelProtection,
+                    "ChannelPermissionProtection" => ModuleType::ChannelPermissionProtection,
                     _ => return Ok(()),
                 };
 
@@ -287,6 +300,7 @@ pub async fn handle_interaction(
                 let module_str = custom_id.trim_start_matches("config_module_punishment_");
                 let module_type = match module_str {
                     "ChannelProtection" => ModuleType::ChannelProtection,
+                    "ChannelPermissionProtection" => ModuleType::ChannelPermissionProtection,
                     _ => return Ok(()),
                 };
 
@@ -324,6 +338,7 @@ pub async fn handle_interaction(
         let module_str = custom_id.trim_start_matches("config_module_revert_");
         let module_type = match module_str {
             "ChannelProtection" => ModuleType::ChannelProtection,
+            "ChannelPermissionProtection" => ModuleType::ChannelPermissionProtection,
             _ => return Ok(()),
         };
 
