@@ -17,6 +17,18 @@
 
 ---
 
+## ⚙️ Configuration (.env)
+
+Open Guard uses a `.env` file for configuration. Create one in the root directory:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DISCORD_TOKEN` | Required. Your bot token. | `Njk4...` |
+| `DATABASE_URL` | Required. PostgreSQL connection. | `postgres://user:pass@localhost/db` |
+| `RUST_LOG` | Optional. Logging verbosity. | `info`, `debug`, `warn` |
+
+---
+
 ## 🚀 Getting Started (Quickest Way)
 
 You don't need to be a developer to run Open Guard! We provide pre-compiled binaries for all major platforms.
