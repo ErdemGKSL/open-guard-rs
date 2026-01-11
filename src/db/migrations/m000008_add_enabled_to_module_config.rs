@@ -14,7 +14,7 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(Alias::new("enabled"))
                             .boolean()
                             .not_null()
-                            .default(true),
+                            .default(false),
                     )
                     .to_owned(),
             )

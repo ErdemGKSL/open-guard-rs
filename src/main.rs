@@ -20,6 +20,10 @@ struct Args {
     /// Clear all commands instead of publishing them.
     #[arg(long)]
     clear: bool,
+
+    /// Rollback the specified number of migrations and run all migrations again.
+    #[arg(long, num_args = 0..=1, default_missing_value = "1")]
+    refresh_migrations: Option<u32>,
 }
 
 // Custom user data passed to all command functions
@@ -56,9 +60,21 @@ async fn main() -> anyhow::Result<()> {
 
     // Run migrations
     use sea_orm_migration::MigratorTrait;
+    if let Some(depth) = args.refresh_migrations {
+        info!("Refreshing migrations (down {}, then up)...", depth);
+        db::migrations::Migrator::down(&db, Some(depth))
+            .await
+            .context("Failed to rollback migration")?;
+    }
+
     db::migrations::Migrator::up(&db, None)
         .await
         .context("Failed to run migrations")?;
+
+    if args.refresh_migrations.is_some() {
+        info!("Migrations refreshed successfully.");
+        std::process::exit(0);
+    }
 
     let token = serenity::Token::from_env("DISCORD_TOKEN").expect("missing DISCORD_TOKEN");
     let intents = serenity::GatewayIntents::non_privileged()
