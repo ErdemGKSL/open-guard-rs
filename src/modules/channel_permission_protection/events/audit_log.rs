@@ -1,9 +1,9 @@
-use crate::db::entities::module_configs::{self, ChannelProtectionModuleConfig, ModuleType};
+use crate::db::entities::module_configs::{self, ChannelPermissionProtectionModuleConfig, ModuleType};
 use crate::services::logger::LogLevel;
 use crate::{Data, Error};
 use poise::serenity_prelude as serenity;
 use sea_orm::EntityTrait;
-use serenity::model::guild::audit_log::{Action, ChannelAction};
+use serenity::model::guild::audit_log::{Action, ChannelOverwriteAction};
 
 pub async fn handle_audit_log(
     ctx: &serenity::Context,
@@ -13,11 +13,11 @@ pub async fn handle_audit_log(
 ) -> Result<(), Error> {
     // Fetch module config
     let config_model =
-        module_configs::Entity::find_by_id((guild_id.get() as i64, ModuleType::ChannelProtection))
+        module_configs::Entity::find_by_id((guild_id.get() as i64, ModuleType::ChannelPermissionProtection))
             .one(&data.db)
             .await?;
 
-    let config: ChannelProtectionModuleConfig = match config_model {
+    let config: ChannelPermissionProtectionModuleConfig = match config_model {
         Some(m) => serde_json::from_value(m.config.clone()).unwrap_or_default(),
         None => return Ok(()), // Module not configured for this guild
     };
@@ -33,10 +33,10 @@ pub async fn handle_audit_log(
     }
 
     // Check if we should ignore private channels (ownership check)
+    // Similar logic to skip if the executor has MANAGE_CHANNELS in the channel
     if config.ignore_private_channels {
         if let Some(target_id) = entry.target_id {
             let channel_id = serenity::ChannelId::new(target_id.get());
-            // We check the HTTP for the channel to check overwrites.
             if let Ok(serenity::Channel::Guild(channel)) = ctx.http.get_channel(channel_id.into()).await {
                 let is_owner = channel.permission_overwrites.iter().any(|overwrite| {
                     if let serenity::PermissionOverwriteType::Member(id) = overwrite.kind {
@@ -55,19 +55,19 @@ pub async fn handle_audit_log(
 
     // Match on the audit log action to triggers variants error
     match entry.action {
-        Action::Channel(ChannelAction::Create) => {
+        Action::ChannelOverwrite(ChannelOverwriteAction::Create) => {
             if config.punish_when.contains(&"create".to_string()) {
-                handle_channel_create(ctx, entry, guild_id, data, &config, user_id).await?;
+                handle_overwrite_create(ctx, entry, guild_id, data, &config, user_id).await?;
             }
         }
-        Action::Channel(ChannelAction::Delete) => {
+        Action::ChannelOverwrite(ChannelOverwriteAction::Delete) => {
             if config.punish_when.contains(&"delete".to_string()) {
-                handle_channel_delete(ctx, entry, guild_id, data, &config, user_id).await?;
+                handle_overwrite_delete(ctx, entry, guild_id, data, &config, user_id).await?;
             }
         }
-        Action::Channel(ChannelAction::Update) => {
+        Action::ChannelOverwrite(ChannelOverwriteAction::Update) => {
             if config.punish_when.contains(&"update".to_string()) {
-                handle_channel_update(ctx, entry, guild_id, data, &config, user_id).await?;
+                handle_overwrite_update(ctx, entry, guild_id, data, &config, user_id).await?;
             }
         }
         _ => {}
@@ -76,12 +76,12 @@ pub async fn handle_audit_log(
     Ok(())
 }
 
-async fn handle_channel_create(
+async fn handle_overwrite_create(
     ctx: &serenity::Context,
     entry: &serenity::AuditLogEntry,
     guild_id: serenity::GuildId,
     data: &Data,
-    _config: &ChannelProtectionModuleConfig,
+    _config: &ChannelPermissionProtectionModuleConfig,
     user_id: serenity::UserId,
 ) -> Result<(), Error> {
     let channel_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
@@ -90,11 +90,11 @@ async fn handle_channel_create(
         .log_action(
             &ctx.http,
             guild_id,
-            Some(ModuleType::ChannelProtection),
+            Some(ModuleType::ChannelPermissionProtection),
             LogLevel::Warn,
-            "Channel Created",
+            "Channel Permission Overwrite Created",
             &format!(
-                "A new channel (<#{}>) was created by <@{}>.",
+                "A permission overwrite in channel (<#{}>) was created by <@{}>.",
                 channel_id, user_id
             ),
             vec![
@@ -107,12 +107,12 @@ async fn handle_channel_create(
     Ok(())
 }
 
-async fn handle_channel_delete(
+async fn handle_overwrite_delete(
     ctx: &serenity::Context,
     entry: &serenity::AuditLogEntry,
     guild_id: serenity::GuildId,
     data: &Data,
-    _config: &ChannelProtectionModuleConfig,
+    _config: &ChannelPermissionProtectionModuleConfig,
     user_id: serenity::UserId,
 ) -> Result<(), Error> {
     let channel_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
@@ -121,16 +121,16 @@ async fn handle_channel_delete(
         .log_action(
             &ctx.http,
             guild_id,
-            Some(ModuleType::ChannelProtection),
+            Some(ModuleType::ChannelPermissionProtection),
             LogLevel::Error,
-            "Channel Deleted",
+            "Channel Permission Overwrite Deleted",
             &format!(
-                "A channel (`{}`) was deleted by <@{}>.",
+                "A permission overwrite in channel (<#{}>) was deleted by <@{}>.",
                 channel_id, user_id
             ),
             vec![
                 ("User", format!("<@{}>", user_id)),
-                ("Channel ID", channel_id.to_string()),
+                ("Channel", format!("<#{}>", channel_id)),
             ],
         )
         .await?;
@@ -138,12 +138,12 @@ async fn handle_channel_delete(
     Ok(())
 }
 
-async fn handle_channel_update(
+async fn handle_overwrite_update(
     ctx: &serenity::Context,
     entry: &serenity::AuditLogEntry,
     guild_id: serenity::GuildId,
     data: &Data,
-    _config: &ChannelProtectionModuleConfig,
+    _config: &ChannelPermissionProtectionModuleConfig,
     user_id: serenity::UserId,
 ) -> Result<(), Error> {
     let channel_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
@@ -152,11 +152,11 @@ async fn handle_channel_update(
         .log_action(
             &ctx.http,
             guild_id,
-            Some(ModuleType::ChannelProtection),
+            Some(ModuleType::ChannelPermissionProtection),
             LogLevel::Info,
-            "Channel Updated",
+            "Channel Permission Overwrite Updated",
             &format!(
-                "A channel (<#{}>) was modified by <@{}>.",
+                "A permission overwrite in channel (<#{}>) was modified by <@{}>.",
                 channel_id, user_id
             ),
             vec![

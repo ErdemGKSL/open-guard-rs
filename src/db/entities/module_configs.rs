@@ -15,10 +15,10 @@ use serde::{Deserialize, Serialize};
 )]
 #[sea_orm(rs_type = "String", db_type = "String(StringLen::N(32))")]
 pub enum ModuleType {
-    #[sea_orm(string_value = "config")]
-    Config,
     #[sea_orm(string_value = "channel_protection")]
     ChannelProtection,
+    #[sea_orm(string_value = "channel_permission_protection")]
+    ChannelPermissionProtection,
 }
 
 #[derive(
@@ -68,7 +68,19 @@ pub enum Relation {}
 impl ActiveModelBehavior for ActiveModel {}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct ChannelProtectionModuleConfig {
-    pub lock_new_channels: bool,
-    pub audit_log_channel_id: Option<u64>,
+    #[serde(default)]
+    pub ignore_private_channels: bool,
+    #[serde(default)]
+    pub punish_when: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct ChannelPermissionProtectionModuleConfig {
+    #[serde(default)]
+    pub ignore_private_channels: bool,
+    #[serde(default)]
+    pub punish_when: Vec<String>,
 }

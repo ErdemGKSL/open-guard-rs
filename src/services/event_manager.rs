@@ -1,5 +1,6 @@
 use crate::Data;
 use crate::modules::channel_protection;
+use crate::modules::channel_permission_protection;
 use poise::serenity_prelude as serenity;
 use tracing::{error, info};
 
@@ -33,6 +34,14 @@ impl serenity::EventHandler for Handler {
                 .await
                 {
                     error!("Error handling audit log for channel protection: {:?}", e);
+                }
+
+                if let Err(e) = channel_permission_protection::events::audit_log::handle_audit_log(
+                    ctx, entry, *guild_id, &data,
+                )
+                .await
+                {
+                    error!("Error handling audit log for channel permission protection: {:?}", e);
                 }
             }
             serenity::FullEvent::InteractionCreate { interaction, .. } => {

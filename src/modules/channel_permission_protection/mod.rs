@@ -5,9 +5,9 @@ use crate::modules::{Module, ModuleDefinition};
 pub fn module() -> Module {
     Module {
         definition: ModuleDefinition {
-            id: "channel_protection",
-            name_key: "module-channel-protection-name",
-            description_key: "module-channel-protection-desc",
+            id: "channel_permission_protection",
+            name_key: "module-channel-permission-protection-name",
+            description_key: "module-channel-permission-protection-desc",
         },
         commands: vec![],
     }
