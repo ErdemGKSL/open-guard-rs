@@ -23,6 +23,15 @@ impl LogLevel {
             LogLevel::Audit => "📝",
         }
     }
+
+    pub fn color(&self) -> u32 {
+        match self {
+            LogLevel::Info => 0x3498db, // Blue
+            LogLevel::Warn => 0xf1c40f, // Yellow
+            LogLevel::Error => 0xe74c3c, // Red
+            LogLevel::Audit => 0x95a5a6, // Gray
+        }
+    }
 }
 
 pub struct LoggerService {
@@ -72,31 +81,31 @@ impl LoggerService {
             None => return Ok(()), // No log channel configured
         };
 
-        let mut components = vec![];
+        let mut inner_components = vec![];
 
         // Header component
-        components.push(serenity::CreateComponent::TextDisplay(
+        inner_components.push(serenity::CreateContainerComponent::TextDisplay(
             serenity::CreateTextDisplay::new(format!("{} **{}**", level.icon(), title)),
         ));
 
         // Separator
-        components.push(serenity::CreateComponent::Separator(
+        inner_components.push(serenity::CreateContainerComponent::Separator(
             serenity::CreateSeparator::new(false),
         ));
 
         // Description component
-        components.push(serenity::CreateComponent::TextDisplay(
+        inner_components.push(serenity::CreateContainerComponent::TextDisplay(
             serenity::CreateTextDisplay::new(description),
         ));
 
         // Optional fields
         if !fields.is_empty() {
-            components.push(serenity::CreateComponent::Separator(
+            inner_components.push(serenity::CreateContainerComponent::Separator(
                 serenity::CreateSeparator::new(true),
             ));
 
             for (name, value) in fields {
-                components.push(serenity::CreateComponent::TextDisplay(
+                inner_components.push(serenity::CreateContainerComponent::TextDisplay(
                     serenity::CreateTextDisplay::new(format!("**{}**: {}", name, value)),
                 ));
             }
@@ -107,7 +116,9 @@ impl LoggerService {
             Vec::new(),
             &serenity::CreateMessage::new()
                 .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                .components(components),
+                .components(vec![serenity::CreateComponent::Container(
+                    serenity::CreateContainer::new(inner_components).accent_color(level.color()),
+                )]),
         )
         .await?;
 
