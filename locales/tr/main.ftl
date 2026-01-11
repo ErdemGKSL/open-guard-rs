@@ -12,6 +12,9 @@ module-role-protection-description = Rolleri yetkisiz oluşturma veya silme işl
 module-role-permission-protection-name = Rol Yetki Koruması
 module-role-permission-protection-desc = Rol yetki değişimlerini yetkisiz işlemlerden korur.
 
+module-member-permission-protection-name = Üye Yetki Koruması
+module-member-permission-protection-description = Üyelere roller aracılığıyla tehlikeli yetkiler verilmesini engeller.
+
 help-title = Bot Yardım Menüsü
 
 config-general-header = ⚙️ **Genel Yapılandırma**
@@ -28,6 +31,8 @@ config-log-field-channel = Kanal
 config-success-update = ✅ Yapılandırma başarıyla güncellendi!
 config-btn-enabled = Aktif
 config-btn-disabled = Devre Dışı
+config-status-enabled = Aktif
+config-status-disabled = Devre Dışı
 config-error-update = ❌ Yapılandırma güncellenemedi.
 config-channel-protection-label = Kanal Koruması
 config-channel-protection-desc = Kanal oluşturma/silme korumasını yapılandırın
@@ -37,6 +42,9 @@ config-role-protection-label = Rol Koruması
 config-role-protection-desc = Rol oluşturma/silme korumasını yapılandırın
 config-role-permission-protection-label = Rol Yetki Koruması
 config-role-permission-protection-desc = Rol yetki değişim korumasını yapılandırın
+
+config-member-permission-protection-label = Üye Yetki Koruması
+config-member-permission-protection-desc = Üye rol/yetki korumasını yapılandırın
 config-punishment-label = Ceza
 config-select-punishment-placeholder = Ceza seçin...
 config-punishment-type-none = Yok
@@ -82,6 +90,7 @@ config-whitelist-channel-protection-header = **Kanal Koruması Beyaz Listeleri**
 config-whitelist-channel-permission-protection-header = **Kanal Yetki Koruması Beyaz Listeleri**
 config-whitelist-role-protection-header = **Rol Koruması Beyaz Listeleri**
 config-whitelist-role-permission-protection-header = **Rol Yetki Koruması Beyaz Listeleri**
+config-whitelist-member-permission-protection-header = **Üye Yetki Koruması Beyaz Listeleri**
 config-whitelist-users-label = **Beyaz Listedeki Kullanıcılar**
 config-whitelist-delete-user-placeholder = Kaldırılacak kullanıcıyı seçin...
 config-whitelist-roles-label = **Beyaz Listedeki Roller**
@@ -94,3 +103,114 @@ config-select-level-placeholder = Beyaz liste seviyesi seçin...
 config-level-head = Yetkili
 config-level-admin = Yönetici
 config-level-invulnerable = Dokunulmaz
+
+help-page-0-title = 🚀 Başlarken
+help-page-0-content = 
+    ### Giriş
+    Open Guard, sunucunuzu yetkisiz değişikliklerden korumak için tasarlanmış yüksek performanslı bir bottur. Kötü niyetli eylemleri geri almak ve failleri cezalandırmak için denetim kayıtlarını gerçek zamanlı olarak izler.
+    
+    ### Yapılandırma
+    Botu yönetmek için ` /config ` komutunu kullanın. Oradan şunları yapabilirsiniz:
+    - Belirli koruma modüllerini etkinleştirin veya devre dışı bırakın.
+    - Her modül için özel kayıt kanalları ayarlayın.
+    - Ceza türlerini ve eşiklerini yapılandırın.
+
+help-page-1-title = ⚖️ Ceza ve İhlal Mantığı
+help-page-1-content = 
+    ### İhlaller
+    Her yetkisiz eylem, bir kullanıcının o belirli modül için ihlal sayacını artırır. Eylemi yapılandırılan aralık içinde tekrarlarlarsa cezalandırılırlar.
+    
+    ### Cezalar
+    - **Unperm (Yetki Kaldır)**: Tehlikeli izinler içeren (örneğin Yönetici, Rolleri Yönet) rolleri kaldırır. Yönetilen rolleri ve botun üzerindeki rolleri güvenli bir şekilde atlar.
+    - **Ban / Kick (Yasakla / At)**: Kullanıcıyı derhal sunucudan uzaklaştırır.
+    - **Jail (Hapset)**: Faili yapılandırılmış bir 'Hapis' rolüne atar.
+
+help-page-2-title = 🛡️ Beyaz Liste Mantığı
+help-page-2-content = 
+    ### Örtük Beyaz Liste (Hiyerarşi)
+    Güven, sunucu hiyerarşisine göre otomatik olarak verilir:
+    - **Yetkili (Head)**: Sunucu Sahibi (Tam bağışıklık).
+    - **Yönetici (Admin)**: Botun üzerinde konumlanmış Yönetici iznine sahip kullanıcılar.
+    - **Dokunulmaz (Invulnerable)**: Botun üzerinde konumlanmış kullanıcılar.
+    
+    ### Açık Beyaz Liste
+    ` /config ` menülerini kullanarak belirli kullanıcıları veya rolleri beyaz listeye ekleyebilirsiniz. Bunlar genel olabilir veya belirli modüllerle sınırlı olabilir.
+
+help-page-3-title = 🔑 Yetki Gereksinimleri
+help-page-3-content = 
+    ### Bot Yetkileri
+    Etkili bir şekilde çalışabilmesi için Open Guard şu izinlere ihtiyaç duyar:
+    - **Denetim Kaydını Görüntüle**: Bir eylemi kimin gerçekleştirdiğini tespit etmek için gereklidir.
+    - **Rolleri Yönet**: Rol değişikliklerini geri almak ve Yetki Kaldırma/Hapsetme işlemlerini uygulamak için gereklidir.
+    - **Kanalları Yönet**: Kanal silme veya düzenleme işlemlerini geri almak için gereklidir.
+    - **Eklentiler**: İlgili cezalar için Atma ve Yasaklama izinleri.
+
+help-prev-btn = Önceki
+help-next-btn = Sonraki
+
+# Kayıtlar (Logging)
+log-status-whitelisted = ✅ **Beyaz Listede ({$level})**\n> Yetkisiz eylem tespit edildi ancak beyaz liste seviyesi nedeniyle yoksayıldı.
+log-status-unauthorized = 🚨 **Yetkisiz Eylem Tespit Edildi**\n> Koruma ve ceza uygulanıyor...
+log-status-punished = 🚨 **Engellendi ve Cezalandırıldı** ({$type})\n> Eylem yetkisizdi. Kullanıcı cezalandırıldı.
+log-status-violation = 🚨 **İhlal Kaydedildi** ({$current}/{$threshold})\n> Eylem yetkisizdi. Ceza {$threshold} ihlalde tetiklenecek.
+log-status-blocked = 🚨 **Engellendi** (Ceza Yok)\n> Eylem yetkisizdi, ancak bu modül için özel bir ceza yapılandırılmamış.
+log-status-reverted = \n✅ **Başarıyla Geri Alındı**\n> Yetkisiz değişiklikler geri alındı.
+log-status-revert-failed = \n❌ **Geri Alma Başarısız**\n> Değişiklikler geri alınamadı. Bot yetkilerini kontrol edin.
+log-status-skipped = \n🛡️ **Koruma Atlandı**\n> Kullanıcı **{$level}** seviye yetkiye sahip, **{$punishment}** cezası uygulanmadı.
+log-status-no-revert = \nℹ️ **Geri Alınacak Bir Şey Yok**\n> Denetim kaydı girişinde geri alınabilir bir değişiklik bulunamadı.
+log-status-not-enabled = ℹ️ **Koruma etkin değil**\n> Bu koruma şu anda modül yapılandırmasında devre dışı.
+
+log-field-acting-user = Gerçekleştiren Kullanıcı
+log-field-target-member = Hedef Üye
+log-field-added-perms = Eklenen Yetkiler
+log-field-action-status = Eylem Durumu
+log-field-role-id = Rol ID
+log-field-role = Rol
+log-field-channel = Kanal
+log-field-user = Kullanıcı
+
+log-member-perm-title-whitelisted = Yetki Paylaşımı (Beyaz Listede)
+log-member-perm-title-blocked = Yetki Paylaşımı (Engellendi)
+log-member-perm-desc = <@{$userId}>, <@{$targetId}> kullanıcısına roller aracılığıyla tehlikeli yetkiler ekledi.
+log-member-perm-reason-update = Yetkisiz Yetki Paylaşımı
+log-member-perm-revert-reason = Yetkisiz Yetki Paylaşımı Geri Alma
+
+log-chan-title-whitelisted = Kanal Değiştirildi (Beyaz Listede)
+log-chan-title-blocked = Kanal Değiştirildi (Engellendi)
+log-chan-title-logged = Kanal Değiştirildi (Kaydedildi)
+log-chan-desc-create = <@{$userId}> tarafından yeni bir kanal (<#{$channelId}>) oluşturuldu.
+log-chan-desc-delete = <@{$userId}> tarafından bir kanal (`{$channelId}`) silindi.
+log-chan-desc-update = <@{$userId}> tarafından bir kanal (<#{$channelId}>) düzenlendi.
+log-chan-reason-create = Kanal Oluşturuldu
+log-chan-reason-delete = Kanal Silindi
+log-chan-reason-update = Kanal Güncellendi
+log-chan-revert-reason = Kanal Koruması Geri Alma
+
+log-role-title-whitelisted = Rol Değiştirildi (Beyaz Listede)
+log-role-title-blocked = Rol Değiştirildi (Engellendi)
+log-role-title-logged = Rol Değiştirildi (Kaydedildi)
+log-role-desc-create = <@{$userId}> tarafından yeni bir rol (`{$roleId}`) oluşturuldu.
+log-role-desc-delete = <@{$userId}> tarafından bir rol (`{$roleId}`) silindi.
+log-role-desc-update = <@{$userId}> tarafından bir rol (<@&{$roleId}>) düzenlendi.
+log-role-reason-create = Rol Oluşturuldu
+log-role-reason-delete = Rol Silindi
+log-role-reason-update = Rol Güncellendi
+log-role-revert-reason = Rol Koruması Geri Alma
+
+log-chan-perm-title-whitelisted = Kanal Yetki Değişimi (Beyaz Listede)
+log-chan-perm-title-blocked = Kanal Yetki Değişimi (Engellendi)
+log-chan-perm-title-logged = Kanal Yetki Değişimi (Kaydedildi)
+log-chan-perm-desc-create = <@{$userId}> tarafından (<#{$channelId}>) kanalında bir yetki değişimi oluşturuldu.
+log-chan-perm-desc-delete = <@{$userId}> tarafından (<#{$channelId}>) kanalında bir yetki değişimi silindi.
+log-chan-perm-desc-update = <@{$userId}> tarafından (<#{$channelId}>) kanalında bir yetki değişimi düzenlendi.
+log-chan-perm-reason-create = Kanal Yetki Değişimi Oluşturuldu
+log-chan-perm-reason-delete = Kanal Yetki Değişimi Silindi
+log-chan-perm-reason-update = Kanal Yetki Değişimi Güncellendi
+log-chan-perm-revert-reason = Kanal Yetki Koruması Geri Alma
+
+log-role-perm-title-whitelisted = Rol Yetkisi Değişti (Beyaz Listede)
+log-role-perm-title-blocked = Rol Yetkisi Değişti (Engellendi)
+log-role-perm-title-logged = Rol Yetkisi Değişti (Kaydedildi)
+log-role-perm-desc-update = <@&{$roleId}> rolünün yetkileri <@{$userId}> tarafından değiştirildi.
+log-role-perm-reason-update = Rol Yetkileri Güncellendi
+log-role-perm-revert-reason = Rol Yetki Koruması Geri Alma

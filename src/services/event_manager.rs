@@ -1,8 +1,11 @@
 use crate::Data;
-use crate::modules::channel_protection;
-use crate::modules::channel_permission_protection;
-use crate::modules::role_protection;
-use crate::modules::role_permission_protection;
+use crate::modules::{
+    channel_protection, 
+    channel_permission_protection, 
+    role_protection, 
+    role_permission_protection,
+    member_permission_protection,
+};
 use poise::serenity_prelude as serenity;
 use tracing::{error, info};
 
@@ -95,6 +98,22 @@ impl serenity::EventHandler for Handler {
                         }
                     });
                 }
+
+                // Member Permission Protection
+                {
+                    let ctx = ctx.clone();
+                    let entry = entry.clone();
+                    let data = data.clone();
+                    tokio::spawn(async move {
+                        if let Err(e) = member_permission_protection::events::audit_log::handle_audit_log(
+                            &ctx, &entry, guild_id, &data,
+                        )
+                        .await
+                        {
+                            error!("Error handling audit log for member permission protection: {:?}", e);
+                        }
+                    });
+                }
             }
             serenity::FullEvent::InteractionCreate { interaction, .. } => {
                 if let serenity::Interaction::Component(component_interaction) = interaction {
@@ -103,8 +122,16 @@ impl serenity::EventHandler for Handler {
                     let component_interaction = component_interaction.clone();
                     
                     tokio::spawn(async move {
-                        if let Err(e) = crate::services::config::handle_interaction(&ctx, &component_interaction, &data).await {
-                            error!("Error handling component interaction: {:?}", e);
+                        let custom_id = &component_interaction.data.custom_id;
+                        
+                        if custom_id.starts_with("config_") {
+                            if let Err(e) = crate::services::config::handle_interaction(&ctx, &component_interaction, &data).await {
+                                error!("Error handling config interaction: {:?}", e);
+                            }
+                        } else if custom_id.starts_with("help-") {
+                            if let Err(e) = crate::services::help::handle_interaction(&ctx, &component_interaction, &data).await {
+                                error!("Error handling help interaction: {:?}", e);
+                            }
                         }
                     });
                 }

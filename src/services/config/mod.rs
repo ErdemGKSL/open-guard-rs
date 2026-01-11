@@ -130,6 +130,11 @@ pub async fn build_main_menu(
             "RolePermissionProtection",
         )
         .description(l10n.t("config-role-permission-protection-desc", None)),
+        serenity::CreateSelectMenuOption::new(
+            format!("{} - {}", l10n.t("config-member-permission-protection-label", None), get_status(ModuleType::MemberPermissionProtection)),
+            "MemberPermissionProtection",
+        )
+        .description(l10n.t("config-member-permission-protection-desc", None)),
     ];
 
     inner_components.push(create_select_menu_row(
@@ -173,6 +178,7 @@ pub async fn build_module_menu(
         ModuleType::ChannelPermissionProtection => l10n.t("config-channel-permission-protection-label", None),
         ModuleType::RoleProtection => l10n.t("config-role-protection-label", None),
         ModuleType::RolePermissionProtection => l10n.t("config-role-permission-protection-label", None),
+        ModuleType::MemberPermissionProtection => l10n.t("config-member-permission-protection-label", None),
     };
 
     let mut inner_components = create_module_config_payload(
@@ -203,6 +209,10 @@ pub async fn build_module_menu(
         let rpp_config: crate::db::entities::module_configs::RolePermissionProtectionModuleConfig = serde_json::from_value(m_config.config).unwrap_or_default();
         inner_components.push(serenity::CreateContainerComponent::Separator(serenity::CreateSeparator::new(true)));
         inner_components.extend(modules::role_permission_protection::build_ui(&rpp_config, l10n));
+    } else if module == ModuleType::MemberPermissionProtection {
+        let mpp_config: crate::db::entities::module_configs::MemberPermissionProtectionModuleConfig = serde_json::from_value(m_config.config).unwrap_or_default();
+        inner_components.push(serenity::CreateContainerComponent::Separator(serenity::CreateSeparator::new(true)));
+        inner_components.extend(modules::member_permission_protection::build_ui(&mpp_config, l10n));
     }
 
     // Add back button at the very end
@@ -260,6 +270,8 @@ pub async fn handle_interaction(
         updated_reply = Some(build_module_menu(data, guild_id, ModuleType::RoleProtection, &l10n).await?);
     } else if modules::role_permission_protection::handle_interaction(ctx, interaction, data, guild_id).await? {
         updated_reply = Some(build_module_menu(data, guild_id, ModuleType::RolePermissionProtection, &l10n).await?);
+    } else if modules::member_permission_protection::handle_interaction(ctx, interaction, data, guild_id).await? {
+        updated_reply = Some(build_module_menu(data, guild_id, ModuleType::MemberPermissionProtection, &l10n).await?);
     } else if let Some(components) = whitelist::handle_interaction(ctx, interaction, data).await? {
         updated_reply = Some(components);
     } else if custom_id == "config_back_to_main" {
@@ -270,6 +282,7 @@ pub async fn handle_interaction(
             "channel_permission_protection" => ModuleType::ChannelPermissionProtection,
             "role_protection" => ModuleType::RoleProtection,
             "role_permission_protection" => ModuleType::RolePermissionProtection,
+            "member_permission_protection" => ModuleType::MemberPermissionProtection,
             _ => return Ok(()),
         };
         updated_reply = Some(build_module_menu(data, guild_id, module_type, &l10n).await?);
@@ -405,6 +418,7 @@ pub async fn handle_interaction(
             "ChannelPermissionProtection" => ModuleType::ChannelPermissionProtection,
             "RoleProtection" => ModuleType::RoleProtection,
             "RolePermissionProtection" => ModuleType::RolePermissionProtection,
+            "MemberPermissionProtection" => ModuleType::MemberPermissionProtection,
             _ => return Ok(()),
         };
 
@@ -444,6 +458,8 @@ pub async fn handle_interaction(
             ModuleType::RoleProtection
         } else if custom_id.contains("RolePermissionProtection") {
             ModuleType::RolePermissionProtection
+        } else if custom_id.contains("MemberPermissionProtection") {
+            ModuleType::MemberPermissionProtection
         } else {
             return Ok(());
         };
@@ -489,6 +505,7 @@ pub async fn handle_interaction(
             "channel_permission_protection" | "ChannelPermissionProtection" => ModuleType::ChannelPermissionProtection,
             "role_protection" | "RoleProtection" => ModuleType::RoleProtection,
             "role_permission_protection" | "RolePermissionProtection" => ModuleType::RolePermissionProtection,
+            "member_permission_protection" | "MemberPermissionProtection" => ModuleType::MemberPermissionProtection,
             _ => return Ok(()),
         };
 

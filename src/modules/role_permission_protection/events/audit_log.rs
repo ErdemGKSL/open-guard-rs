@@ -37,14 +37,14 @@ pub async fn handle_audit_log(
     }
 
     // Check whitelist
-    let is_whitelisted = data.whitelist.get_whitelist_level(ctx, guild_id, user_id, ModuleType::RolePermissionProtection).await?.is_some();
+    let whitelist_level = data.whitelist.get_whitelist_level(ctx, guild_id, user_id, ModuleType::RolePermissionProtection).await?;
 
     match entry.action {
         Action::Role(RoleAction::Update) => {
             // Check if permissions changed
             let has_perm_change = entry.changes.iter().any(|c| matches!(c, Change::Permissions { .. }));
             if has_perm_change {
-                handle_role_permission_update(ctx, entry, guild_id, data, &config_model, user_id, is_whitelisted).await?;
+                handle_role_permission_update(ctx, entry, guild_id, data, &config_model, user_id, whitelist_level).await?;
             }
         }
         _ => {}
@@ -60,34 +60,51 @@ async fn handle_role_permission_update(
     data: &Data,
     config: &module_configs::Model,
     user_id: serenity::UserId,
-    is_whitelisted: bool,
+    whitelist_level: Option<crate::db::entities::whitelists::WhitelistLevel>,
 ) -> Result<(), Error> {
     let role_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
 
-    let mut status = if is_whitelisted { 
-        "✅ Whitelisted (No action taken)".to_string() 
-    } else { 
-        "🚨 Blocked (Revert Pending)".to_string() 
+    let guild = match guild_id.to_partial_guild(&ctx.http).await {
+        Ok(g) => g,
+        Err(_) => return Ok(()),
+    };
+    let l10n = data.l10n.get_proxy(&guild.preferred_locale.to_string());
+
+    let mut status = if let Some(level) = whitelist_level {
+        let mut args = fluent::FluentArgs::new();
+        args.set("level", format!("{:?}", level));
+        l10n.t("log-status-whitelisted", Some(&args))
+    } else {
+        l10n.t("log-status-unauthorized", None)
     };
 
-    if !is_whitelisted {
+    if whitelist_level.is_none() {
         // Punishment
-        let result = data.punishment
+        let reason = l10n.t("log-role-perm-reason-update", None);
+        let result = data
+            .punishment
             .handle_violation(
                 &ctx.http,
                 guild_id,
                 user_id,
                 ModuleType::RolePermissionProtection,
-                "Role Permissions Updated",
+                &reason,
             )
             .await?;
 
         status = match result {
-            crate::services::punishment::ViolationResult::Punished(p) => format!("🚨 Blocked & Punished ({:?})", p),
+            crate::services::punishment::ViolationResult::Punished(p) => {
+                let mut args = fluent::FluentArgs::new();
+                args.set("type", format!("{:?}", p));
+                l10n.t("log-status-punished", Some(&args))
+            }
             crate::services::punishment::ViolationResult::ViolationRecorded { current, threshold } => {
-                format!("🚨 Blocked & Violation Recorded ({}/{})", current, threshold)
-            },
-            crate::services::punishment::ViolationResult::None => "🚨 Blocked (No Punishment Configured)".to_string(),
+                let mut args = fluent::FluentArgs::new();
+                args.set("current", current);
+                args.set("threshold", threshold);
+                l10n.t("log-status-violation", Some(&args))
+            }
+            crate::services::punishment::ViolationResult::None => l10n.t("log-status-blocked", None),
         };
 
         // Revert
@@ -101,13 +118,47 @@ async fn handle_role_permission_update(
             }
 
             if let Some(p) = old_permissions {
-                let _ = guild_id.edit_role(&ctx.http, serenity::RoleId::new(role_id), serenity::EditRole::default().permissions(p)).await;
+                let revert_reason = l10n.t("log-role-perm-revert-reason", None);
+                if guild_id
+                    .edit_role(
+                        &ctx.http,
+                        serenity::RoleId::new(role_id),
+                        serenity::EditRole::default()
+                            .permissions(p)
+                            .audit_log_reason(&revert_reason),
+                    )
+                    .await
+                    .is_ok()
+                {
+                    status += &l10n.t("log-status-reverted", None);
+                } else {
+                    status += &l10n.t("log-status-revert-failed", None);
+                }
             }
         }
+    } else if let Some(level) = whitelist_level {
+        let mut args = fluent::FluentArgs::new();
+        args.set("level", format!("{:?}", level));
+        args.set("punishment", format!("{:?}", config.punishment));
+        status += &l10n.t("log-status-skipped", Some(&args));
     }
 
-    let title = if is_whitelisted { "Role Permissions Updated (Whitelisted)" } else { "Role Permissions Updated" };
-    let log_level = if is_whitelisted { LogLevel::Audit } else { LogLevel::Info };
+    let is_whitelisted = whitelist_level.is_some();
+    let title = if is_whitelisted {
+        l10n.t("log-role-perm-title-whitelisted", None)
+    } else {
+        l10n.t("log-role-perm-title-blocked", None)
+    };
+    let log_level = if is_whitelisted {
+        LogLevel::Audit
+    } else {
+        LogLevel::Warn
+    };
+
+    let mut desc_args = fluent::FluentArgs::new();
+    desc_args.set("roleId", role_id);
+    desc_args.set("userId", user_id.get());
+    let description = l10n.t("log-role-perm-desc-update", Some(&desc_args));
 
     data.logger
         .log_action(
@@ -115,17 +166,16 @@ async fn handle_role_permission_update(
             guild_id,
             Some(ModuleType::RolePermissionProtection),
             log_level,
-            title,
-            &format!(
-                "Permissions for role (<@&{}>) were modified by <@{}>.\n\n**Status**: {}",
-                role_id, user_id, status
-            ),
+            &title,
+            &description,
             vec![
-                ("User", format!("<@{}>", user_id)),
-                ("Role", format!("<@&{}>", role_id)),
+                (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
+                (&l10n.t("log-field-role", None), format!("<@&{}>", role_id)),
+                (&l10n.t("log-field-action-status", None), status),
             ],
         )
         .await?;
 
     Ok(())
 }
+

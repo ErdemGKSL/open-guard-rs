@@ -109,6 +109,13 @@ impl LocalizationManager {
         }
     }
 
+    pub fn get_proxy(self: &Arc<Self>, locale: &str) -> L10nProxy {
+        L10nProxy {
+            manager: self.clone(),
+            locale: locale.to_string(),
+        }
+    }
+
     pub fn translate(&self, locale: &str, key: &str, args: Option<&FluentArgs>) -> String {
         let lang_id = locale
             .parse::<LanguageIdentifier>()

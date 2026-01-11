@@ -23,6 +23,8 @@ pub enum ModuleType {
     RoleProtection,
     #[sea_orm(string_value = "role_permission_protection")]
     RolePermissionProtection,
+    #[sea_orm(string_value = "member_permission_protection")]
+    MemberPermissionProtection,
 }
 
 impl std::fmt::Display for ModuleType {
@@ -32,6 +34,7 @@ impl std::fmt::Display for ModuleType {
             ModuleType::ChannelPermissionProtection => write!(f, "channel_permission_protection"),
             ModuleType::RoleProtection => write!(f, "role_protection"),
             ModuleType::RolePermissionProtection => write!(f, "role_permission_protection"),
+            ModuleType::MemberPermissionProtection => write!(f, "member_permission_protection"),
         }
     }
 }
@@ -111,3 +114,7 @@ pub struct RoleProtectionModuleConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct RolePermissionProtectionModuleConfig {}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct MemberPermissionProtectionModuleConfig {}

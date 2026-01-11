@@ -37,21 +37,21 @@ pub async fn handle_audit_log(
     }
 
     // Check whitelist
-    let is_whitelisted = data.whitelist.get_whitelist_level(ctx, guild_id, user_id, ModuleType::RoleProtection).await?.is_some();
+    let whitelist_level = data.whitelist.get_whitelist_level(ctx, guild_id, user_id, ModuleType::RoleProtection).await?;
 
     // Match on the audit log action to triggers variants error
     match entry.action {
         Action::Role(RoleAction::Create) => {
-            handle_role_create(ctx, entry, guild_id, data, &config_model, user_id, is_whitelisted, &config).await?;
+            handle_role_create(ctx, entry, guild_id, data, &config_model, user_id, whitelist_level, &config).await?;
         }
         Action::Role(RoleAction::Delete) => {
-            handle_role_delete(ctx, entry, guild_id, data, &config_model, user_id, is_whitelisted, &config).await?;
+            handle_role_delete(ctx, entry, guild_id, data, &config_model, user_id, whitelist_level, &config).await?;
         }
         Action::Role(RoleAction::Update) => {
             // Only process if there are non-permission changes to avoid double handling with RolePermissionProtection
             let has_other_changes = entry.changes.iter().any(|c| !matches!(c, serenity::model::guild::audit_log::Change::Permissions { .. }));
             if has_other_changes {
-                handle_role_update(ctx, entry, guild_id, data, &config_model, user_id, is_whitelisted, &config).await?;
+                handle_role_update(ctx, entry, guild_id, data, &config_model, user_id, whitelist_level, &config).await?;
             }
         }
         _ => {}
@@ -67,50 +67,102 @@ async fn handle_role_create(
     data: &Data,
     config_model: &module_configs::Model,
     user_id: serenity::UserId,
-    is_whitelisted: bool,
+    whitelist_level: Option<crate::db::entities::whitelists::WhitelistLevel>,
     config: &RoleProtectionModuleConfig,
 ) -> Result<(), Error> {
     let role_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
     let should_punish = config.punish_when.is_empty() || config.punish_when.contains(&"create".to_string());
 
-    let mut status = if is_whitelisted { 
-        "✅ Whitelisted (No action taken)".to_string() 
+    let guild = match guild_id.to_partial_guild(&ctx.http).await {
+        Ok(g) => g,
+        Err(_) => return Ok(()),
+    };
+    let l10n = data.l10n.get_proxy(&guild.preferred_locale.to_string());
+
+    let mut status = if let Some(level) = whitelist_level {
+        let mut args = fluent::FluentArgs::new();
+        args.set("level", format!("{:?}", level));
+        l10n.t("log-status-whitelisted", Some(&args))
     } else if !should_punish {
-        "ℹ️ Protection not enabled for this action".to_string()
-    } else { 
-        "🚨 Blocked (Revert Pending)".to_string() 
+        l10n.t("log-status-not-enabled", None)
+    } else {
+        l10n.t("log-status-unauthorized", None)
     };
 
-    if !is_whitelisted && should_punish {
+    if whitelist_level.is_none() && should_punish {
         // Punishment
-        let result = data.punishment
+        let reason = l10n.t("log-role-reason-create", None);
+        let result = data
+            .punishment
             .handle_violation(
                 &ctx.http,
                 guild_id,
                 user_id,
                 ModuleType::RoleProtection,
-                "Role Created",
+                &reason,
             )
             .await?;
 
         status = match result {
-            crate::services::punishment::ViolationResult::Punished(p) => format!("🚨 **Blocked & Punished** ({:?})", p),
+            crate::services::punishment::ViolationResult::Punished(p) => {
+                let mut args = fluent::FluentArgs::new();
+                args.set("type", format!("{:?}", p));
+                l10n.t("log-status-punished", Some(&args))
+            }
             crate::services::punishment::ViolationResult::ViolationRecorded { current, threshold } => {
-                format!("🚨 **Blocked & Violation Recorded** ({}/{})", current, threshold)
-            },
-            crate::services::punishment::ViolationResult::None => "🚨 **Blocked** (No Punishment Configured)".to_string(),
+                let mut args = fluent::FluentArgs::new();
+                args.set("current", current);
+                args.set("threshold", threshold);
+                l10n.t("log-status-violation", Some(&args))
+            }
+            crate::services::punishment::ViolationResult::None => l10n.t("log-status-blocked", None),
         };
 
         // Revert
         if config_model.revert && role_id != 0 {
-            if ctx.http.delete_role(guild_id, serenity::RoleId::new(role_id), Some("Role Protection Revert")).await.is_ok() {
-                status += "\n✅ **Successfully Reverted**";
+            let revert_reason = l10n.t("log-role-revert-reason", None);
+            if ctx
+                .http
+                .delete_role(
+                    guild_id,
+                    serenity::RoleId::new(role_id),
+                    Some(&revert_reason),
+                )
+                .await
+                .is_ok()
+            {
+                status += &l10n.t("log-status-reverted", None);
+            } else {
+                status += &l10n.t("log-status-revert-failed", None);
             }
         }
+    } else if let Some(level) = whitelist_level {
+        let mut args = fluent::FluentArgs::new();
+        args.set("level", format!("{:?}", level));
+        args.set("punishment", format!("{:?}", config_model.punishment));
+        status += &l10n.t("log-status-skipped", Some(&args));
     }
 
-    let title = if is_whitelisted { "Role Created (Whitelisted)" } else if should_punish { "Role Created (Blocked)" } else { "Role Created (Logged)" };
-    let log_level = if is_whitelisted { LogLevel::Audit } else if should_punish { LogLevel::Warn } else { LogLevel::Info };
+    let is_whitelisted = whitelist_level.is_some();
+    let title = if is_whitelisted {
+        l10n.t("log-role-title-whitelisted", None)
+    } else if should_punish {
+        l10n.t("log-role-title-blocked", None)
+    } else {
+        l10n.t("log-role-title-logged", None)
+    };
+    let log_level = if is_whitelisted {
+        LogLevel::Audit
+    } else if should_punish {
+        LogLevel::Warn
+    } else {
+        LogLevel::Info
+    };
+
+    let mut desc_args = fluent::FluentArgs::new();
+    desc_args.set("roleId", role_id);
+    desc_args.set("userId", user_id.get());
+    let description = l10n.t("log-role-desc-create", Some(&desc_args));
 
     data.logger
         .log_action(
@@ -118,15 +170,12 @@ async fn handle_role_create(
             guild_id,
             Some(ModuleType::RoleProtection),
             log_level,
-            title,
-            &format!(
-                "A new role (`{}`) was created by <@{}>.",
-                role_id, user_id
-            ),
+            &title,
+            &description,
             vec![
-                ("User", format!("<@{}>", user_id)),
-                ("Role ID", role_id.to_string()),
-                ("Status", status),
+                (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
+                (&l10n.t("log-field-role-id", None), role_id.to_string()),
+                (&l10n.t("log-field-action-status", None), status),
             ],
         )
         .await?;
@@ -141,38 +190,55 @@ async fn handle_role_delete(
     data: &Data,
     config_model: &module_configs::Model,
     user_id: serenity::UserId,
-    is_whitelisted: bool,
+    whitelist_level: Option<crate::db::entities::whitelists::WhitelistLevel>,
     config: &RoleProtectionModuleConfig,
 ) -> Result<(), Error> {
     let role_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
     let should_punish = config.punish_when.is_empty() || config.punish_when.contains(&"delete".to_string());
 
-    let mut status = if is_whitelisted { 
-        "✅ Whitelisted (No action taken)".to_string() 
+    let guild = match guild_id.to_partial_guild(&ctx.http).await {
+        Ok(g) => g,
+        Err(_) => return Ok(()),
+    };
+    let l10n = data.l10n.get_proxy(&guild.preferred_locale.to_string());
+
+    let mut status = if let Some(level) = whitelist_level {
+        let mut args = fluent::FluentArgs::new();
+        args.set("level", format!("{:?}", level));
+        l10n.t("log-status-whitelisted", Some(&args))
     } else if !should_punish {
-        "ℹ️ Protection not enabled for this action".to_string()
-    } else { 
-        "🚨 Blocked (Revert Pending)".to_string() 
+        l10n.t("log-status-not-enabled", None)
+    } else {
+        l10n.t("log-status-unauthorized", None)
     };
 
-    if !is_whitelisted && should_punish {
+    if whitelist_level.is_none() && should_punish {
         // Punishment
-        let result = data.punishment
+        let reason = l10n.t("log-role-reason-delete", None);
+        let result = data
+            .punishment
             .handle_violation(
                 &ctx.http,
                 guild_id,
                 user_id,
                 ModuleType::RoleProtection,
-                "Role Deleted",
+                &reason,
             )
             .await?;
 
         status = match result {
-            crate::services::punishment::ViolationResult::Punished(p) => format!("🚨 **Blocked & Punished** ({:?})", p),
+            crate::services::punishment::ViolationResult::Punished(p) => {
+                let mut args = fluent::FluentArgs::new();
+                args.set("type", format!("{:?}", p));
+                l10n.t("log-status-punished", Some(&args))
+            }
             crate::services::punishment::ViolationResult::ViolationRecorded { current, threshold } => {
-                format!("🚨 **Blocked & Violation Recorded** ({}/{})", current, threshold)
-            },
-            crate::services::punishment::ViolationResult::None => "🚨 **Blocked** (No Punishment Configured)".to_string(),
+                let mut args = fluent::FluentArgs::new();
+                args.set("current", current);
+                args.set("threshold", threshold);
+                l10n.t("log-status-violation", Some(&args))
+            }
+            crate::services::punishment::ViolationResult::None => l10n.t("log-status-blocked", None),
         };
 
         // Revert
@@ -194,16 +260,43 @@ async fn handle_role_delete(
                     .hoist(role.hoist())
                     .mentionable(role.mentionable())
                     .permissions(role.permissions);
-                
+
                 if guild_id.create_role(&ctx.http, edit_role).await.is_ok() {
-                    status += "\n✅ **Successfully Reverted**";
+                    status += &l10n.t("log-status-reverted", None);
+                } else {
+                    status += &l10n.t("log-status-revert-failed", None);
                 }
+            } else {
+                status += &l10n.t("log-status-revert-failed", None);
             }
         }
+    } else if let Some(level) = whitelist_level {
+        let mut args = fluent::FluentArgs::new();
+        args.set("level", format!("{:?}", level));
+        args.set("punishment", format!("{:?}", config_model.punishment));
+        status += &l10n.t("log-status-skipped", Some(&args));
     }
 
-    let title = if is_whitelisted { "Role Deleted (Whitelisted)" } else if should_punish { "Role Deleted (Blocked)" } else { "Role Deleted (Logged)" };
-    let log_level = if is_whitelisted { LogLevel::Audit } else if should_punish { LogLevel::Error } else { LogLevel::Info };
+    let is_whitelisted = whitelist_level.is_some();
+    let title = if is_whitelisted {
+        l10n.t("log-role-title-whitelisted", None)
+    } else if should_punish {
+        l10n.t("log-role-title-blocked", None)
+    } else {
+        l10n.t("log-role-title-logged", None)
+    };
+    let log_level = if is_whitelisted {
+        LogLevel::Audit
+    } else if should_punish {
+        LogLevel::Error
+    } else {
+        LogLevel::Info
+    };
+
+    let mut desc_args = fluent::FluentArgs::new();
+    desc_args.set("roleId", role_id);
+    desc_args.set("userId", user_id.get());
+    let description = l10n.t("log-role-desc-delete", Some(&desc_args));
 
     data.logger
         .log_action(
@@ -211,15 +304,12 @@ async fn handle_role_delete(
             guild_id,
             Some(ModuleType::RoleProtection),
             log_level,
-            title,
-            &format!(
-                "A role (`{}`) was deleted by <@{}>.",
-                role_id, user_id
-            ),
+            &title,
+            &description,
             vec![
-                ("User", format!("<@{}>", user_id)),
-                ("Role ID", role_id.to_string()),
-                ("Status", status),
+                (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
+                (&l10n.t("log-field-role-id", None), role_id.to_string()),
+                (&l10n.t("log-field-action-status", None), status),
             ],
         )
         .await?;
@@ -234,77 +324,137 @@ async fn handle_role_update(
     data: &Data,
     config_model: &module_configs::Model,
     user_id: serenity::UserId,
-    is_whitelisted: bool,
+    whitelist_level: Option<crate::db::entities::whitelists::WhitelistLevel>,
     config: &RoleProtectionModuleConfig,
 ) -> Result<(), Error> {
     let role_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
     let should_punish = config.punish_when.is_empty() || config.punish_when.contains(&"update".to_string());
 
-    let mut status = if is_whitelisted { 
-        "✅ Whitelisted (No action taken)".to_string() 
+    let guild = match guild_id.to_partial_guild(&ctx.http).await {
+        Ok(g) => g,
+        Err(_) => return Ok(()),
+    };
+    let l10n = data.l10n.get_proxy(&guild.preferred_locale.to_string());
+
+    let mut status = if let Some(level) = whitelist_level {
+        let mut args = fluent::FluentArgs::new();
+        args.set("level", format!("{:?}", level));
+        l10n.t("log-status-whitelisted", Some(&args))
     } else if !should_punish {
-        "ℹ️ Protection not enabled for this action".to_string()
-    } else { 
-        "🚨 Blocked (Revert Pending)".to_string() 
+        l10n.t("log-status-not-enabled", None)
+    } else {
+        l10n.t("log-status-unauthorized", None)
     };
 
-    if !is_whitelisted && should_punish {
+    if whitelist_level.is_none() && should_punish {
         // Punishment
-        let result = data.punishment
+        let reason = l10n.t("log-role-reason-update", None);
+        let result = data
+            .punishment
             .handle_violation(
                 &ctx.http,
                 guild_id,
                 user_id,
                 ModuleType::RoleProtection,
-                "Role Updated",
+                &reason,
             )
             .await?;
 
         status = match result {
-            crate::services::punishment::ViolationResult::Punished(p) => format!("🚨 **Blocked & Punished** ({:?})", p),
+            crate::services::punishment::ViolationResult::Punished(p) => {
+                let mut args = fluent::FluentArgs::new();
+                args.set("type", format!("{:?}", p));
+                l10n.t("log-status-punished", Some(&args))
+            }
             crate::services::punishment::ViolationResult::ViolationRecorded { current, threshold } => {
-                format!("🚨 **Blocked & Violation Recorded** ({}/{})", current, threshold)
-            },
-            crate::services::punishment::ViolationResult::None => "🚨 **Blocked** (No Punishment Configured)".to_string(),
+                let mut args = fluent::FluentArgs::new();
+                args.set("current", current);
+                args.set("threshold", threshold);
+                l10n.t("log-status-violation", Some(&args))
+            }
+            crate::services::punishment::ViolationResult::None => l10n.t("log-status-blocked", None),
         };
 
         // Revert
         if config_model.revert && role_id != 0 {
             let mut edit_role = serenity::EditRole::default();
+            let mut change_count = 0;
             for change in &entry.changes {
                 match change {
                     serenity::model::guild::audit_log::Change::Name { old, .. } => {
                         if let Some(n) = old {
                             edit_role = edit_role.name(n);
+                            change_count += 1;
                         }
                     }
                     serenity::model::guild::audit_log::Change::Color { old, .. } => {
                         if let Some(c) = old {
                             edit_role = edit_role.colour(*c as u32);
+                            change_count += 1;
                         }
                     }
                     serenity::model::guild::audit_log::Change::Hoist { old, .. } => {
                         if let Some(h) = old {
                             edit_role = edit_role.hoist(*h);
+                            change_count += 1;
                         }
                     }
                     serenity::model::guild::audit_log::Change::Mentionable { old, .. } => {
                         if let Some(m) = old {
                             edit_role = edit_role.mentionable(*m);
+                            change_count += 1;
                         }
                     }
                     _ => {}
                 }
             }
 
-            if guild_id.edit_role(&ctx.http, serenity::RoleId::new(role_id), edit_role).await.is_ok() {
-                status += "\n✅ **Successfully Reverted**";
+            if change_count > 0 {
+                let revert_reason = l10n.t("log-role-revert-reason", None);
+                if guild_id
+                    .edit_role(
+                        &ctx.http,
+                        serenity::RoleId::new(role_id),
+                        edit_role.audit_log_reason(&revert_reason),
+                    )
+                    .await
+                    .is_ok()
+                {
+                    status += &l10n.t("log-status-reverted", None);
+                } else {
+                    status += &l10n.t("log-status-revert-failed", None);
+                }
+            } else {
+                status += &l10n.t("log-status-no-revert", None);
             }
         }
+    } else if let Some(level) = whitelist_level {
+        let mut args = fluent::FluentArgs::new();
+        args.set("level", format!("{:?}", level));
+        args.set("punishment", format!("{:?}", config_model.punishment));
+        status += &l10n.t("log-status-skipped", Some(&args));
     }
 
-    let title = if is_whitelisted { "Role Updated (Whitelisted)" } else if should_punish { "Role Updated (Blocked)" } else { "Role Updated (Logged)" };
-    let log_level = if is_whitelisted { LogLevel::Audit } else if should_punish { LogLevel::Info } else { LogLevel::Info };
+    let is_whitelisted = whitelist_level.is_some();
+    let title = if is_whitelisted {
+        l10n.t("log-role-title-whitelisted", None)
+    } else if should_punish {
+        l10n.t("log-role-title-blocked", None)
+    } else {
+        l10n.t("log-role-title-logged", None)
+    };
+    let log_level = if is_whitelisted {
+        LogLevel::Audit
+    } else if should_punish {
+        LogLevel::Info
+    } else {
+        LogLevel::Info
+    };
+
+    let mut desc_args = fluent::FluentArgs::new();
+    desc_args.set("roleId", role_id);
+    desc_args.set("userId", user_id.get());
+    let description = l10n.t("log-role-desc-update", Some(&desc_args));
 
     data.logger
         .log_action(
@@ -312,19 +462,17 @@ async fn handle_role_update(
             guild_id,
             Some(ModuleType::RoleProtection),
             log_level,
-            title,
-            &format!(
-                "A role (<@&{}>) was modified by <@{}>.",
-                role_id, user_id
-            ),
+            &title,
+            &description,
             vec![
-                ("User", format!("<@{}>", user_id)),
-                ("Role", format!("<@&{}>", role_id)),
-                ("Status", status),
+                (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
+                (&l10n.t("log-field-role", None), format!("<@&{}>", role_id)),
+                (&l10n.t("log-field-action-status", None), status),
             ],
         )
         .await?;
 
     Ok(())
 }
+
 

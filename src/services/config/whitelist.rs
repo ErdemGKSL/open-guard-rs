@@ -125,6 +125,7 @@ pub async fn build_whitelist_menu(
             ModuleType::ChannelPermissionProtection => l10n.t("config-whitelist-channel-permission-protection-header", None),
             ModuleType::RoleProtection => l10n.t("config-whitelist-role-protection-header", None),
             ModuleType::RolePermissionProtection => l10n.t("config-whitelist-role-permission-protection-header", None),
+            ModuleType::MemberPermissionProtection => l10n.t("config-whitelist-member-permission-protection-header", None),
         }
     } else {
         l10n.t("config-whitelist-global-header", None)
