@@ -19,11 +19,14 @@ struct Args {
 }
 
 // Custom user data passed to all command functions
+#[derive(Clone)]
 pub struct Data {
     pub db: DatabaseConnection,
     pub l10n: Arc<services::localization::LocalizationManager>,
     pub logger: Arc<services::logger::LoggerService>,
     pub punishment: Arc<services::punishment::PunishmentService>,
+    pub whitelist: Arc<services::whitelist::WhitelistService>,
+    pub cache: Arc<services::cache::ObjectCacheService>,
     pub module_definitions: Vec<modules::ModuleDefinition>,
 }
 
@@ -68,6 +71,12 @@ async fn main() -> anyhow::Result<()> {
 
     // Initialize punishment service
     let punishment = Arc::new(services::punishment::PunishmentService::new(db.clone()));
+
+    // Initialize whitelist service
+    let whitelist = Arc::new(services::whitelist::WhitelistService::new(db.clone()));
+
+    // Initialize object cache service
+    let cache = Arc::new(services::cache::ObjectCacheService::new());
 
     // Load and translate commands
     let mut commands = modules::commands();
@@ -128,6 +137,8 @@ async fn main() -> anyhow::Result<()> {
             l10n,
             logger,
             punishment,
+            whitelist,
+            cache,
             module_definitions: modules::definitions(),
         }) as _)
         .await

@@ -19,6 +19,21 @@ pub enum ModuleType {
     ChannelProtection,
     #[sea_orm(string_value = "channel_permission_protection")]
     ChannelPermissionProtection,
+    #[sea_orm(string_value = "role_protection")]
+    RoleProtection,
+    #[sea_orm(string_value = "role_permission_protection")]
+    RolePermissionProtection,
+}
+
+impl std::fmt::Display for ModuleType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ModuleType::ChannelProtection => write!(f, "channel_protection"),
+            ModuleType::ChannelPermissionProtection => write!(f, "channel_permission_protection"),
+            ModuleType::RoleProtection => write!(f, "role_protection"),
+            ModuleType::RolePermissionProtection => write!(f, "role_permission_protection"),
+        }
+    }
 }
 
 #[derive(
@@ -81,6 +96,20 @@ pub struct ChannelProtectionModuleConfig {
 pub struct ChannelPermissionProtectionModuleConfig {
     #[serde(default)]
     pub ignore_private_channels: bool,
+    #[serde(default)]
+    pub punish_when: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct RoleProtectionModuleConfig {
+    #[serde(default)]
+    pub punish_when: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct RolePermissionProtectionModuleConfig {
     #[serde(default)]
     pub punish_when: Vec<String>,
 }

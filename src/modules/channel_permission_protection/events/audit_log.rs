@@ -35,6 +35,9 @@ pub async fn handle_audit_log(
         return Ok(());
     }
 
+    // Check whitelist
+    let is_whitelisted = data.whitelist.get_whitelist_level(ctx, guild_id, user_id, ModuleType::ChannelPermissionProtection).await?.is_some();
+
     // Check if we should ignore private channels (ownership check)
     if config.ignore_private_channels {
         let channel_id = entry.options.as_ref().and_then(|o| o.channel_id);
@@ -42,7 +45,7 @@ pub async fn handle_audit_log(
             if let Ok(serenity::Channel::Guild(channel)) = ctx.http.get_channel(channel_id).await {
                 let is_owner = channel.permission_overwrites.iter().any(|overwrite| {
                     if let serenity::PermissionOverwriteType::Member(id) = overwrite.kind {
-                        id == user_id && overwrite.allow.contains(serenity::Permissions::MANAGE_CHANNELS)
+                        id == user_id && overwrite.allow.contains(serenity::Permissions::MANAGE_ROLES)
                     } else {
                         false
                     }
@@ -59,17 +62,17 @@ pub async fn handle_audit_log(
     match entry.action {
         Action::ChannelOverwrite(ChannelOverwriteAction::Create) => {
             if config.punish_when.contains(&"create".to_string()) {
-                handle_overwrite_create(ctx, entry, guild_id, data, &config_model, user_id).await?;
+                handle_overwrite_create(ctx, entry, guild_id, data, &config_model, user_id, is_whitelisted).await?;
             }
         }
         Action::ChannelOverwrite(ChannelOverwriteAction::Delete) => {
             if config.punish_when.contains(&"delete".to_string()) {
-                handle_overwrite_delete(ctx, entry, guild_id, data, &config_model, user_id).await?;
+                handle_overwrite_delete(ctx, entry, guild_id, data, &config_model, user_id, is_whitelisted).await?;
             }
         }
         Action::ChannelOverwrite(ChannelOverwriteAction::Update) => {
             if config.punish_when.contains(&"update".to_string()) {
-                handle_overwrite_update(ctx, entry, guild_id, data, &config_model, user_id).await?;
+                handle_overwrite_update(ctx, entry, guild_id, data, &config_model, user_id, is_whitelisted).await?;
             }
         }
         _ => {}
@@ -85,43 +88,63 @@ async fn handle_overwrite_create(
     data: &Data,
     config: &module_configs::Model,
     user_id: serenity::UserId,
+    is_whitelisted: bool,
 ) -> Result<(), Error> {
     let channel_id = entry.options.as_ref().and_then(|o| o.channel_id).map(|id| id.get()).unwrap_or(0);
     let target_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
 
-    // Punishment
-    data.punishment
-        .handle_violation(
-            &ctx.http,
-            guild_id,
-            user_id,
-            ModuleType::ChannelPermissionProtection,
-            "Channel Permission Overwrite Created",
-        )
-        .await?;
+    let mut status = if is_whitelisted { 
+        "✅ Whitelisted (No action taken)".to_string() 
+    } else { 
+        "🚨 Blocked (Revert Pending)".to_string() 
+    };
 
-    // Revert
-    if config.revert && channel_id != 0 && target_id != 0 {
-        let _ = ctx
-            .http
-            .delete_permission(
-                serenity::ChannelId::new(channel_id),
-                serenity::TargetId::new(target_id),
-                Some("Channel Permission Protection Revert"),
+    if !is_whitelisted {
+        // Punishment
+        let result = data.punishment
+            .handle_violation(
+                &ctx.http,
+                guild_id,
+                user_id,
+                ModuleType::ChannelPermissionProtection,
+                "Channel Permission Overwrite Created",
             )
-            .await;
+            .await?;
+
+        status = match result {
+            crate::services::punishment::ViolationResult::Punished(p) => format!("🚨 Blocked & Punished ({:?})", p),
+            crate::services::punishment::ViolationResult::ViolationRecorded { current, threshold } => {
+                format!("🚨 Blocked & Violation Recorded ({}/{})", current, threshold)
+            },
+            crate::services::punishment::ViolationResult::None => "🚨 Blocked (No Punishment Configured)".to_string(),
+        };
+
+        // Revert
+        if config.revert && channel_id != 0 && target_id != 0 {
+            let _ = ctx
+                .http
+                .delete_permission(
+                    serenity::ChannelId::new(channel_id),
+                    serenity::TargetId::new(target_id),
+                    Some("Channel Permission Protection Revert"),
+                )
+                .await;
+        }
     }
+
+    let title = if is_whitelisted { "Permission Overwrite Created (Whitelisted)" } else { "Permission Overwrite Created" };
+    let log_level = if is_whitelisted { LogLevel::Audit } else { LogLevel::Warn };
 
     data.logger
         .log_action(
             &ctx.http,
             guild_id,
             Some(ModuleType::ChannelPermissionProtection),
-            LogLevel::Warn,
-            "Channel Permission Overwrite Created",
+            log_level,
+            title,
             &format!(
-                "A permission overwrite in channel (<#{}>) was created by <@{}>.",
-                channel_id, user_id
+                "A permission overwrite in channel (<#{}>) was created by <@{}>.\n\n**Status**: {}",
+                channel_id, user_id, status
             ),
             vec![
                 ("User", format!("<@{}>", user_id)),
@@ -140,79 +163,99 @@ async fn handle_overwrite_delete(
     data: &Data,
     config: &module_configs::Model,
     user_id: serenity::UserId,
+    is_whitelisted: bool,
 ) -> Result<(), Error> {
     let channel_id = entry.options.as_ref().and_then(|o| o.channel_id).map(|id| id.get()).unwrap_or(0);
     let target_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
 
-    // Punishment
-    data.punishment
-        .handle_violation(
-            &ctx.http,
-            guild_id,
-            user_id,
-            ModuleType::ChannelPermissionProtection,
-            "Channel Permission Overwrite Deleted",
-        )
-        .await?;
+    let mut status = if is_whitelisted { 
+        "✅ Whitelisted (No action taken)".to_string() 
+    } else { 
+        "🚨 Blocked (Revert Pending)".to_string() 
+    };
 
-    // Revert
-    if config.revert && channel_id != 0 && target_id != 0 {
-        let mut allow = serenity::Permissions::empty();
-        let mut deny = serenity::Permissions::empty();
+    if !is_whitelisted {
+        // Punishment
+        let result = data.punishment
+            .handle_violation(
+                &ctx.http,
+                guild_id,
+                user_id,
+                ModuleType::ChannelPermissionProtection,
+                "Channel Permission Overwrite Deleted",
+            )
+            .await?;
 
-        for change in &entry.changes {
-            match change {
-                serenity::model::guild::audit_log::Change::Allow { old, .. } => {
-                    if let Some(p) = old {
-                        allow = *p;
-                    }
-                }
-                serenity::model::guild::audit_log::Change::Deny { old, .. } => {
-                    if let Some(p) = old {
-                        deny = *p;
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        let kind_num = if let Some(options) = &entry.options {
-            match options.kind.as_ref().map(|s| s.as_str()) {
-                Some("role") => 0,
-                Some("member") => 1,
-                _ => 0,
-            }
-        } else {
-            0
+        status = match result {
+            crate::services::punishment::ViolationResult::Punished(p) => format!("🚨 Blocked & Punished ({:?})", p),
+            crate::services::punishment::ViolationResult::ViolationRecorded { current, threshold } => {
+                format!("🚨 Blocked & Violation Recorded ({}/{})", current, threshold)
+            },
+            crate::services::punishment::ViolationResult::None => "🚨 Blocked (No Punishment Configured)".to_string(),
         };
 
-        let map = serde_json::json!({
-            "allow": allow.bits(),
-            "deny": deny.bits(),
-            "type": kind_num,
-        });
+        // Revert
+        if config.revert && channel_id != 0 && target_id != 0 {
+            let mut allow = serenity::Permissions::empty();
+            let mut deny = serenity::Permissions::empty();
 
-        let _ = ctx
-            .http
-            .create_permission(
-                serenity::ChannelId::new(channel_id),
-                serenity::TargetId::new(target_id),
-                &map,
-                Some("Channel Permission Protection Revert"),
-            )
-            .await;
+            for change in &entry.changes {
+                match change {
+                    serenity::model::guild::audit_log::Change::Allow { old, .. } => {
+                        if let Some(p) = old {
+                            allow = *p;
+                        }
+                    }
+                    serenity::model::guild::audit_log::Change::Deny { old, .. } => {
+                        if let Some(p) = old {
+                            deny = *p;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            let kind_num = if let Some(options) = &entry.options {
+                match options.kind.as_ref().map(|s| s.as_str()) {
+                    Some("role") => 0,
+                    Some("member") => 1,
+                    _ => 0,
+                }
+            } else {
+                0
+            };
+
+            let map = serde_json::json!({
+                "allow": allow.bits(),
+                "deny": deny.bits(),
+                "type": kind_num,
+            });
+
+            let _ = ctx
+                .http
+                .create_permission(
+                    serenity::ChannelId::new(channel_id),
+                    serenity::TargetId::new(target_id),
+                    &map,
+                    Some("Channel Permission Protection Revert"),
+                )
+                .await;
+        }
     }
+
+    let title = if is_whitelisted { "Permission Overwrite Deleted (Whitelisted)" } else { "Permission Overwrite Deleted" };
+    let log_level = if is_whitelisted { LogLevel::Audit } else { LogLevel::Error };
 
     data.logger
         .log_action(
             &ctx.http,
             guild_id,
             Some(ModuleType::ChannelPermissionProtection),
-            LogLevel::Error,
-            "Channel Permission Overwrite Deleted",
+            log_level,
+            title,
             &format!(
-                "A permission overwrite in channel (<#{}>) was deleted by <@{}>.",
-                channel_id, user_id
+                "A permission overwrite in channel (<#{}>) was deleted by <@{}>.\n\n**Status**: {}",
+                channel_id, user_id, status
             ),
             vec![
                 ("User", format!("<@{}>", user_id)),
@@ -231,95 +274,115 @@ async fn handle_overwrite_update(
     data: &Data,
     config: &module_configs::Model,
     user_id: serenity::UserId,
+    is_whitelisted: bool,
 ) -> Result<(), Error> {
     let channel_id = entry.options.as_ref().and_then(|o| o.channel_id).map(|id| id.get()).unwrap_or(0);
     let target_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
 
-    // Punishment
-    data.punishment
-        .handle_violation(
-            &ctx.http,
-            guild_id,
-            user_id,
-            ModuleType::ChannelPermissionProtection,
-            "Channel Permission Overwrite Updated",
-        )
-        .await?;
+    let mut status = if is_whitelisted { 
+        "✅ Whitelisted (No action taken)".to_string() 
+    } else { 
+        "🚨 Blocked (Revert Pending)".to_string() 
+    };
 
-    // Revert
-    if config.revert && channel_id != 0 && target_id != 0 {
-        // We need to fetch current permissions and apply changes back
-        let mut allow = None;
-        let mut deny = None;
+    if !is_whitelisted {
+        // Punishment
+        let result = data.punishment
+            .handle_violation(
+                &ctx.http,
+                guild_id,
+                user_id,
+                ModuleType::ChannelPermissionProtection,
+                "Channel Permission Overwrite Updated",
+            )
+            .await?;
 
-        for change in &entry.changes {
-            match change {
-                serenity::model::guild::audit_log::Change::Allow { old, .. } => {
-                    allow = *old;
-                }
-                serenity::model::guild::audit_log::Change::Deny { old, .. } => {
-                    deny = *old;
-                }
-                _ => {}
-            }
-        }
+        status = match result {
+            crate::services::punishment::ViolationResult::Punished(p) => format!("🚨 Blocked & Punished ({:?})", p),
+            crate::services::punishment::ViolationResult::ViolationRecorded { current, threshold } => {
+                format!("🚨 Blocked & Violation Recorded ({}/{})", current, threshold)
+            },
+            crate::services::punishment::ViolationResult::None => "🚨 Blocked (No Punishment Configured)".to_string(),
+        };
 
-        if allow.is_some() || deny.is_some() {
-            // Get current permissions from the channel to fill the missing one
-            let channel = ctx.http.get_channel(serenity::GenericChannelId::new(channel_id)).await;
-            if let Ok(serenity::Channel::Guild(channel)) = channel {
-                let current_overwrite = channel.permission_overwrites.iter().find(|o| match o.kind {
-                    serenity::PermissionOverwriteType::Role(id) => id.get() == target_id,
-                    serenity::PermissionOverwriteType::Member(id) => id.get() == target_id,
-                    _ => false,
-                });
+        // Revert
+        if config.revert && channel_id != 0 && target_id != 0 {
+            // We need to fetch current permissions and apply changes back
+            let mut allow = None;
+            let mut deny = None;
 
-                let final_allow = allow.unwrap_or_else(|| {
-                    current_overwrite.map(|o| o.allow).unwrap_or_else(serenity::Permissions::empty)
-                });
-                let final_deny = deny.unwrap_or_else(|| {
-                    current_overwrite.map(|o| o.deny).unwrap_or_else(serenity::Permissions::empty)
-                });
-
-                let kind_num = if let Some(options) = &entry.options {
-                    match options.kind.as_ref().map(|s| s.as_str()) {
-                        Some("role") => 0,
-                        Some("member") => 1,
-                        _ => 0,
+            for change in &entry.changes {
+                match change {
+                    serenity::model::guild::audit_log::Change::Allow { old, .. } => {
+                        allow = *old;
                     }
-                } else {
-                    0
-                };
+                    serenity::model::guild::audit_log::Change::Deny { old, .. } => {
+                        deny = *old;
+                    }
+                    _ => {}
+                }
+            }
 
-                let map = serde_json::json!({
-                    "allow": final_allow.bits(),
-                    "deny": final_deny.bits(),
-                    "type": kind_num,
-                });
+            if allow.is_some() || deny.is_some() {
+                // Get current permissions from the channel to fill the missing one
+                let channel = ctx.http.get_channel(serenity::GenericChannelId::new(channel_id)).await;
+                if let Ok(serenity::Channel::Guild(channel)) = channel {
+                    let current_overwrite = channel.permission_overwrites.iter().find(|o| match o.kind {
+                        serenity::PermissionOverwriteType::Role(id) => id.get() == target_id,
+                        serenity::PermissionOverwriteType::Member(id) => id.get() == target_id,
+                        _ => false,
+                    });
 
-                let _ = ctx
-                    .http
-                    .create_permission(
-                        serenity::ChannelId::new(channel_id),
-                        serenity::TargetId::new(target_id),
-                        &map,
-                        Some("Channel Permission Protection Revert"),
-                    )
-                    .await;
+                    let final_allow = allow.unwrap_or_else(|| {
+                        current_overwrite.map(|o| o.allow).unwrap_or_else(serenity::Permissions::empty)
+                    });
+                    let final_deny = deny.unwrap_or_else(|| {
+                        current_overwrite.map(|o| o.deny).unwrap_or_else(serenity::Permissions::empty)
+                    });
+
+                    let kind_num = if let Some(options) = &entry.options {
+                        match options.kind.as_ref().map(|s| s.as_str()) {
+                            Some("role") => 0,
+                            Some("member") => 1,
+                            _ => 0,
+                        }
+                    } else {
+                        0
+                    };
+
+                    let map = serde_json::json!({
+                        "allow": final_allow.bits(),
+                        "deny": final_deny.bits(),
+                        "type": kind_num,
+                    });
+
+                    let _ = ctx
+                        .http
+                        .create_permission(
+                            serenity::ChannelId::new(channel_id),
+                            serenity::TargetId::new(target_id),
+                            &map,
+                            Some("Channel Permission Protection Revert"),
+                        )
+                        .await;
+                }
             }
         }
     }
+
+    let title = if is_whitelisted { "Permission Overwrite Updated (Whitelisted)" } else { "Permission Overwrite Updated" };
+    let log_level = if is_whitelisted { LogLevel::Audit } else { LogLevel::Info };
 
     data.logger
         .log_action(
             &ctx.http,
             guild_id,
             Some(ModuleType::ChannelPermissionProtection),
-            LogLevel::Info,
-            "Channel Permission Overwrite Updated",
+            log_level,
+            title,
             &format!(
-                "A permission overwrite in channel (<#{}>) was modified by <@{}>.",
-                channel_id, user_id
+                "A permission overwrite in channel (<#{}>) was modified by <@{}>.\n\n**Status**: {}",
+                channel_id, user_id, status
             ),
             vec![
                 ("User", format!("<@{}>", user_id)),

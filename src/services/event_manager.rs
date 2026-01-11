@@ -1,6 +1,8 @@
 use crate::Data;
 use crate::modules::channel_protection;
 use crate::modules::channel_permission_protection;
+use crate::modules::role_protection;
+use crate::modules::role_permission_protection;
 use poise::serenity_prelude as serenity;
 use tracing::{error, info};
 
@@ -25,31 +27,96 @@ impl serenity::EventHandler for Handler {
             serenity::FullEvent::GuildAuditLogEntryCreate {
                 entry, guild_id, ..
             } => {
-                // Get our data from the context
-                let data = ctx.data::<Data>();
+                let data = ctx.data::<Data>().clone();
+                let entry = entry.clone();
+                let guild_id = *guild_id;
+                let ctx = ctx.clone();
 
-                if let Err(e) = channel_protection::events::audit_log::handle_audit_log(
-                    ctx, entry, *guild_id, &data,
-                )
-                .await
+                // Channel Protection
                 {
-                    error!("Error handling audit log for channel protection: {:?}", e);
+                    let ctx = ctx.clone();
+                    let entry = entry.clone();
+                    let data = data.clone();
+                    tokio::spawn(async move {
+                        if let Err(e) = channel_protection::events::audit_log::handle_audit_log(
+                            &ctx, &entry, guild_id, &data,
+                        )
+                        .await
+                        {
+                            error!("Error handling audit log for channel protection: {:?}", e);
+                        }
+                    });
                 }
 
-                if let Err(e) = channel_permission_protection::events::audit_log::handle_audit_log(
-                    ctx, entry, *guild_id, &data,
-                )
-                .await
+                // Channel Permission Protection
                 {
-                    error!("Error handling audit log for channel permission protection: {:?}", e);
+                    let ctx = ctx.clone();
+                    let entry = entry.clone();
+                    let data = data.clone();
+                    tokio::spawn(async move {
+                        if let Err(e) = channel_permission_protection::events::audit_log::handle_audit_log(
+                            &ctx, &entry, guild_id, &data,
+                        )
+                        .await
+                        {
+                            error!("Error handling audit log for channel permission protection: {:?}", e);
+                        }
+                    });
+                }
+
+                // Role Protection
+                {
+                    let ctx = ctx.clone();
+                    let entry = entry.clone();
+                    let data = data.clone();
+                    tokio::spawn(async move {
+                        if let Err(e) = role_protection::events::audit_log::handle_audit_log(
+                            &ctx, &entry, guild_id, &data,
+                        )
+                        .await
+                        {
+                            error!("Error handling audit log for role protection: {:?}", e);
+                        }
+                    });
+                }
+
+                // Role Permission Protection
+                {
+                    let ctx = ctx.clone();
+                    let entry = entry.clone();
+                    let data = data.clone();
+                    tokio::spawn(async move {
+                        if let Err(e) = role_permission_protection::events::audit_log::handle_audit_log(
+                            &ctx, &entry, guild_id, &data,
+                        )
+                        .await
+                        {
+                            error!("Error handling audit log for role permission protection: {:?}", e);
+                        }
+                    });
                 }
             }
             serenity::FullEvent::InteractionCreate { interaction, .. } => {
                 if let serenity::Interaction::Component(component_interaction) = interaction {
+                    let data = ctx.data::<Data>().clone();
+                    let ctx = ctx.clone();
+                    let component_interaction = component_interaction.clone();
+                    
+                    tokio::spawn(async move {
+                        if let Err(e) = crate::services::config::handle_interaction(&ctx, &component_interaction, &data).await {
+                            error!("Error handling component interaction: {:?}", e);
+                        }
+                    });
+                }
+            }
+            serenity::FullEvent::ChannelDelete { channel, .. } => {
+                let data = ctx.data::<Data>();
+                data.cache.store_channel(channel.base.guild_id, channel.clone());
+            }
+            serenity::FullEvent::GuildRoleDelete { guild_id, removed_role_data_if_available, .. } => {
+                if let Some(role) = removed_role_data_if_available {
                     let data = ctx.data::<Data>();
-                    if let Err(e) = crate::services::config::handle_interaction(ctx, component_interaction, &data).await {
-                        error!("Error handling component interaction: {:?}", e);
-                    }
+                    data.cache.store_role(*guild_id, role.clone());
                 }
             }
             _ => {}

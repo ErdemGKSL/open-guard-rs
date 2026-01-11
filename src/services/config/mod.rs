@@ -7,6 +7,7 @@ use sea_orm::{EntityTrait, ActiveModelTrait, Set};
 
 pub mod builders;
 pub mod modules;
+pub mod whitelist;
 
 pub use builders::*;
 
@@ -85,6 +86,12 @@ pub async fn build_main_menu(
         l10n.t("config-select-jail-role-placeholder", None),
     ));
 
+    // Whitelists Section
+    inner_components.push(serenity::CreateContainerComponent::Separator(
+        serenity::CreateSeparator::new(false),
+    ));
+    inner_components.push(create_whitelist_section("config_whitelist_view_global".to_string(), l10n));
+
     // Modules Section
     inner_components.extend(create_header(l10n.t("config-modules-header", None), true));
 
@@ -99,6 +106,16 @@ pub async fn build_main_menu(
             "ChannelPermissionProtection",
         )
         .description(l10n.t("config-channel-permission-protection-desc", None)),
+        serenity::CreateSelectMenuOption::new(
+            l10n.t("config-role-protection-label", None),
+            "RoleProtection",
+        )
+        .description(l10n.t("config-role-protection-desc", None)),
+        serenity::CreateSelectMenuOption::new(
+            l10n.t("config-role-permission-protection-label", None),
+            "RolePermissionProtection",
+        )
+        .description(l10n.t("config-role-permission-protection-desc", None)),
     ];
 
     inner_components.push(create_select_menu_row(
@@ -140,6 +157,8 @@ pub async fn build_module_menu(
     let name = match module {
         ModuleType::ChannelProtection => l10n.t("config-channel-protection-label", None),
         ModuleType::ChannelPermissionProtection => l10n.t("config-channel-permission-protection-label", None),
+        ModuleType::RoleProtection => l10n.t("config-role-protection-label", None),
+        ModuleType::RolePermissionProtection => l10n.t("config-role-permission-protection-label", None),
     };
 
     let mut inner_components = create_module_config_payload(
@@ -153,7 +172,6 @@ pub async fn build_module_menu(
         l10n,
     );
 
-    // Append module-specific UI
     if module == ModuleType::ChannelProtection {
         let cp_config: ChannelProtectionModuleConfig = serde_json::from_value(m_config.config).unwrap_or_default();
         inner_components.push(serenity::CreateContainerComponent::Separator(serenity::CreateSeparator::new(true)));
@@ -162,7 +180,19 @@ pub async fn build_module_menu(
         let cpp_config: crate::db::entities::module_configs::ChannelPermissionProtectionModuleConfig = serde_json::from_value(m_config.config).unwrap_or_default();
         inner_components.push(serenity::CreateContainerComponent::Separator(serenity::CreateSeparator::new(true)));
         inner_components.extend(modules::channel_permission_protection::build_ui(&cpp_config, l10n));
+    } else if module == ModuleType::RoleProtection {
+        let rp_config: crate::db::entities::module_configs::RoleProtectionModuleConfig = serde_json::from_value(m_config.config).unwrap_or_default();
+        inner_components.push(serenity::CreateContainerComponent::Separator(serenity::CreateSeparator::new(true)));
+        inner_components.extend(modules::role_protection::build_ui(&rp_config, l10n));
+    } else if module == ModuleType::RolePermissionProtection {
+        let rpp_config: crate::db::entities::module_configs::RolePermissionProtectionModuleConfig = serde_json::from_value(m_config.config).unwrap_or_default();
+        inner_components.push(serenity::CreateContainerComponent::Separator(serenity::CreateSeparator::new(true)));
+        inner_components.extend(modules::role_permission_protection::build_ui(&rpp_config, l10n));
     }
+
+    // Whitelist Section
+    inner_components.push(serenity::CreateContainerComponent::Separator(serenity::CreateSeparator::new(true)));
+    inner_components.push(create_whitelist_section(format!("config_whitelist_view_module_{}", module), l10n));
 
     // Add back button at the very end
     inner_components.push(serenity::CreateContainerComponent::Separator(serenity::CreateSeparator::new(false)));
@@ -215,6 +245,23 @@ pub async fn handle_interaction(
         updated_reply = Some(build_module_menu(data, guild_id, ModuleType::ChannelProtection, &l10n).await?);
     } else if modules::channel_permission_protection::handle_interaction(ctx, interaction, data, guild_id).await? {
         updated_reply = Some(build_module_menu(data, guild_id, ModuleType::ChannelPermissionProtection, &l10n).await?);
+    } else if modules::role_protection::handle_interaction(ctx, interaction, data, guild_id).await? {
+        updated_reply = Some(build_module_menu(data, guild_id, ModuleType::RoleProtection, &l10n).await?);
+    } else if modules::role_permission_protection::handle_interaction(ctx, interaction, data, guild_id).await? {
+        updated_reply = Some(build_module_menu(data, guild_id, ModuleType::RolePermissionProtection, &l10n).await?);
+    } else if let Some(components) = whitelist::handle_interaction(ctx, interaction, data).await? {
+        updated_reply = Some(components);
+    } else if custom_id == "config_back_to_main" {
+        updated_reply = Some(build_main_menu(data, guild_id, &l10n).await?);
+    } else if let Some(module_str) = custom_id.strip_prefix("config_module_menu_") {
+        let module_type = match module_str {
+            "channel_protection" => ModuleType::ChannelProtection,
+            "channel_permission_protection" => ModuleType::ChannelPermissionProtection,
+            "role_protection" => ModuleType::RoleProtection,
+            "role_permission_protection" => ModuleType::RolePermissionProtection,
+            _ => return Ok(()),
+        };
+        updated_reply = Some(build_module_menu(data, guild_id, module_type, &l10n).await?);
     } else if custom_id == "config_general_log_channel" {
         if let serenity::ComponentInteractionDataKind::ChannelSelect { values } = &interaction.data.kind {
             if let Some(channel_id) = values.first() {
@@ -259,6 +306,8 @@ pub async fn handle_interaction(
                 let module_type = match module_str.as_str() {
                     "ChannelProtection" => ModuleType::ChannelProtection,
                     "ChannelPermissionProtection" => ModuleType::ChannelPermissionProtection,
+                    "RoleProtection" => ModuleType::RoleProtection,
+                    "RolePermissionProtection" => ModuleType::RolePermissionProtection,
                     _ => return Ok(()),
                 };
                 updated_reply = Some(build_module_menu(data, guild_id, module_type, &l10n).await?);
@@ -271,6 +320,8 @@ pub async fn handle_interaction(
                 let module_type = match module_str {
                     "ChannelProtection" => ModuleType::ChannelProtection,
                     "ChannelPermissionProtection" => ModuleType::ChannelPermissionProtection,
+                    "RoleProtection" => ModuleType::RoleProtection,
+                    "RolePermissionProtection" => ModuleType::RolePermissionProtection,
                     _ => return Ok(()),
                 };
 
@@ -301,6 +352,8 @@ pub async fn handle_interaction(
                 let module_type = match module_str {
                     "ChannelProtection" => ModuleType::ChannelProtection,
                     "ChannelPermissionProtection" => ModuleType::ChannelPermissionProtection,
+                    "RoleProtection" => ModuleType::RoleProtection,
+                    "RolePermissionProtection" => ModuleType::RolePermissionProtection,
                     _ => return Ok(()),
                 };
 
@@ -339,6 +392,8 @@ pub async fn handle_interaction(
         let module_type = match module_str {
             "ChannelProtection" => ModuleType::ChannelProtection,
             "ChannelPermissionProtection" => ModuleType::ChannelPermissionProtection,
+            "RoleProtection" => ModuleType::RoleProtection,
+            "RolePermissionProtection" => ModuleType::RolePermissionProtection,
             _ => return Ok(()),
         };
 
@@ -368,6 +423,53 @@ pub async fn handle_interaction(
         .exec(&data.db)
         .await?;
 
+        updated_reply = Some(build_module_menu(data, guild_id, module_type, &l10n).await?);
+    } else if custom_id.contains("_punish_at_") || custom_id.contains("_punish_interval_") {
+        let module_type = if custom_id.contains("ChannelProtection") {
+            ModuleType::ChannelProtection
+        } else if custom_id.contains("ChannelPermissionProtection") {
+            ModuleType::ChannelPermissionProtection
+        } else if custom_id.contains("RoleProtection") {
+            ModuleType::RoleProtection
+        } else if custom_id.contains("RolePermissionProtection") {
+            ModuleType::RolePermissionProtection
+        } else {
+            return Ok(());
+        };
+
+        let config = module_configs::Entity::find_by_id((guild_id.get() as i64, module_type))
+            .one(&data.db)
+            .await?;
+
+        let (mut am, current_at, current_interval) = match config.as_ref() {
+            Some(m) => (m.clone().into(), m.punishment_at, m.punishment_at_interval),
+            None => {
+                let am = module_configs::ActiveModel {
+                    guild_id: Set(guild_id.get() as i64),
+                    module_type: Set(module_type),
+                    punishment_at: Set(1),
+                    punishment_at_interval: Set(10),
+                    ..Default::default()
+                };
+                (am, 1, 10)
+            }
+        };
+
+        if custom_id.contains("punish_at_inc") {
+            am.punishment_at = Set(current_at + 1);
+        } else if custom_id.contains("punish_at_dec") {
+            am.punishment_at = Set((current_at - 1).max(1));
+        } else if custom_id.contains("punish_interval_inc") {
+            am.punishment_at_interval = Set(current_interval + 5);
+        } else if custom_id.contains("punish_interval_dec") {
+            am.punishment_at_interval = Set((current_interval - 5).max(1));
+        }
+
+        if config.is_some() {
+            am.update(&data.db).await?;
+        } else {
+            am.insert(&data.db).await?;
+        }
         updated_reply = Some(build_module_menu(data, guild_id, module_type, &l10n).await?);
     } else if custom_id == "config_back_to_main" {
         updated_reply = Some(build_main_menu(data, guild_id, &l10n).await?);

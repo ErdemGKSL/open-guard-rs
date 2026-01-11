@@ -1,5 +1,7 @@
 pub mod channel_protection;
 pub mod channel_permission_protection;
+pub mod role_protection;
+pub mod role_permission_protection;
 
 use crate::{Data, Error};
 
@@ -19,6 +21,8 @@ pub fn get_modules() -> Vec<Module> {
     vec![
         channel_protection::module(),
         channel_permission_protection::module(),
+        role_protection::module(),
+        role_permission_protection::module(),
     ]
 }
 

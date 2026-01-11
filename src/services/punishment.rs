@@ -12,6 +12,13 @@ pub struct PunishmentService {
     db: DatabaseConnection,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ViolationResult {
+    Punished(PunishmentType),
+    ViolationRecorded { current: i32, threshold: i32 },
+    None,
+}
+
 impl PunishmentService {
     pub fn new(db: DatabaseConnection) -> Self {
         Self { db }
@@ -25,14 +32,14 @@ impl PunishmentService {
         user_id: serenity::UserId,
         module_type: ModuleType,
         reason: &str,
-    ) -> Result<(), Error> {
+    ) -> Result<ViolationResult, Error> {
         let config = module_configs::Entity::find_by_id((guild_id.get() as i64, module_type))
             .one(&self.db)
             .await?
             .ok_or_else(|| anyhow::anyhow!("Module config not found"))?;
 
         if config.punishment == PunishmentType::None {
-            return Ok(());
+            return Ok(ViolationResult::None);
         }
 
         // Find or create violation record
@@ -70,28 +77,32 @@ impl PunishmentService {
         };
 
         let updated_violation = active_violation.save(&self.db).await?;
-        let current_count = updated_violation.count.as_ref();
+        let current_count = *updated_violation.count.as_ref();
 
         // If punishment_at is 0 or 1, it's immediate.
-        // Otherwise, wait until the count hits the threshold.
         let threshold = if config.punishment_at <= 0 {
             1
         } else {
             config.punishment_at
         };
 
-        if *current_count >= threshold {
-            self.punish(http, guild_id, user_id, config.punishment, reason)
-                .await?;
+        if current_count >= threshold {
+            if let Err(e) = self.punish(http, guild_id, user_id, config.punishment, reason).await {
+                tracing::error!("Failed to punish user {} in guild {}: {:?}", user_id, guild_id, e);
+            }
 
-            // Reset count after punishment? User didn't specify, but usually it's better to reset
-            // so they don't get punished on EVERY subsequent action if punishment_at > 1.
+            // Reset count after punishment
             let mut reset_am: violations::ActiveModel = updated_violation;
             reset_am.count = Set(0);
             reset_am.save(&self.db).await?;
+
+            return Ok(ViolationResult::Punished(config.punishment));
         }
 
-        Ok(())
+        Ok(ViolationResult::ViolationRecorded {
+            current: current_count,
+            threshold,
+        })
     }
 
     pub async fn punish(
@@ -106,10 +117,53 @@ impl PunishmentService {
             PunishmentType::None => Ok(()),
             PunishmentType::Unperm => {
                 let member = guild_id.member(http, user_id).await?;
+                let guild = guild_id.to_partial_guild(http).await?;
+                let bot_id = http.get_current_user().await?.id;
+                let bot_member = guild_id.member(http, bot_id).await?;
+                
+                // Get bot's highest role position
+                let bot_highest_role_pos = bot_member.roles.iter()
+                    .filter_map(|role_id| guild.roles.get(role_id))
+                    .map(|role| role.position)
+                    .max()
+                    .unwrap_or(0);
+
+                let dangerous_permissions = serenity::Permissions::ADMINISTRATOR 
+                    | serenity::Permissions::MANAGE_GUILD
+                    | serenity::Permissions::MANAGE_ROLES
+                    | serenity::Permissions::MANAGE_CHANNELS
+                    | serenity::Permissions::KICK_MEMBERS
+                    | serenity::Permissions::BAN_MEMBERS
+                    | serenity::Permissions::MANAGE_WEBHOOKS
+                    | serenity::Permissions::MANAGE_GUILD_EXPRESSIONS
+                    | serenity::Permissions::MANAGE_THREADS
+                    | serenity::Permissions::MANAGE_MESSAGES
+                    | serenity::Permissions::MANAGE_EVENTS
+                    | serenity::Permissions::MODERATE_MEMBERS;
+
+                let mut new_roles = Vec::new();
+
                 for role_id in &member.roles {
-                    // Ignore errors for individual roles (e.g. managed roles)
-                    let _ = member.remove_role(http, *role_id, Some(reason)).await;
+                    if let Some(role) = guild.roles.get(role_id) {
+                        // Keep the role if:
+                        // 1. It's managed (integration/booster role)
+                        // 2. It's higher than or equal to bot's highest role (outside our reach/safety)
+                        // 3. It DOES NOT have dangerous permissions
+                        if role.managed() || role.position >= bot_highest_role_pos || !role.permissions.intersects(dangerous_permissions) {
+                            new_roles.push(*role_id);
+                        }
+                    } else {
+                        // If role is not found in guild roles map, keep it just in case?
+                        // Usually this means it's @everyone or something went wrong.
+                        new_roles.push(*role_id);
+                    }
                 }
+
+                // If roles changed, apply it
+                if new_roles.len() != member.roles.len() as usize {
+                    guild_id.edit_member(http, user_id, serenity::EditMember::default().roles(new_roles).audit_log_reason(reason)).await?;
+                }
+                
                 Ok(())
             }
             PunishmentType::Ban => {
