@@ -126,6 +126,7 @@ pub async fn build_whitelist_menu(
             ModuleType::RoleProtection => l10n.t("config-whitelist-role-protection-header", None),
             ModuleType::RolePermissionProtection => l10n.t("config-whitelist-role-permission-protection-header", None),
             ModuleType::MemberPermissionProtection => l10n.t("config-whitelist-member-permission-protection-header", None),
+            ModuleType::BotAddingProtection => l10n.t("config-whitelist-bot-adding-protection-header", None),
         }
     } else {
         l10n.t("config-whitelist-global-header", None)
@@ -415,6 +416,8 @@ pub async fn handle_interaction(
                 "channel_permission_protection" => Some(ModuleType::ChannelPermissionProtection),
                 "role_protection" => Some(ModuleType::RoleProtection),
                 "role_permission_protection" => Some(ModuleType::RolePermissionProtection),
+                "member_permission_protection" => Some(ModuleType::MemberPermissionProtection),
+                "bot_adding_protection" => Some(ModuleType::BotAddingProtection),
                 _ => None,
             }
         }

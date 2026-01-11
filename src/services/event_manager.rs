@@ -114,6 +114,22 @@ impl serenity::EventHandler for Handler {
                         }
                     });
                 }
+
+                // Bot Adding Protection
+                {
+                    let ctx = ctx.clone();
+                    let entry = entry.clone();
+                    let data = data.clone();
+                    tokio::spawn(async move {
+                        if let Err(e) = crate::modules::bot_adding_protection::events::audit_log::handle_audit_log(
+                            &ctx, &entry, guild_id, &data,
+                        )
+                        .await
+                        {
+                            error!("Error handling audit log for bot adding protection: {:?}", e);
+                        }
+                    });
+                }
             }
             serenity::FullEvent::InteractionCreate { interaction, .. } => {
                 if let serenity::Interaction::Component(component_interaction) = interaction {

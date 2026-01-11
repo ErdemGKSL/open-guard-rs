@@ -15,6 +15,9 @@ module-role-permission-protection-desc = Protect role permissions from unauthori
 module-member-permission-protection-name = Member Permission Protection
 module-member-permission-protection-description = Protect members from being granted dangerous permissions via roles.
 
+module-bot-adding-protection-name = Bot Adding Protection
+module-bot-adding-protection-description = Automatically kicks newly added bots and punishes the user who added them.
+
 help-title = Bot Help Menu
 
 config-general-header = ⚙️ **General Configuration**
@@ -45,6 +48,9 @@ config-role-permission-protection-desc = Configure role permission protection
 
 config-member-permission-protection-label = Member Permission Protection
 config-member-permission-protection-desc = Configure member role/permission protection
+
+config-bot-adding-protection-label = Bot Adding Protection
+config-bot-adding-protection-desc = Configure bot adding protection
 config-punishment-label = Punishment
 config-select-punishment-placeholder = Select punishment...
 config-punishment-type-none = None
@@ -75,6 +81,9 @@ config-rp-punish-when-placeholder = When to punish?
 config-rpp-punish-update = Update
 config-rpp-punish-when-placeholder = When to punish?
 
+config-bap-punish-add = Bot Added
+config-bap-punish-when-placeholder = When to punish?
+
 config-whitelists-btn = Whitelists
 config-whitelists-view-btn = View
 config-whitelist-manage-btn = Manage
@@ -91,6 +100,7 @@ config-whitelist-channel-permission-protection-header = **Channel Permission Pro
 config-whitelist-role-protection-header = **Role Protection Whitelists**
 config-whitelist-role-permission-protection-header = **Role Permission Protection Whitelists**
 config-whitelist-member-permission-protection-header = **Member Permission Protection Whitelists**
+config-whitelist-bot-adding-protection-header = **Bot Adding Protection Whitelists**
 config-whitelist-users-label = **Whitelisted Users**
 config-whitelist-delete-user-placeholder = Select user to remove...
 config-whitelist-roles-label = **Whitelisted Roles**
@@ -213,4 +223,10 @@ log-role-perm-title-blocked = Role Permission Modified (Blocked)
 log-role-perm-title-logged = Role Permission Modified (Logged)
 log-role-perm-desc-update = Permissions for role <@&{$roleId}> were modified by <@{$userId}>.
 log-role-perm-reason-update = Role Permissions Updated
-log-role-perm-revert-reason = Role Permission Protection Revert
+log-role-permission-revert-reason = Role Permission Protection Revert
+
+log-bot-add-title-whitelisted = Bot Added (Whitelisted)
+log-bot-add-title-blocked = Bot Added (Blocked)
+log-bot-add-desc = Bot <@{$botId}> (`{$botId}`) was added by <@{$userId}>.
+log-bot-add-reason = Unauthorized Bot Added
+log-bot-add-revert-reason = Bot Adding Protection Revert

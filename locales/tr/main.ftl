@@ -15,6 +15,9 @@ module-role-permission-protection-desc = Rol yetki değişimlerini yetkisiz işl
 module-member-permission-protection-name = Üye Yetki Koruması
 module-member-permission-protection-description = Üyelere roller aracılığıyla tehlikeli yetkiler verilmesini engeller.
 
+module-bot-adding-protection-name = Bot Ekleme Koruması
+module-bot-adding-protection-description = Yeni eklenen botları otomatik olarak atar ve ekleyen kullanıcıyı cezalandırır.
+
 help-title = Bot Yardım Menüsü
 
 config-general-header = ⚙️ **Genel Yapılandırma**
@@ -45,6 +48,9 @@ config-role-permission-protection-desc = Rol yetki değişim korumasını yapıl
 
 config-member-permission-protection-label = Üye Yetki Koruması
 config-member-permission-protection-desc = Üye rol/yetki korumasını yapılandırın
+
+config-bot-adding-protection-label = Bot Ekleme Koruması
+config-bot-adding-protection-desc = Bot ekleme korumasını yapılandırın
 config-punishment-label = Ceza
 config-select-punishment-placeholder = Ceza seçin...
 config-punishment-type-none = Yok
@@ -91,6 +97,7 @@ config-whitelist-channel-permission-protection-header = **Kanal Yetki Koruması 
 config-whitelist-role-protection-header = **Rol Koruması Beyaz Listeleri**
 config-whitelist-role-permission-protection-header = **Rol Yetki Koruması Beyaz Listeleri**
 config-whitelist-member-permission-protection-header = **Üye Yetki Koruması Beyaz Listeleri**
+config-whitelist-bot-adding-protection-header = **Bot Ekleme Koruması Beyaz Listeleri**
 config-whitelist-users-label = **Beyaz Listedeki Kullanıcılar**
 config-whitelist-delete-user-placeholder = Kaldırılacak kullanıcıyı seçin...
 config-whitelist-roles-label = **Beyaz Listedeki Roller**
@@ -214,3 +221,9 @@ log-role-perm-title-logged = Rol Yetkisi Değişti (Kaydedildi)
 log-role-perm-desc-update = <@&{$roleId}> rolünün yetkileri <@{$userId}> tarafından değiştirildi.
 log-role-perm-reason-update = Rol Yetkileri Güncellendi
 log-role-perm-revert-reason = Rol Yetki Koruması Geri Alma
+
+log-bot-add-title-whitelisted = Bot Eklendi (Beyaz Listede)
+log-bot-add-title-blocked = Bot Eklendi (Engellendi)
+log-bot-add-desc = <@{$botId}> (`{$botId}`) botu <@{$userId}> tarafından eklendi.
+log-bot-add-reason = Yetkisiz Bot Ekleme
+log-bot-add-revert-reason = Bot Ekleme Koruması Geri Alma
