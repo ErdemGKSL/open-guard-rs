@@ -1,88 +1,77 @@
-# Discord Guard Bot (Rust)
+# 🛡️ Open Guard
 
-A high-performance, scalable Discord guard bot implemented in Rust using the **serenity** and **poise** frameworks. Designed for sharding, reliability, and modularity.
+**Open Guard** is a high-performance, open-source security and protection bot for Discord, built with Rust. It is designed to keep your community safe with lightning-fast response times and robust modular protection.
 
-## 🚀 Features
+[![Release](https://img.shields.io/github/v/release/ErdemGKSL/open-guard-rs?label=latest%20release&color=blue)](https://github.com/ErdemGKSL/open-guard-rs/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-- **Sharding**: Ready for large-scale operation with autosharding support.
-- **Dynamic Prefixing**: Database-backed prefix handling with high-performance **lock-free caching** (using [Papaya](https://github.com/ibraheemdev/papaya)).
-- **Modular Architecture**: Clean separation of concerns between core services, database logic, and feature modules.
-- **Database Integrated**: Powered by **PostgreSQL** and **SeaORM** with automated migrations.
-- **Slash Commands**: Full support for slash commands, including subcommands and autocomplete.
-- **CLI Command Publisher**: Built-in CLI tool to publish slash commands globally or to specific guilds.
+---
 
-## 🛠️ Tech Stack
+## ✨ Key Features
 
-- **Language**: Rust (Stable)
-- **Discord Framework**: [serenity](https://github.com/serenity-rs/serenity) + [poise](https://github.com/serenity-rs/poise)
-- **Database/ORM**: [SeaORM](https://www.sea-ql.org/SeaORM/) + PostgreSQL
-- **Async Runtime**: [tokio](https://tokio.rs/)
-- **Caching**: [Papaya](https://github.com/ibraheemdev/papaya) (Concurrent Hash Table)
-- **Configuration**: [dotenvy](https://github.com/allan2/dotenvy)
-- **Error Handling**: [anyhow](https://github.com/dtolnay/anyhow)
-- **CLI Parsing**: [clap](https://github.com/clap-rs/clap)
+*   **⚡ Blazing Fast**: Built in Rust for maximum performance and minimal memory footprint.
+*   **🛡️ Advanced Protection**: Modular guard system to protect your server from malicious actions.
+*   **📂 Easy Scale**: Full support for autosharding, ready to protect thousands of servers.
+*   **💻 Modern Commands**: Native support for Slash Commands and subcommands.
+*   **⚙️ Highly Configurable**: Database-backed settings that can be customized for every server.
 
-## 📁 Project Structure
+---
 
-```text
-src/
-├── db/               # Database entities and migrations
-│   ├── entities/     # SeaORM entity models
-│   └── migrations/   # Database schema migrations
-├── modules/          # Feature-specific modules (commands & events)
-│   └── hello/        # Example feature module
-├── services/         # Shared business logic and managers
-│   ├── event_manager.rs # Main event handling logic
-│   └── prefix.rs     # Dynamic prefix and caching logic
-└── main.rs           # Entry point and bot initialization
-```
+## 🚀 Getting Started (Quickest Way)
 
-## ⚙️ Getting Started
+You don't need to be a developer to run Open Guard! We provide pre-compiled binaries for all major platforms.
+
+1.  **Download Open Guard**: Go to the [Latest Release](https://github.com/ErdemGKSL/open-guard-rs/releases/latest) and download the binary for your operating system (Windows, Linux, or macOS).
+2.  **Setup Environment**: Create a file named `.env` in the same folder as the binary:
+    ```env
+    DISCORD_TOKEN=your_token_here
+    DATABASE_URL=postgres://user:pass@localhost/open_guard
+    ```
+3.  **Run it**:
+    *   **Windows**: Double-click `open-guard-rs-windows-x86_64.exe`
+    *   **Linux/macOS**: 
+        ```bash
+        chmod +x open-guard-rs-linux-x86_64
+        ./open-guard-rs-linux-x86_64
+        ```
+
+---
+
+## 🛠️ For Developers
+
+If you want to contribute or build from source, follow these steps:
 
 ### Prerequisites
-
 - [Rust](https://www.rust-lang.org/tools/install) (Stable)
 - [PostgreSQL](https://www.postgresql.org/)
 
-### Setup
-
-1. **Clone the repository**:
-   ```bash
-   git clone <repository_url>
-   cd open-guard-rs
-   ```
-
-2. **Configure environment variables**:
-   ```bash
-   cp .env.example .env
-   ```
-   Edit `.env` and provide your `DISCORD_TOKEN` and `DATABASE_URL`.
-
-3. **Database Migrations**:
-   Migrations run automatically when the bot starts.
-
-### Running the Bot
-
+### Installation
 ```bash
-# Direct run
-cargo run
-
-# With command publishing (Global)
-cargo run -- --publish
-
-# With command publishing (Specific Guild)
-cargo run -- --publish <guild_id>
+git clone https://github.com/ErdemGKSL/open-guard-rs.git
+cd open-guard-rs
+cargo build --release
 ```
 
-## 📜 Usage
+### Running with Commands
+```bash
+# Start the bot
+cargo run --release
 
-### CLI Commands
+# Publish Slash Commands (First time only)
+cargo run --release -- --publish
+```
 
-| Flag | Description |
-|------|-------------|
-| `--publish` | Publishes all registered slash commands globally to Discord. |
-| `--publish <guild_id>` | Publishes slash commands to a specific guild (instant update). |
+---
+
+## 📁 Project Overview
+
+*   **`src/modules/`**: Contains all protection and utility modules.
+*   **`src/db/`**: Handles database entities and automated migrations.
+*   **`src/services/`**: Core engine logic and event management.
 
 ## 🛡️ License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+This project is licensed under the **MIT License**. See the `LICENSE` file for details.
+
+---
+*Created with ❤️ by the Open Guard Community.*
