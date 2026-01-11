@@ -15,11 +15,16 @@ pub async fn handle_audit_log(
         .one(&data.db)
         .await?
     {
-        Some(m) => m,
+        Some(m) => {
+            if !m.enabled {
+                return Ok(());
+            }
+            m
+        },
         None => return Ok(()),
     };
 
-    let config: RolePermissionProtectionModuleConfig = serde_json::from_value(config_model.config.clone()).unwrap_or_default();
+    let _config: RolePermissionProtectionModuleConfig = serde_json::from_value(config_model.config.clone()).unwrap_or_default();
 
     let user_id = match entry.user_id {
         Some(id) => id,
@@ -38,7 +43,7 @@ pub async fn handle_audit_log(
         Action::Role(RoleAction::Update) => {
             // Check if permissions changed
             let has_perm_change = entry.changes.iter().any(|c| matches!(c, Change::Permissions { .. }));
-            if has_perm_change && config.punish_when.contains(&"update".to_string()) {
+            if has_perm_change {
                 handle_role_permission_update(ctx, entry, guild_id, data, &config_model, user_id, is_whitelisted).await?;
             }
         }

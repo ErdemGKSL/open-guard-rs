@@ -3,40 +3,4 @@ help:
   description: "Show help message"
 config:
   name: "config"
-  description: "Configuration commands"
-  subcommands:
-    set_log_channel:
-      name: "set_log_channel"
-      description: "Set the general channel where logs will be sent"
-      options:
-        channel:
-          name: "channel"
-          description: "The channel to send logs to"
-    set_module_log_channel:
-      name: "set_module_log_channel"
-      description: "Set a module-specific log channel"
-      options:
-        module_type:
-          name: "module"
-          description: "The module to configure"
-        channel:
-          name: "channel"
-          description: "The channel to send logs to"
-channel_protection:
-  name: "channel_protection"
-  description: "Channel protection commands"
-  subcommands:
-    toggle:
-      name: "toggle"
-      description: "Enable or disable channel creation locking"
-      options:
-        enabled:
-          name: "enabled"
-          description: "Whether to lock new channels"
-    set_audit_log:
-      name: "set_audit_log"
-      description: "Set a specific channel for protection-related audit logs"
-      options:
-        channel:
-          name: "channel"
-          description: "The channel to send protection logs to"
+  description: "Bot configuration and module management"

@@ -11,6 +11,7 @@ pub mod m000004_add_punishments;
 pub mod m000005_create_violations;
 pub mod m000006_create_whitelist_tables;
 pub mod m000007_update_whitelist_indexes;
+pub mod m000008_add_enabled_to_module_config;
 
 use sea_orm_migration::prelude::*;
 
@@ -27,6 +28,7 @@ impl MigratorTrait for Migrator {
             Box::new(m000005_create_violations::Migration),
             Box::new(m000006_create_whitelist_tables::Migration),
             Box::new(m000007_update_whitelist_indexes::Migration),
+            Box::new(m000008_add_enabled_to_module_config::Migration),
         ]
     }
 }

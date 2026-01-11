@@ -3,7 +3,7 @@ use crate::db::entities::module_configs::{ModuleType, ChannelProtectionModuleCon
 use crate::services::localization::{L10nProxy, ContextL10nExt};
 use crate::{Data, Error};
 use poise::serenity_prelude as serenity;
-use sea_orm::{EntityTrait, ActiveModelTrait, Set};
+use sea_orm::{EntityTrait, ActiveModelTrait, Set, QueryFilter, ColumnTrait};
 
 pub mod builders;
 pub mod modules;
@@ -95,24 +95,38 @@ pub async fn build_main_menu(
     // Modules Section
     inner_components.extend(create_header(l10n.t("config-modules-header", None), true));
 
+    let m_configs: Vec<module_configs::Model> = module_configs::Entity::find()
+        .filter(module_configs::Column::GuildId.eq(guild_id.get() as i64))
+        .all(db)
+        .await?;
+
+    let get_status = |m: ModuleType| {
+        let enabled = m_configs.iter().find(|c| c.module_type == m).map(|c| c.enabled).unwrap_or(true);
+        if enabled {
+            format!("🟢 {}", l10n.t("config-btn-enabled", None))
+        } else {
+            format!("🔴 {}", l10n.t("config-btn-disabled", None))
+        }
+    };
+
     let options = vec![
         serenity::CreateSelectMenuOption::new(
-            l10n.t("config-channel-protection-label", None),
+            format!("{} - {}", l10n.t("config-channel-protection-label", None), get_status(ModuleType::ChannelProtection)),
             "ChannelProtection",
         )
         .description(l10n.t("config-channel-protection-desc", None)),
         serenity::CreateSelectMenuOption::new(
-            l10n.t("config-channel-permission-protection-label", None),
+            format!("{} - {}", l10n.t("config-channel-permission-protection-label", None), get_status(ModuleType::ChannelPermissionProtection)),
             "ChannelPermissionProtection",
         )
         .description(l10n.t("config-channel-permission-protection-desc", None)),
         serenity::CreateSelectMenuOption::new(
-            l10n.t("config-role-protection-label", None),
+            format!("{} - {}", l10n.t("config-role-protection-label", None), get_status(ModuleType::RoleProtection)),
             "RoleProtection",
         )
         .description(l10n.t("config-role-protection-desc", None)),
         serenity::CreateSelectMenuOption::new(
-            l10n.t("config-role-permission-protection-label", None),
+            format!("{} - {}", l10n.t("config-role-permission-protection-label", None), get_status(ModuleType::RolePermissionProtection)),
             "RolePermissionProtection",
         )
         .description(l10n.t("config-role-permission-protection-desc", None)),
@@ -168,6 +182,7 @@ pub async fn build_module_menu(
         m_config.punishment,
         m_config.punishment_at,
         m_config.punishment_at_interval,
+        m_config.enabled,
         m_config.revert,
         l10n,
     );
@@ -466,6 +481,41 @@ pub async fn handle_interaction(
         } else {
             am.insert(&data.db).await?;
         }
+        updated_reply = Some(build_module_menu(data, guild_id, module_type, &l10n).await?);
+    } else if custom_id.starts_with("config_module_toggle_") {
+        let module_str = custom_id.trim_start_matches("config_module_toggle_");
+        let module_type = match module_str {
+            "channel_protection" | "ChannelProtection" => ModuleType::ChannelProtection,
+            "channel_permission_protection" | "ChannelPermissionProtection" => ModuleType::ChannelPermissionProtection,
+            "role_protection" | "RoleProtection" => ModuleType::RoleProtection,
+            "role_permission_protection" | "RolePermissionProtection" => ModuleType::RolePermissionProtection,
+            _ => return Ok(()),
+        };
+
+        let config = module_configs::Entity::find_by_id((guild_id.get() as i64, module_type))
+            .one(&data.db)
+            .await?;
+
+        let (mut am, current_enabled): (module_configs::ActiveModel, bool) = match config {
+            Some(m) => {
+                let enabled = m.enabled;
+                (m.into(), enabled)
+            },
+            None => {
+                let am = module_configs::ActiveModel {
+                    guild_id: Set(guild_id.get() as i64),
+                    module_type: Set(module_type),
+                    enabled: Set(true),
+                    ..Default::default()
+                };
+                let entry = am.insert(&data.db).await?;
+                (entry.into(), true)
+            }
+        };
+
+        am.enabled = Set(!current_enabled);
+        am.update(&data.db).await?;
+        
         updated_reply = Some(build_module_menu(data, guild_id, module_type, &l10n).await?);
     } else if custom_id == "config_back_to_main" {
         updated_reply = Some(build_main_menu(data, guild_id, &l10n).await?);

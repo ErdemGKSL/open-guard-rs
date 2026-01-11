@@ -73,6 +73,7 @@ pub struct Model {
     pub punishment: PunishmentType,
     pub punishment_at: i32,
     pub punishment_at_interval: i32,
+    pub enabled: bool,
     pub revert: bool,
     pub config: Json,
 }
@@ -109,7 +110,4 @@ pub struct RoleProtectionModuleConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
-pub struct RolePermissionProtectionModuleConfig {
-    #[serde(default)]
-    pub punish_when: Vec<String>,
-}
+pub struct RolePermissionProtectionModuleConfig {}

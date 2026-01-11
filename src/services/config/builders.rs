@@ -34,13 +34,39 @@ pub fn create_module_config_payload(
     punishment: crate::db::entities::module_configs::PunishmentType,
     punishment_at: i32,
     punishment_at_interval: i32,
+    enabled: bool,
     revert: bool,
     l10n: &L10nProxy,
 ) -> Vec<serenity::CreateContainerComponent<'static>> {
     let mut components = vec![];
 
     // Module Header
-    components.extend(create_header(format!("⚙️ **{}**", name), true));
+    let status_label = if enabled {
+        l10n.t("config-btn-enabled", None)
+    } else {
+        l10n.t("config-btn-disabled", None)
+    };
+
+    let toggle_btn = serenity::CreateButton::new(format!("config_module_toggle_{}", module_type))
+        .label(status_label)
+        .style(if enabled {
+            serenity::ButtonStyle::Success
+        } else {
+            serenity::ButtonStyle::Danger
+        });
+
+    components.push(serenity::CreateContainerComponent::Section(
+        serenity::CreateSection::new(
+            vec![serenity::CreateSectionComponent::TextDisplay(
+                serenity::CreateTextDisplay::new(format!("⚙️ **{}**", name)),
+            )],
+            serenity::CreateSectionAccessory::Button(toggle_btn),
+        )
+    ));
+
+    components.push(serenity::CreateContainerComponent::Separator(
+        serenity::CreateSeparator::new(true),
+    ));
 
     // Whitelist Section (Moved to top)
     components.push(create_whitelist_section(format!("config_whitelist_view_module_{}", module_type), l10n));

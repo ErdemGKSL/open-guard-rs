@@ -3,40 +3,4 @@ help:
   description: "Yardım mesajını göster"
 config:
   name: "yapılandırma"
-  description: "Yapılandırma komutları"
-  subcommands:
-    set_log_channel:
-      name: "log_kanalı_ayarla"
-      description: "Genel logların gönderileceği kanalı ayarlar"
-      options:
-        channel:
-          name: "kanal"
-          description: "Logların gönderileceği kanal"
-    set_module_log_channel:
-      name: "modül_log_kanalı_ayarla"
-      description: "Modüle özel log kanalı ayarlar"
-      options:
-        module_type:
-          name: "modül"
-          description: "Yapılandırılacak modül"
-        channel:
-          name: "kanal"
-          description: "Logların gönderileceği kanal"
-channel_protection:
-  name: "kanal_koruması"
-  description: "Kanal koruma komutları"
-  subcommands:
-    toggle:
-      name: "aktif_et"
-      description: "Kanal korumasını açar veya kapatır"
-      options:
-        enabled:
-          name: "durum"
-          description: "Kanal koruması durumu"
-    set_audit_log:
-      name: "log_kanalı_ayarla"
-      description: "Kanal koruması loglarının gönderileceği kanalı ayarlar"
-      options:
-        channel:
-          name: "kanal"
-          description: "Logların gönderileceği kanal"
+  description: "Bot yapılandırması ve modül yönetimi"

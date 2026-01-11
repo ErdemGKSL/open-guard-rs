@@ -84,17 +84,16 @@ impl LoggerService {
 
         let mut inner_components = vec![];
 
-        // Header component
+        // Header
         inner_components.push(serenity::CreateContainerComponent::TextDisplay(
-            serenity::CreateTextDisplay::new(format!("{} **{}**", level.icon(), title)),
+            serenity::CreateTextDisplay::new(format!("### {} {}", level.icon(), title)),
         ));
 
-        // Separator
         inner_components.push(serenity::CreateContainerComponent::Separator(
-            serenity::CreateSeparator::new(false),
+            serenity::CreateSeparator::new(true),
         ));
 
-        // Description component
+        // Description
         inner_components.push(serenity::CreateContainerComponent::TextDisplay(
             serenity::CreateTextDisplay::new(description),
         ));
@@ -102,12 +101,12 @@ impl LoggerService {
         // Optional fields
         if !fields.is_empty() {
             inner_components.push(serenity::CreateContainerComponent::Separator(
-                serenity::CreateSeparator::new(true),
+                serenity::CreateSeparator::new(false),
             ));
 
             for (name, value) in fields {
                 inner_components.push(serenity::CreateContainerComponent::TextDisplay(
-                    serenity::CreateTextDisplay::new(format!("**{}**: {}", name, value)),
+                    serenity::CreateTextDisplay::new(format!("> **{}**\n> {}", name, value)),
                 ));
             }
         }

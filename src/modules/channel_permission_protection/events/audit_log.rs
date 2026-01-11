@@ -18,7 +18,12 @@ pub async fn handle_audit_log(
             .await?;
 
     let config_model = match config_model {
-        Some(m) => m,
+        Some(m) => {
+            if !m.enabled {
+                return Ok(());
+            }
+            m
+        },
         None => return Ok(()), // Module not configured for this guild
     };
 
@@ -61,19 +66,13 @@ pub async fn handle_audit_log(
     // Match on the audit log action to triggers variants error
     match entry.action {
         Action::ChannelOverwrite(ChannelOverwriteAction::Create) => {
-            if config.punish_when.contains(&"create".to_string()) {
-                handle_overwrite_create(ctx, entry, guild_id, data, &config_model, user_id, is_whitelisted).await?;
-            }
+            handle_overwrite_create(ctx, entry, guild_id, data, &config_model, user_id, is_whitelisted, &config).await?;
         }
         Action::ChannelOverwrite(ChannelOverwriteAction::Delete) => {
-            if config.punish_when.contains(&"delete".to_string()) {
-                handle_overwrite_delete(ctx, entry, guild_id, data, &config_model, user_id, is_whitelisted).await?;
-            }
+            handle_overwrite_delete(ctx, entry, guild_id, data, &config_model, user_id, is_whitelisted, &config).await?;
         }
         Action::ChannelOverwrite(ChannelOverwriteAction::Update) => {
-            if config.punish_when.contains(&"update".to_string()) {
-                handle_overwrite_update(ctx, entry, guild_id, data, &config_model, user_id, is_whitelisted).await?;
-            }
+            handle_overwrite_update(ctx, entry, guild_id, data, &config_model, user_id, is_whitelisted, &config).await?;
         }
         _ => {}
     }
@@ -86,20 +85,24 @@ async fn handle_overwrite_create(
     entry: &serenity::AuditLogEntry,
     guild_id: serenity::GuildId,
     data: &Data,
-    config: &module_configs::Model,
+    config_model: &module_configs::Model,
     user_id: serenity::UserId,
     is_whitelisted: bool,
+    config: &ChannelPermissionProtectionModuleConfig,
 ) -> Result<(), Error> {
     let channel_id = entry.options.as_ref().and_then(|o| o.channel_id).map(|id| id.get()).unwrap_or(0);
     let target_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
+    let should_punish = config.punish_when.is_empty() || config.punish_when.contains(&"create".to_string());
 
     let mut status = if is_whitelisted { 
         "✅ Whitelisted (No action taken)".to_string() 
+    } else if !should_punish {
+        "ℹ️ Protection not enabled for this action".to_string()
     } else { 
         "🚨 Blocked (Revert Pending)".to_string() 
     };
 
-    if !is_whitelisted {
+    if !is_whitelisted && should_punish {
         // Punishment
         let result = data.punishment
             .handle_violation(
@@ -112,28 +115,23 @@ async fn handle_overwrite_create(
             .await?;
 
         status = match result {
-            crate::services::punishment::ViolationResult::Punished(p) => format!("🚨 Blocked & Punished ({:?})", p),
+            crate::services::punishment::ViolationResult::Punished(p) => format!("🚨 **Blocked & Punished** ({:?})", p),
             crate::services::punishment::ViolationResult::ViolationRecorded { current, threshold } => {
-                format!("🚨 Blocked & Violation Recorded ({}/{})", current, threshold)
+                format!("🚨 **Blocked & Violation Recorded** ({}/{})", current, threshold)
             },
-            crate::services::punishment::ViolationResult::None => "🚨 Blocked (No Punishment Configured)".to_string(),
+            crate::services::punishment::ViolationResult::None => "🚨 **Blocked** (No Punishment Configured)".to_string(),
         };
 
         // Revert
-        if config.revert && channel_id != 0 && target_id != 0 {
-            let _ = ctx
-                .http
-                .delete_permission(
-                    serenity::ChannelId::new(channel_id),
-                    serenity::TargetId::new(target_id),
-                    Some("Channel Permission Protection Revert"),
-                )
-                .await;
+        if config_model.revert && channel_id != 0 && target_id != 0 {
+            if ctx.http.delete_permission(serenity::ChannelId::new(channel_id), serenity::TargetId::new(target_id), Some("Channel Permission Protection Revert")).await.is_ok() {
+                status += "\n✅ **Successfully Reverted**";
+            }
         }
     }
 
-    let title = if is_whitelisted { "Permission Overwrite Created (Whitelisted)" } else { "Permission Overwrite Created" };
-    let log_level = if is_whitelisted { LogLevel::Audit } else { LogLevel::Warn };
+    let title = if is_whitelisted { "Permission Overwrite Created (Whitelisted)" } else if should_punish { "Permission Overwrite Created (Blocked)" } else { "Permission Overwrite Created (Logged)" };
+    let log_level = if is_whitelisted { LogLevel::Audit } else if should_punish { LogLevel::Warn } else { LogLevel::Info };
 
     data.logger
         .log_action(
@@ -143,12 +141,13 @@ async fn handle_overwrite_create(
             log_level,
             title,
             &format!(
-                "A permission overwrite in channel (<#{}>) was created by <@{}>.\n\n**Status**: {}",
-                channel_id, user_id, status
+                "A permission overwrite in channel (<#{}>) was created by <@{}>.",
+                channel_id, user_id
             ),
             vec![
                 ("User", format!("<@{}>", user_id)),
                 ("Channel", format!("<#{}>", channel_id)),
+                ("Status", status),
             ],
         )
         .await?;
@@ -161,20 +160,24 @@ async fn handle_overwrite_delete(
     entry: &serenity::AuditLogEntry,
     guild_id: serenity::GuildId,
     data: &Data,
-    config: &module_configs::Model,
+    config_model: &module_configs::Model,
     user_id: serenity::UserId,
     is_whitelisted: bool,
+    config: &ChannelPermissionProtectionModuleConfig,
 ) -> Result<(), Error> {
     let channel_id = entry.options.as_ref().and_then(|o| o.channel_id).map(|id| id.get()).unwrap_or(0);
     let target_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
+    let should_punish = config.punish_when.is_empty() || config.punish_when.contains(&"delete".to_string());
 
     let mut status = if is_whitelisted { 
         "✅ Whitelisted (No action taken)".to_string() 
+    } else if !should_punish {
+        "ℹ️ Protection not enabled for this action".to_string()
     } else { 
         "🚨 Blocked (Revert Pending)".to_string() 
     };
 
-    if !is_whitelisted {
+    if !is_whitelisted && should_punish {
         // Punishment
         let result = data.punishment
             .handle_violation(
@@ -187,15 +190,15 @@ async fn handle_overwrite_delete(
             .await?;
 
         status = match result {
-            crate::services::punishment::ViolationResult::Punished(p) => format!("🚨 Blocked & Punished ({:?})", p),
+            crate::services::punishment::ViolationResult::Punished(p) => format!("🚨 **Blocked & Punished** ({:?})", p),
             crate::services::punishment::ViolationResult::ViolationRecorded { current, threshold } => {
-                format!("🚨 Blocked & Violation Recorded ({}/{})", current, threshold)
+                format!("🚨 **Blocked & Violation Recorded** ({}/{})", current, threshold)
             },
-            crate::services::punishment::ViolationResult::None => "🚨 Blocked (No Punishment Configured)".to_string(),
+            crate::services::punishment::ViolationResult::None => "🚨 **Blocked** (No Punishment Configured)".to_string(),
         };
 
         // Revert
-        if config.revert && channel_id != 0 && target_id != 0 {
+        if config_model.revert && channel_id != 0 && target_id != 0 {
             let mut allow = serenity::Permissions::empty();
             let mut deny = serenity::Permissions::empty();
 
@@ -231,20 +234,14 @@ async fn handle_overwrite_delete(
                 "type": kind_num,
             });
 
-            let _ = ctx
-                .http
-                .create_permission(
-                    serenity::ChannelId::new(channel_id),
-                    serenity::TargetId::new(target_id),
-                    &map,
-                    Some("Channel Permission Protection Revert"),
-                )
-                .await;
+            if ctx.http.create_permission(serenity::ChannelId::new(channel_id), serenity::TargetId::new(target_id), &map, Some("Channel Permission Protection Revert")).await.is_ok() {
+                status += "\n✅ **Successfully Reverted**";
+            }
         }
     }
 
-    let title = if is_whitelisted { "Permission Overwrite Deleted (Whitelisted)" } else { "Permission Overwrite Deleted" };
-    let log_level = if is_whitelisted { LogLevel::Audit } else { LogLevel::Error };
+    let title = if is_whitelisted { "Permission Overwrite Deleted (Whitelisted)" } else if should_punish { "Permission Overwrite Deleted (Blocked)" } else { "Permission Overwrite Deleted (Logged)" };
+    let log_level = if is_whitelisted { LogLevel::Audit } else if should_punish { LogLevel::Error } else { LogLevel::Info };
 
     data.logger
         .log_action(
@@ -254,12 +251,13 @@ async fn handle_overwrite_delete(
             log_level,
             title,
             &format!(
-                "A permission overwrite in channel (<#{}>) was deleted by <@{}>.\n\n**Status**: {}",
-                channel_id, user_id, status
+                "A permission overwrite in channel (<#{}>) was deleted by <@{}>.",
+                channel_id, user_id
             ),
             vec![
                 ("User", format!("<@{}>", user_id)),
                 ("Channel", format!("<#{}>", channel_id)),
+                ("Status", status),
             ],
         )
         .await?;
@@ -272,20 +270,24 @@ async fn handle_overwrite_update(
     entry: &serenity::AuditLogEntry,
     guild_id: serenity::GuildId,
     data: &Data,
-    config: &module_configs::Model,
+    config_model: &module_configs::Model,
     user_id: serenity::UserId,
     is_whitelisted: bool,
+    config: &ChannelPermissionProtectionModuleConfig,
 ) -> Result<(), Error> {
     let channel_id = entry.options.as_ref().and_then(|o| o.channel_id).map(|id| id.get()).unwrap_or(0);
     let target_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
+    let should_punish = config.punish_when.is_empty() || config.punish_when.contains(&"update".to_string());
 
     let mut status = if is_whitelisted { 
         "✅ Whitelisted (No action taken)".to_string() 
+    } else if !should_punish {
+        "ℹ️ Protection not enabled for this action".to_string()
     } else { 
         "🚨 Blocked (Revert Pending)".to_string() 
     };
 
-    if !is_whitelisted {
+    if !is_whitelisted && should_punish {
         // Punishment
         let result = data.punishment
             .handle_violation(
@@ -298,16 +300,15 @@ async fn handle_overwrite_update(
             .await?;
 
         status = match result {
-            crate::services::punishment::ViolationResult::Punished(p) => format!("🚨 Blocked & Punished ({:?})", p),
+            crate::services::punishment::ViolationResult::Punished(p) => format!("🚨 **Blocked & Punished** ({:?})", p),
             crate::services::punishment::ViolationResult::ViolationRecorded { current, threshold } => {
-                format!("🚨 Blocked & Violation Recorded ({}/{})", current, threshold)
+                format!("🚨 **Blocked & Violation Recorded** ({}/{})", current, threshold)
             },
-            crate::services::punishment::ViolationResult::None => "🚨 Blocked (No Punishment Configured)".to_string(),
+            crate::services::punishment::ViolationResult::None => "🚨 **Blocked** (No Punishment Configured)".to_string(),
         };
 
         // Revert
-        if config.revert && channel_id != 0 && target_id != 0 {
-            // We need to fetch current permissions and apply changes back
+        if config_model.revert && channel_id != 0 && target_id != 0 {
             let mut allow = None;
             let mut deny = None;
 
@@ -324,7 +325,6 @@ async fn handle_overwrite_update(
             }
 
             if allow.is_some() || deny.is_some() {
-                // Get current permissions from the channel to fill the missing one
                 let channel = ctx.http.get_channel(serenity::GenericChannelId::new(channel_id)).await;
                 if let Ok(serenity::Channel::Guild(channel)) = channel {
                     let current_overwrite = channel.permission_overwrites.iter().find(|o| match o.kind {
@@ -356,22 +356,16 @@ async fn handle_overwrite_update(
                         "type": kind_num,
                     });
 
-                    let _ = ctx
-                        .http
-                        .create_permission(
-                            serenity::ChannelId::new(channel_id),
-                            serenity::TargetId::new(target_id),
-                            &map,
-                            Some("Channel Permission Protection Revert"),
-                        )
-                        .await;
+                    if ctx.http.create_permission(serenity::ChannelId::new(channel_id), serenity::TargetId::new(target_id), &map, Some("Channel Permission Protection Revert")).await.is_ok() {
+                        status += "\n✅ **Successfully Reverted**";
+                    }
                 }
             }
         }
     }
 
-    let title = if is_whitelisted { "Permission Overwrite Updated (Whitelisted)" } else { "Permission Overwrite Updated" };
-    let log_level = if is_whitelisted { LogLevel::Audit } else { LogLevel::Info };
+    let title = if is_whitelisted { "Permission Overwrite Updated (Whitelisted)" } else if should_punish { "Permission Overwrite Updated (Blocked)" } else { "Permission Overwrite Updated (Logged)" };
+    let log_level = if is_whitelisted { LogLevel::Audit } else if should_punish { LogLevel::Info } else { LogLevel::Info };
 
     data.logger
         .log_action(
@@ -381,16 +375,18 @@ async fn handle_overwrite_update(
             log_level,
             title,
             &format!(
-                "A permission overwrite in channel (<#{}>) was modified by <@{}>.\n\n**Status**: {}",
-                channel_id, user_id, status
+                "A permission overwrite in channel (<#{}>) was modified by <@{}>.",
+                channel_id, user_id
             ),
             vec![
                 ("User", format!("<@{}>", user_id)),
                 ("Channel", format!("<#{}>", channel_id)),
+                ("Status", status),
             ],
         )
         .await?;
 
     Ok(())
 }
+
 

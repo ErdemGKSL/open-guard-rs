@@ -19,6 +19,9 @@ pub async fn handle_audit_log(
 
     let (config_model, config) = match config_model {
         Some(m) => {
+            if !m.enabled {
+                return Ok(());
+            }
             let config: ChannelProtectionModuleConfig =
                 serde_json::from_value(m.config.clone()).unwrap_or_default();
             (m, config)
@@ -63,19 +66,13 @@ pub async fn handle_audit_log(
     // Match on the audit log action to triggers variants error
     match entry.action {
         Action::Channel(ChannelAction::Create) => {
-            if config.punish_when.contains(&"create".to_string()) {
-                handle_channel_create(ctx, entry, guild_id, data, &config_model, user_id, is_whitelisted).await?;
-            }
+            handle_channel_create(ctx, entry, guild_id, data, &config_model, user_id, is_whitelisted, &config).await?;
         }
         Action::Channel(ChannelAction::Delete) => {
-            if config.punish_when.contains(&"delete".to_string()) {
-                handle_channel_delete(ctx, entry, guild_id, data, &config_model, user_id, is_whitelisted).await?;
-            }
+            handle_channel_delete(ctx, entry, guild_id, data, &config_model, user_id, is_whitelisted, &config).await?;
         }
         Action::Channel(ChannelAction::Update) => {
-            if config.punish_when.contains(&"update".to_string()) {
-                handle_channel_update(ctx, entry, guild_id, data, &config_model, user_id, is_whitelisted).await?;
-            }
+            handle_channel_update(ctx, entry, guild_id, data, &config_model, user_id, is_whitelisted, &config).await?;
         }
         _ => {}
     }
@@ -88,19 +85,23 @@ async fn handle_channel_create(
     entry: &serenity::AuditLogEntry,
     guild_id: serenity::GuildId,
     data: &Data,
-    config: &module_configs::Model,
+    config_model: &module_configs::Model,
     user_id: serenity::UserId,
     is_whitelisted: bool,
+    config: &ChannelProtectionModuleConfig,
 ) -> Result<(), Error> {
     let channel_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
+    let should_punish = config.punish_when.is_empty() || config.punish_when.contains(&"create".to_string());
 
     let mut status = if is_whitelisted { 
         "✅ Whitelisted (No action taken)".to_string() 
+    } else if !should_punish {
+        "ℹ️ Protection not enabled for this action".to_string()
     } else { 
         "🚨 Blocked (Revert Pending)".to_string() 
     };
 
-    if !is_whitelisted {
+    if !is_whitelisted && should_punish {
         // Punishment
         let result = data.punishment
             .handle_violation(
@@ -113,24 +114,25 @@ async fn handle_channel_create(
             .await?;
         
         status = match result {
-            crate::services::punishment::ViolationResult::Punished(p) => format!("🚨 Blocked & Punished ({:?})", p),
+            crate::services::punishment::ViolationResult::Punished(p) => format!("🚨 **Blocked & Punished** ({:?})", p),
             crate::services::punishment::ViolationResult::ViolationRecorded { current, threshold } => {
-                format!("🚨 Blocked & Violation Recorded ({}/{})", current, threshold)
+                format!("🚨 **Blocked & Violation Recorded** ({}/{})", current, threshold)
             },
-            crate::services::punishment::ViolationResult::None => "🚨 Blocked (No Punishment Configured)".to_string(),
+            crate::services::punishment::ViolationResult::None => "🚨 **Blocked** (No Punishment Configured)".to_string(),
         };
 
         // Revert
-        if config.revert && channel_id != 0 {
+        if config_model.revert && channel_id != 0 {
             let _ = ctx
                 .http
                 .delete_channel(serenity::GenericChannelId::new(channel_id), Some("Channel Protection Revert"))
                 .await;
+            status += "\n✅ **Successfully Reverted**";
         }
     }
 
-    let title = if is_whitelisted { "Channel Created (Whitelisted)" } else { "Channel Created" };
-    let log_level = if is_whitelisted { LogLevel::Audit } else { LogLevel::Warn };
+    let title = if is_whitelisted { "Channel Created (Whitelisted)" } else if should_punish { "Channel Created (Blocked)" } else { "Channel Created (Logged)" };
+    let log_level = if is_whitelisted { LogLevel::Audit } else if should_punish { LogLevel::Warn } else { LogLevel::Info };
 
     data.logger
         .log_action(
@@ -140,12 +142,13 @@ async fn handle_channel_create(
             log_level,
             title,
             &format!(
-                "A new channel (<#{}>) was created by <@{}>.\n\n**Status**: {}",
-                channel_id, user_id, status
+                "A new channel (<#{}>) was created by <@{}>.",
+                channel_id, user_id
             ),
             vec![
                 ("User", format!("<@{}>", user_id)),
                 ("Channel", format!("<#{}>", channel_id)),
+                ("Status", status),
             ],
         )
         .await?;
@@ -158,19 +161,23 @@ async fn handle_channel_delete(
     entry: &serenity::AuditLogEntry,
     guild_id: serenity::GuildId,
     data: &Data,
-    config: &module_configs::Model,
+    config_model: &module_configs::Model,
     user_id: serenity::UserId,
     is_whitelisted: bool,
+    config: &ChannelProtectionModuleConfig,
 ) -> Result<(), Error> {
     let channel_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
+    let should_punish = config.punish_when.is_empty() || config.punish_when.contains(&"delete".to_string());
 
     let mut status = if is_whitelisted { 
         "✅ Whitelisted (No action taken)".to_string() 
+    } else if !should_punish {
+        "ℹ️ Protection not enabled for this action".to_string()
     } else { 
         "🚨 Blocked (Revert Pending)".to_string() 
     };
 
-    if !is_whitelisted {
+    if !is_whitelisted && should_punish {
         // Punishment
         let result = data.punishment
             .handle_violation(
@@ -183,16 +190,16 @@ async fn handle_channel_delete(
             .await?;
 
         status = match result {
-            crate::services::punishment::ViolationResult::Punished(p) => format!("🚨 Blocked & Punished ({:?})", p),
+            crate::services::punishment::ViolationResult::Punished(p) => format!("🚨 **Blocked & Punished** ({:?})", p),
             crate::services::punishment::ViolationResult::ViolationRecorded { current, threshold } => {
-                format!("🚨 Blocked & Violation Recorded ({}/{})", current, threshold)
+                format!("🚨 **Blocked & Violation Recorded** ({}/{})", current, threshold)
             },
-            crate::services::punishment::ViolationResult::None => "🚨 Blocked (No Punishment Configured)".to_string(),
+            crate::services::punishment::ViolationResult::None => "🚨 **Blocked** (No Punishment Configured)".to_string(),
         };
 
         // Revert
-        if config.revert {
-            // Wait for the channel to be stored in cache (it might come slightly after the audit log)
+        if config_model.revert {
+            // Wait for the channel to be stored in cache
             let mut cached_channel = None;
             for _ in 0..10 {
                 if let Some(c) = data.cache.take_channel(guild_id, serenity::ChannelId::new(channel_id)) {
@@ -231,13 +238,15 @@ async fn handle_channel_delete(
 
                 create_channel = create_channel.position(channel.position as u16);
 
-                let _ = guild_id.create_channel(&ctx.http, create_channel).await;
+                if guild_id.create_channel(&ctx.http, create_channel).await.is_ok() {
+                    status += "\n✅ **Successfully Reverted**";
+                }
             }
         }
     }
 
-    let title = if is_whitelisted { "Channel Deleted (Whitelisted)" } else { "Channel Deleted" };
-    let log_level = if is_whitelisted { LogLevel::Audit } else { LogLevel::Error };
+    let title = if is_whitelisted { "Channel Deleted (Whitelisted)" } else if should_punish { "Channel Deleted (Blocked)" } else { "Channel Deleted (Logged)" };
+    let log_level = if is_whitelisted { LogLevel::Audit } else if should_punish { LogLevel::Error } else { LogLevel::Info };
 
     data.logger
         .log_action(
@@ -247,12 +256,13 @@ async fn handle_channel_delete(
             log_level,
             title,
             &format!(
-                "A channel (`{}`) was deleted by <@{}>.\n\n**Status**: {}",
-                channel_id, user_id, status
+                "A channel (`{}`) was deleted by <@{}>.",
+                channel_id, user_id
             ),
             vec![
                 ("User", format!("<@{}>", user_id)),
                 ("Channel ID", channel_id.to_string()),
+                ("Status", status),
             ],
         )
         .await?;
@@ -265,19 +275,23 @@ async fn handle_channel_update(
     entry: &serenity::AuditLogEntry,
     guild_id: serenity::GuildId,
     data: &Data,
-    config: &module_configs::Model,
+    config_model: &module_configs::Model,
     user_id: serenity::UserId,
     is_whitelisted: bool,
+    config: &ChannelProtectionModuleConfig,
 ) -> Result<(), Error> {
     let channel_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
+    let should_punish = config.punish_when.is_empty() || config.punish_when.contains(&"update".to_string());
 
     let mut status = if is_whitelisted { 
         "✅ Whitelisted (No action taken)".to_string() 
+    } else if !should_punish {
+        "ℹ️ Protection not enabled for this action".to_string()
     } else { 
         "🚨 Blocked (Revert Pending)".to_string() 
     };
 
-    if !is_whitelisted {
+    if !is_whitelisted && should_punish {
         // Punishment
         let result = data.punishment
             .handle_violation(
@@ -290,15 +304,15 @@ async fn handle_channel_update(
             .await?;
 
         status = match result {
-            crate::services::punishment::ViolationResult::Punished(p) => format!("🚨 Blocked & Punished ({:?})", p),
+            crate::services::punishment::ViolationResult::Punished(p) => format!("🚨 **Blocked & Punished** ({:?})", p),
             crate::services::punishment::ViolationResult::ViolationRecorded { current, threshold } => {
-                format!("🚨 Blocked & Violation Recorded ({}/{})", current, threshold)
+                format!("🚨 **Blocked & Violation Recorded** ({}/{})", current, threshold)
             },
-            crate::services::punishment::ViolationResult::None => "🚨 Blocked (No Punishment Configured)".to_string(),
+            crate::services::punishment::ViolationResult::None => "🚨 **Blocked** (No Punishment Configured)".to_string(),
         };
 
         // Revert
-        if config.revert && channel_id != 0 {
+        if config_model.revert && channel_id != 0 {
             let mut map = serde_json::Map::new();
             for change in &entry.changes {
                 match change {
@@ -327,20 +341,15 @@ async fn handle_channel_update(
             }
 
             if !map.is_empty() {
-                let _ = ctx
-                    .http
-                    .edit_channel(
-                        serenity::GenericChannelId::new(channel_id),
-                        &map,
-                        Some("Channel Protection Revert"),
-                    )
-                    .await;
+                if ctx.http.edit_channel(serenity::GenericChannelId::new(channel_id), &map, Some("Channel Protection Revert")).await.is_ok() {
+                    status += "\n✅ **Successfully Reverted**";
+                }
             }
         }
     }
 
-    let title = if is_whitelisted { "Channel Updated (Whitelisted)" } else { "Channel Updated" };
-    let log_level = if is_whitelisted { LogLevel::Audit } else { LogLevel::Info };
+    let title = if is_whitelisted { "Channel Updated (Whitelisted)" } else if should_punish { "Channel Updated (Blocked)" } else { "Channel Updated (Logged)" };
+    let log_level = if is_whitelisted { LogLevel::Audit } else if should_punish { LogLevel::Info } else { LogLevel::Info };
 
     data.logger
         .log_action(
@@ -350,15 +359,17 @@ async fn handle_channel_update(
             log_level,
             title,
             &format!(
-                "A channel (<#{}>) was modified by <@{}>.\n\n**Status**: {}",
-                channel_id, user_id, status
+                "A channel (<#{}>) was modified by <@{}>.",
+                channel_id, user_id
             ),
             vec![
                 ("User", format!("<@{}>", user_id)),
                 ("Channel", format!("<#{}>", channel_id)),
+                ("Status", status),
             ],
         )
         .await?;
 
     Ok(())
 }
+
