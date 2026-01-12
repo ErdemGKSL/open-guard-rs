@@ -35,7 +35,7 @@ echo "Deploying binary to remote server..."
 scp -i "$PEM_FILE" "$BINARY_PATH" "$REMOTE_USER@$DEPLOY_IP:$REMOTE_DIR/open-guard-rs"
 
 echo "Registering commands (publish)..."
-ssh -i "$PEM_FILE" "$REMOTE_USER@$DEPLOY_IP" "cd $REMOTE_DIR && ./open-guard-rs --publish"
+ssh -i "$PEM_FILE" "$REMOTE_USER@$DEPLOY_IP" "cd $REMOTE_DIR && export RUST_LOG=debug && ./open-guard-rs --publish"
 
 echo "Starting open-guard service..."
 ssh -i "$PEM_FILE" "$REMOTE_USER@$DEPLOY_IP" "sudo systemctl start open-guard"
