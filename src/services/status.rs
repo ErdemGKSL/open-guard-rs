@@ -52,7 +52,7 @@ pub async fn status(ctx: Context<'_>) -> Result<(), Error> {
 
     // Shard info
     let shard_id = ctx.serenity_context().shard_id;
-    let shard_count = ctx.framework().shard_manager().runners().read().await.len();
+    let shard_count = ctx.framework().serenity_context.runners.len();
 
     let mut embed = serenity::CreateEmbed::default()
         .title(l10n.t("status-title", None))
