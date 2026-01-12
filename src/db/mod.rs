@@ -39,11 +39,20 @@ pub async fn ensure_database_exists(database_url: &str) -> anyhow::Result<()> {
         _ => return Ok(()), // Could not parse DB name, let connection fail naturally later
     };
 
-    // Remove query parameters if any
-    let db_name = db_name.split('?').next().unwrap_or(db_name);
+    // Remove query parameters if any, but save them for later
+    let (db_name, query_params) = if let Some((name, params)) = db_name.split_once('?') {
+        (name, Some(params))
+    } else {
+        (db_name, None)
+    };
 
     // Connect to 'postgres' database to create the target database
-    let root_url = format!("{}/postgres", base_url);
+    // Preserve query parameters (like ?host=/var/run/postgresql for Unix sockets)
+    let root_url = if let Some(params) = query_params {
+        format!("{}/postgres?{}", base_url, params)
+    } else {
+        format!("{}/postgres", base_url)
+    };
 
     info!("Ensuring database '{}' exists...", db_name);
 
