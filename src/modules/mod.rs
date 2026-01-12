@@ -1,9 +1,9 @@
-pub mod channel_protection;
-pub mod channel_permission_protection;
-pub mod role_protection;
-pub mod role_permission_protection;
-pub mod member_permission_protection;
 pub mod bot_adding_protection;
+pub mod channel_permission_protection;
+pub mod channel_protection;
+pub mod member_permission_protection;
+pub mod role_permission_protection;
+pub mod role_protection;
 
 use crate::{Data, Error};
 
@@ -48,4 +48,5 @@ pub fn commands() -> Vec<poise::Command<Data, Error>> {
 
 pub fn definitions() -> Vec<ModuleDefinition> {
     get_modules().into_iter().map(|m| m.definition).collect()
+}
 }

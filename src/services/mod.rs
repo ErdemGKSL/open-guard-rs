@@ -6,3 +6,4 @@ pub mod localization;
 pub mod logger;
 pub mod punishment;
 pub mod whitelist;
+pub mod status;

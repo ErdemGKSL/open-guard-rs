@@ -227,3 +227,10 @@ log-bot-add-title-blocked = Bot Eklendi (Engellendi)
 log-bot-add-desc = <@{$botId}> (`{$botId}`) botu <@{$userId}> tarafından eklendi.
 log-bot-add-reason = Yetkisiz Bot Ekleme
 log-bot-add-revert-reason = Bot Ekleme Koruması Geri Alma
+
+status-title = 📊 Bot Durumu
+status-modules = 📦 Aktif Modüller
+status-latency = ⏱️ Gecikme
+status-shard = 💎 Shard
+status-system = 🖥️ Sistem Kaynakları
+status-no-guild = ❌ Sunucuda değil.

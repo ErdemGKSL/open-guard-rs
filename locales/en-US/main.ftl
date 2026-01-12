@@ -230,3 +230,10 @@ log-bot-add-title-blocked = Bot Added (Blocked)
 log-bot-add-desc = Bot <@{$botId}> (`{$botId}`) was added by <@{$userId}>.
 log-bot-add-reason = Unauthorized Bot Added
 log-bot-add-revert-reason = Bot Adding Protection Revert
+
+status-title = 📊 Bot Status
+status-modules = 📦 Enabled Modules
+status-latency = ⏱️ Latency
+status-shard = 💎 Shard
+status-system = 🖥️ System Resources
+status-no-guild = ❌ Not in a guild.
