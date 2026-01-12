@@ -43,6 +43,7 @@ pub fn commands() -> Vec<poise::Command<Data, Error>> {
 
     all_commands.push(crate::services::config::config());
     all_commands.push(crate::services::help::help());
+    all_commands.push(crate::services::status::status());
     all_commands
 }
 
