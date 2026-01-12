@@ -176,7 +176,9 @@ jobs:
           scp -i deploy_key.pem open-guard-rs-linux-x86_64 "$REMOTE_USER@$DEPLOY_IP:$REMOTE_DIR/open-guard-rs"
           
           echo "Registering commands (publish)..."
-          ssh -i deploy_key.pem "$REMOTE_USER@$DEPLOY_IP" "cd $REMOTE_DIR && chmod +x open-guard-rs && ./open-guard-rs --publish"
+          ssh -i deploy_key.pem "$REMOTE_USER@$DEPLOY_IP" "cd $REMOTE_DIR && chmod +x open-guard-rs && export RUST_LOG=info && ./open-guard-rs --publish"
           
           echo "Starting open-guard service..."
           ssh -i deploy_key.pem "$REMOTE_USER@$DEPLOY_IP" "sudo systemctl start open-guard"
+          
+          echo "Deployment finished successfully!"
