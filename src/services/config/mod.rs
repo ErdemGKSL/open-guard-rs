@@ -108,7 +108,7 @@ pub async fn build_main_menu(
             .iter()
             .find(|c| c.module_type == m)
             .map(|c| c.enabled)
-            .unwrap_or(true);
+            .unwrap_or(false);
         if enabled {
             format!("🟢 {}", l10n.t("config-btn-enabled", None))
         } else {
@@ -735,7 +735,7 @@ pub async fn handle_interaction(
                     ..Default::default()
                 };
                 let entry = am.insert(&data.db).await?;
-                (entry.into(), true)
+                (entry.into(), false)
             }
         };
 
