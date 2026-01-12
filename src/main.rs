@@ -4,6 +4,7 @@ use dotenvy::dotenv;
 use poise::serenity_prelude as serenity;
 use sea_orm::DatabaseConnection;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU32, Ordering};
 use tracing::{error, info};
 
 mod db;
@@ -27,7 +28,6 @@ struct Args {
 }
 
 // Custom user data passed to all command functions
-#[derive(Clone)]
 pub struct Data {
     pub db: DatabaseConnection,
     pub l10n: Arc<services::localization::LocalizationManager>,
@@ -36,6 +36,7 @@ pub struct Data {
     pub whitelist: Arc<services::whitelist::WhitelistService>,
     pub cache: Arc<services::cache::ObjectCacheService>,
     pub module_definitions: Vec<modules::ModuleDefinition>,
+    pub shard_count: AtomicU32,
 }
 
 pub type Error = anyhow::Error;
@@ -110,15 +111,18 @@ async fn main() -> anyhow::Result<()> {
     // Handle command registration if requested
     if let Some(publish_args) = args.publish {
         let http = serenity::HttpBuilder::new(token.clone()).build();
-        let bot_user = http.get_current_user().await.context("Failed to fetch bot user info")?;
+        let bot_user = http
+            .get_current_user()
+            .await
+            .context("Failed to fetch bot user info")?;
         let application_id = bot_user.id;
-        
+
         info!("Fetched Application ID: {}", application_id);
 
         let http = serenity::HttpBuilder::new(token.clone())
             .application_id(serenity::ApplicationId::new(application_id.get()))
             .build();
-        
+
         let empty_commands = vec![];
         let commands = if args.clear {
             &empty_commands
@@ -162,6 +166,38 @@ async fn main() -> anyhow::Result<()> {
         std::process::exit(0);
     }
 
+    let http = serenity::HttpBuilder::new(token.clone()).build();
+    let initial_shard_count = http
+        .get_bot_gateway()
+        .await
+        .context("Failed to get bot gateway info")?
+        .shards
+        .get() as u32;
+
+    let shard_count = Arc::new(AtomicU32::new(initial_shard_count));
+
+    // Spawn background task to refresh shard count every 2 minutes
+    {
+        let shard_count = shard_count.clone();
+        let token = token.clone();
+        tokio::spawn(async move {
+            let http = serenity::HttpBuilder::new(token).build();
+            loop {
+                tokio::time::sleep(tokio::time::Duration::from_secs(120)).await;
+                match http.get_bot_gateway().await {
+                    Ok(gateway) => {
+                        let new_count = gateway.shards.get() as u32;
+                        shard_count.store(new_count, Ordering::Relaxed);
+                        info!("Shard count refreshed: {}", new_count);
+                    }
+                    Err(e) => {
+                        error!("Failed to refresh shard count: {:?}", e);
+                    }
+                }
+            }
+        });
+    }
+
     // Create the poise framework
     let framework = poise::Framework::new(framework_options);
 
@@ -177,6 +213,7 @@ async fn main() -> anyhow::Result<()> {
             whitelist,
             cache,
             module_definitions: modules::definitions(),
+            shard_count: AtomicU32::new(shard_count.load(Ordering::Relaxed)),
         }) as _)
         .await
         .context("Failed to create client")?;
