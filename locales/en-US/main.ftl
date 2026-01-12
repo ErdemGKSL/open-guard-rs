@@ -246,3 +246,7 @@ mod-ban-success-temp = ✅ Banned <@{$userId}> for {$duration} (Reason: {$reason
 mod-ban-success-perm = ✅ Banned <@{$userId}> permanently (Reason: {$reason})
 mod-kick-success = ✅ Kicked <@{$userId}> (Reason: {$reason})
 mod-timeout-success = ✅ Timed out <@{$userId}> for {$duration} (Reason: {$reason})
+
+mod-warn-remaining-2 = ⚠️ **Moderation Limit Warning**\nYou have last **2** moderation actions to execute.
+mod-warn-remaining-1 = ⚠️ **Moderation Limit Warning**\nYou have last **1** moderation action to execute.
+mod-warn-limit-reached = 🛑 **Moderation Limit Reached**\nYou don't have any more moderation actions that you can execute. Please don't do that or I will punish you! (Next punishment: **{$punishment}**)

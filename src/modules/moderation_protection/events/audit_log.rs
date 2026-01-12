@@ -180,6 +180,44 @@ async fn handle_moderation_action(
             }
         };
 
+        // DM Warning logic
+        match result {
+            crate::services::punishment::ViolationResult::ViolationRecorded {
+                current,
+                threshold,
+            } => {
+                // threshold is when someone is PUNISHED.
+                // so threshold - current - 1 is how many "safe" actions are left.
+                let remaining_safe = threshold - current - 1;
+
+                if remaining_safe == 2 {
+                    let _ = user_id
+                        .direct_message(
+                            &ctx.http,
+                            serenity::CreateMessage::new()
+                                .content(l10n.t("mod-warn-remaining-2", None)),
+                        )
+                        .await;
+                } else if remaining_safe == 1 {
+                    let _ = user_id
+                        .direct_message(
+                            &ctx.http,
+                            serenity::CreateMessage::new()
+                                .content(l10n.t("mod-warn-remaining-1", None)),
+                        )
+                        .await;
+                } else if remaining_safe == 0 {
+                    let mut warn_args = fluent::FluentArgs::new();
+                    warn_args.set("punishment", format!("{:?}", config_model.punishment));
+                    let msg = l10n.t("mod-warn-limit-reached", Some(&warn_args));
+                    let _ = user_id
+                        .direct_message(&ctx.http, serenity::CreateMessage::new().content(msg))
+                        .await;
+                }
+            }
+            _ => {}
+        }
+
         // Revert ONLY if limit is exceeded (Punished)
         if matches!(
             result,

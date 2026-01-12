@@ -245,3 +245,7 @@ mod-ban-success-temp = ✅ <@{$userId}> kullanıcısı {$duration} süreliğine 
 mod-ban-success-perm = ✅ <@{$userId}> kullanıcısı kalıcı olarak yasaklandı (Sebep: {$reason})
 mod-kick-success = ✅ <@{$userId}> kullanıcısı atıldı (Sebep: {$reason})
 mod-timeout-success = ✅ <@{$userId}> kullanıcısı {$duration} süreliğine susturuldu (Sebep: {$reason})
+
+mod-warn-remaining-2 = ⚠️ **Moderasyon Sınırı Uyarısı**\nGerçekleştirebileceğiniz son **2** moderasyon işleminiz kaldı.
+mod-warn-remaining-1 = ⚠️ **Moderasyon Sınırı Uyarısı**\nGerçekleştirebileceğiniz son **1** moderasyon işleminiz kaldı.
+mod-warn-limit-reached = 🛑 **Moderasyon Sınırı Aşıldı**\nGerçekleştirebileceğiniz başka moderasyon işlemi kalmadı. Lütfen devam etmeyin yoksa sizi cezalandırmak zorunda kalacağım! (Sıradaki ceza: **{$punishment}**)
