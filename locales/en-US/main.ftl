@@ -2,8 +2,9 @@ module-config-name = Configuration
 module-config-description = Bot settings and module configuration.
 
 module-channel-protection-name = Channel Protection
-module-channel-protection-description = Protect channels from unauthorized creation or deletion.
+module-channel-protection-desc = Protect channels from unauthorized creation or deletion.
 
+module-channel-permission-protection-name = Channel Permission Protection
 module-channel-permission-protection-desc = Protect channel permission overwrites from unauthorized changes.
 
 module-role-protection-name = Role Protection
@@ -237,3 +238,5 @@ status-latency = ⏱️ Latency
 status-shard = 💎 Shard
 status-system = 🖥️ System Resources
 status-no-guild = ❌ Not in a guild.
+status-refresh-btn = Refresh
+status-metrics = Metrics

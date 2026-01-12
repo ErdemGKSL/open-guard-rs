@@ -2,8 +2,9 @@ module-config-name = Yapılandırma
 module-config-description = Bot ayarları ve modül yapılandırması.
 
 module-channel-protection-name = Kanal Koruması
-module-channel-protection-description = Kanalları yetkisiz oluşturma veya silme işlemlerinden korur.
+module-channel-protection-desc = Kanalları yetkisiz oluşturma veya silme işlemlerinden korur.
 
+module-channel-permission-protection-name = Kanal Yetki Koruması
 module-channel-permission-protection-desc = Kanal yetki değişimlerini yetkisiz işlemlerden korur.
 
 module-role-protection-name = Rol Koruması
@@ -234,3 +235,5 @@ status-latency = ⏱️ Gecikme
 status-shard = 💎 Shard
 status-system = 🖥️ Sistem Kaynakları
 status-no-guild = ❌ Sunucuda değil.
+status-refresh-btn = Yenile
+status-metrics = İstatistikler

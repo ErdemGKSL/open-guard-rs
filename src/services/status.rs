@@ -14,7 +14,7 @@ use std::sync::atomic::Ordering;
     ephemeral
 )]
 pub async fn status(ctx: Context<'_>) -> Result<(), Error> {
-    ctx.defer().await?;
+    ctx.defer_ephemeral().await?;
     let end_time = Utc::now();
 
     let l10n = ctx.l10n_user();
@@ -100,7 +100,7 @@ pub async fn get_status_components(
 
     // Metrics Section
     inner_components.push(serenity::CreateContainerComponent::TextDisplay(
-        serenity::CreateTextDisplay::new(format!("### 📈 Metrics")),
+        serenity::CreateTextDisplay::new(format!("### 📈 {}", l10n.t("status-metrics", None))),
     ));
 
     // Latency

@@ -121,18 +121,29 @@ impl LocalizationManager {
             .parse::<LanguageIdentifier>()
             .unwrap_or_else(|_| "en-US".parse().unwrap());
 
-        let bundle = self.bundles.get(&lang_id).or_else(|| {
-            // Fallback to en-US if the requested locale is not available
-            self.bundles.get(&"en-US".parse().unwrap())
-        });
-
-        if let Some(bundle) = bundle {
+        // 1. Try to get the message from the requested locale
+        if let Some(bundle) = self.bundles.get(&lang_id) {
             if let Some(msg) = bundle.get_message(key) {
                 if let Some(pattern) = msg.value() {
                     let mut errors = vec![];
                     return bundle
                         .format_pattern(pattern, args, &mut errors)
                         .into_owned();
+                }
+            }
+        }
+
+        // 2. Fallback to en-US if requested locale failed and it wasn't already en-US
+        let en_us: LanguageIdentifier = "en-US".parse().unwrap();
+        if lang_id != en_us {
+            if let Some(en_bundle) = self.bundles.get(&en_us) {
+                if let Some(msg) = en_bundle.get_message(key) {
+                    if let Some(pattern) = msg.value() {
+                        let mut errors = vec![];
+                        return en_bundle
+                            .format_pattern(pattern, args, &mut errors)
+                            .into_owned();
+                    }
                 }
             }
         }
