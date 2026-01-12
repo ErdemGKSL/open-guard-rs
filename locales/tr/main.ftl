@@ -20,6 +20,9 @@ module-bot-adding-protection-name = Bot Ekleme Koruması
 module-moderation-protection-name = Moderasyon Koruması
 module-bot-adding-protection-desc = Yeni eklenen botları otomatik olarak atar ve ekleyen kullanıcıyı cezalandırır.
 module-moderation-protection-desc = Ban, kick ve susturma işlemlerini sınırlandırır. Komutlar bu sınırları baypas eder.
+module-logging-name = Kayıt Tutma (Logging)
+module-logging-label = Kayıt Tutma (Logging)
+module-logging-desc = Kapsamlı sunucu olayı kaydı (Mesajlar, Ses, Üyeler)
 
 help-title = Bot Yardım Menüsü
 
@@ -299,10 +302,20 @@ config-log-channels-header = Tür Bazlı Kayıt Kanalları (İsteğe Bağlı)
 config-log-msg-channel-placeholder = Mesaj kayıt kanalı seçin...
 config-log-voice-channel-placeholder = Ses kayıt kanalı seçin...
 config-log-member-channel-placeholder = Üye kayıt kanalı seçin...
+config-log-toggles-header = **Kayıt Ayarları**
+config-page-general = Genel
+config-page-channels = Kanallar
+config-log-msg-channel-label = **Mesaj Kayıt Kanalı**
+config-log-voice-channel-label = **Ses Kayıt Kanalı**
+config-log-member-channel-label = **Üye Kayıt Kanalı**
 
 # Kayıt Olayları
 log-msg-delete-title = Mesaj Silindi
-log-msg-delete-desc = <#{$channelId}> kanalında bir mesaj silindi
+log-msg-delete-desc = { $userId ->
+    [0] <#{$channelId}> kanalında bir mesaj silindi
+    *[other] <@{$userId}> kullanıcısının <#{$channelId}> kanalındaki mesajı silindi
+}
+log-msg-delete-content = İçerik
 log-msg-edit-title = Mesaj Düzenlendi
 log-msg-edit-desc = <@{$userId}>, <#{$channelId}> kanalında bir mesajı düzenledi
 log-msg-edit-before = Önceki

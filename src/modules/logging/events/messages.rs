@@ -7,7 +7,7 @@ pub async fn handle_message_delete(
     ctx: &serenity::Context,
     guild_id: serenity::GuildId,
     channel_id: serenity::ChannelId,
-    _deleted_message_id: serenity::MessageId,
+    deleted_message_id: serenity::MessageId,
     data: &Data,
 ) -> Result<(), Error> {
     // 1. Get module config
@@ -25,8 +25,23 @@ pub async fn handle_message_delete(
 
     let l10n = data.l10n.get_l10n_for_guild(guild_id, &data.db).await;
 
+    // Try to get message from cache and extract data immediately to avoid Send issues
+    let cached_data = ctx
+        .cache
+        .message(channel_id.into(), deleted_message_id)
+        .map(|msg| (msg.author.id, msg.content.to_string()));
+
     let mut args = fluent::FluentArgs::new();
     args.set("channelId", channel_id.get());
+    args.set("userId", 0);
+
+    let mut fields: Vec<(&str, String)> = vec![];
+    let content_label = l10n.t("log-msg-delete-content", None);
+
+    if let Some((author_id, content)) = cached_data {
+        args.set("userId", author_id.get());
+        fields.push((content_label.as_str(), content));
+    }
 
     data.logger
         .log_action(
@@ -37,7 +52,7 @@ pub async fn handle_message_delete(
             crate::services::logger::LogLevel::Info,
             &l10n.t("log-msg-delete-title", None),
             &l10n.t("log-msg-delete-desc", Some(&args)),
-            vec![],
+            fields,
         )
         .await?;
 

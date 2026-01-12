@@ -85,6 +85,8 @@ async fn main() -> anyhow::Result<()> {
         | serenity::GatewayIntents::AUTO_MODERATION_CONFIGURATION
         | serenity::GatewayIntents::GUILD_MODERATION
         | serenity::GatewayIntents::AUTO_MODERATION_EXECUTION
+        | serenity::GatewayIntents::MESSAGE_CONTENT
+        | serenity::GatewayIntents::GUILD_MEMBERS
         | serenity::GatewayIntents::GUILD_VOICE_STATES;
 
     // Initialize localization manager
@@ -221,10 +223,14 @@ async fn main() -> anyhow::Result<()> {
     // Create the poise framework
     let framework = poise::Framework::new(framework_options);
 
+    let mut cache_settings = serenity::cache::Settings::default();
+    cache_settings.max_messages = 2048;
+
     // Build the client with both poise framework and custom event handler
     let mut client = serenity::ClientBuilder::new(token, intents)
         .framework(Box::new(framework))
         .event_handler(Arc::new(services::event_manager::Handler))
+        .cache_settings(cache_settings)
         .data(Arc::new(Data {
             db: db.clone(),
             l10n,

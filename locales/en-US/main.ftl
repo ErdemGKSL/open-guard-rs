@@ -19,6 +19,10 @@ module-member-permission-protection-desc = Protect members from being granted da
 module-bot-adding-protection-name = Bot Adding Protection
 module-moderation-protection-name = Moderation Protection
 module-bot-adding-protection-desc = Automatically kicks newly added bots and punishes the user who added them.
+module-moderation-protection-desc = Logs and limits moderation actions by authorized users. Commands bypass these limits.
+module-logging-name = Logging
+module-logging-label = Logging
+module-logging-desc = Comprehensive server event logging (Messages, Voice, Members)
 
 help-title = Bot Help Menu
 
@@ -300,10 +304,20 @@ config-log-channels-header = Per-type Log Channels (Optional)
 config-log-msg-channel-placeholder = Select message log channel...
 config-log-voice-channel-placeholder = Select voice log channel...
 config-log-member-channel-placeholder = Select member log channel...
+config-log-toggles-header = **Log Toggles**
+config-page-general = General
+config-page-channels = Channels
+config-log-msg-channel-label = **Message Log Channel**
+config-log-voice-channel-label = **Voice Log Channel**
+config-log-member-channel-label = **Member Log Channel**
 
 # Logging Events
 log-msg-delete-title = Message Deleted
-log-msg-delete-desc = A message was deleted in <#{$channelId}>
+log-msg-delete-desc = { $userId ->
+    [0] A message was deleted in <#{$channelId}>
+    *[other] A message by <@{$userId}> was deleted in <#{$channelId}>
+}
+log-msg-delete-content = Content
 log-msg-edit-title = Message Edited
 log-msg-edit-desc = <@{$userId}> edited a message in <#{$channelId}>
 log-msg-edit-before = Before

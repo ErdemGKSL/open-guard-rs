@@ -209,6 +209,7 @@ pub async fn build_module_menu(
     data: &Data,
     guild_id: serenity::GuildId,
     module: ModuleType,
+    page: u32,
     l10n: &L10nProxy,
 ) -> Result<Vec<serenity::CreateComponent<'static>>, Error> {
     let m_config = match module_configs::Entity::find_by_id((guild_id.get() as i64, module))
@@ -244,17 +245,83 @@ pub async fn build_module_menu(
         ModuleType::Logging => l10n.t("config-logging-label", None),
     };
 
-    let mut inner_components = create_module_config_payload(
-        name,
-        module,
-        m_config.log_channel_id,
-        m_config.punishment,
-        m_config.punishment_at,
-        m_config.punishment_at_interval,
-        m_config.enabled,
-        m_config.revert,
-        l10n,
-    );
+    let mut inner_components = if module == ModuleType::Logging && page == 1 {
+        create_header(name, true)
+    } else if module == ModuleType::Logging {
+        // Page 0: General - Header and Global toggle
+        let mut components = vec![];
+        let status_label = if m_config.enabled {
+            l10n.t("config-btn-enabled", None)
+        } else {
+            l10n.t("config-btn-disabled", None)
+        };
+
+        let toggle_btn = serenity::CreateButton::new(format!("config_module_toggle_{}", module))
+            .label(status_label)
+            .style(if m_config.enabled {
+                serenity::ButtonStyle::Success
+            } else {
+                serenity::ButtonStyle::Danger
+            });
+
+        components.push(serenity::CreateContainerComponent::Section(
+            serenity::CreateSection::new(
+                vec![serenity::CreateSectionComponent::TextDisplay(
+                    serenity::CreateTextDisplay::new(format!("⚙️ **{}**", name)),
+                )],
+                serenity::CreateSectionAccessory::Button(toggle_btn),
+            ),
+        ));
+
+        // Sub-log toggles
+        let logging_config: crate::db::entities::module_configs::LoggingModuleConfig =
+            serde_json::from_value(m_config.config.clone()).unwrap_or_default();
+        components.extend(modules::logging::build_ui(0, &logging_config, l10n));
+
+        components.push(serenity::CreateContainerComponent::Separator(
+            serenity::CreateSeparator::new(true),
+        ));
+
+        // Whitelist
+        components.push(create_whitelist_section(
+            format!("config_whitelist_view_module_{}", module),
+            l10n,
+        ));
+
+        components.push(serenity::CreateContainerComponent::Separator(
+            serenity::CreateSeparator::new(true),
+        ));
+
+        // General Log Channel
+        components.push(serenity::CreateContainerComponent::TextDisplay(
+            serenity::CreateTextDisplay::new(l10n.t("config-module-log-channel-label", None)),
+        ));
+
+        components.push(create_select_menu_row(
+            format!("config_module_log_channel_{:?}", module),
+            serenity::CreateSelectMenuKind::Channel {
+                channel_types: None,
+                default_channels: m_config
+                    .log_channel_id
+                    .map(|id| vec![serenity::ChannelId::new(id as u64).into()].into()),
+            },
+            l10n.t("config-select-module-log-channel-placeholder", None),
+        ));
+
+        components
+    } else {
+        create_module_config_payload(
+            name,
+            module,
+            m_config.log_channel_id,
+            m_config.punishment,
+            m_config.punishment_at,
+            m_config.punishment_at_interval,
+            m_config.enabled,
+            m_config.revert,
+            l10n,
+        )
+    };
 
     if module == ModuleType::ChannelProtection {
         let cp_config: ChannelProtectionModuleConfig =
@@ -313,12 +380,37 @@ pub async fn build_module_menu(
         ));
         inner_components.extend(modules::moderation_protection::build_ui(&mp_config, l10n));
     } else if module == ModuleType::Logging {
-        let logging_config: crate::db::entities::module_configs::LoggingModuleConfig =
-            serde_json::from_value(m_config.config).unwrap_or_default();
+        if page == 1 {
+            let logging_config: crate::db::entities::module_configs::LoggingModuleConfig =
+                serde_json::from_value(m_config.config).unwrap_or_default();
+            inner_components.extend(modules::logging::build_ui(page, &logging_config, l10n));
+        }
+    }
+
+    // Add pagination row for Logging
+    if module == ModuleType::Logging {
         inner_components.push(serenity::CreateContainerComponent::Separator(
             serenity::CreateSeparator::new(true),
         ));
-        inner_components.extend(modules::logging::build_ui(&logging_config, l10n));
+        let buttons = vec![
+            serenity::CreateButton::new(format!("config_page_{}_0", module))
+                .label(l10n.t("config-page-general", None))
+                .style(if page == 0 {
+                    serenity::ButtonStyle::Primary
+                } else {
+                    serenity::ButtonStyle::Secondary
+                }),
+            serenity::CreateButton::new(format!("config_page_{}_1", module))
+                .label(l10n.t("config-page-channels", None))
+                .style(if page == 1 {
+                    serenity::ButtonStyle::Primary
+                } else {
+                    serenity::ButtonStyle::Secondary
+                }),
+        ];
+        inner_components.push(serenity::CreateContainerComponent::ActionRow(
+            serenity::CreateActionRow::Buttons(buttons.into()),
+        ));
     }
 
     // Add back button at the very end
@@ -369,10 +461,22 @@ pub async fn handle_interaction(
 
     let mut updated_reply = None;
 
+    let mut page = 0;
+    if custom_id.ends_with("_channel") && custom_id.starts_with("config_log_") {
+        page = 1;
+    } else if custom_id.ends_with("_toggle") && custom_id.starts_with("config_log_") {
+        page = 0;
+    } else if let Some(rest) = custom_id.strip_prefix("config_page_") {
+        let parts: Vec<&str> = rest.split('_').collect();
+        if parts.len() >= 2 {
+            page = parts[1].parse().unwrap_or(0);
+        }
+    }
+
     // Try module-specific handlers first
     if modules::channel_protection::handle_interaction(ctx, interaction, data, guild_id).await? {
         updated_reply =
-            Some(build_module_menu(data, guild_id, ModuleType::ChannelProtection, &l10n).await?);
+            Some(build_module_menu(data, guild_id, ModuleType::ChannelProtection, page, &l10n).await?);
     } else if modules::channel_permission_protection::handle_interaction(
         ctx,
         interaction,
@@ -386,6 +490,7 @@ pub async fn handle_interaction(
                 data,
                 guild_id,
                 ModuleType::ChannelPermissionProtection,
+                page,
                 &l10n,
             )
             .await?,
@@ -393,7 +498,7 @@ pub async fn handle_interaction(
     } else if modules::role_protection::handle_interaction(ctx, interaction, data, guild_id).await?
     {
         updated_reply =
-            Some(build_module_menu(data, guild_id, ModuleType::RoleProtection, &l10n).await?);
+            Some(build_module_menu(data, guild_id, ModuleType::RoleProtection, page, &l10n).await?);
     } else if modules::role_permission_protection::handle_interaction(
         ctx,
         interaction,
@@ -403,7 +508,7 @@ pub async fn handle_interaction(
     .await?
     {
         updated_reply = Some(
-            build_module_menu(data, guild_id, ModuleType::RolePermissionProtection, &l10n).await?,
+            build_module_menu(data, guild_id, ModuleType::RolePermissionProtection, page, &l10n).await?,
         );
     } else if modules::member_permission_protection::handle_interaction(
         ctx,
@@ -418,6 +523,7 @@ pub async fn handle_interaction(
                 data,
                 guild_id,
                 ModuleType::MemberPermissionProtection,
+                page,
                 &l10n,
             )
             .await?,
@@ -426,14 +532,14 @@ pub async fn handle_interaction(
         .await?
     {
         updated_reply =
-            Some(build_module_menu(data, guild_id, ModuleType::BotAddingProtection, &l10n).await?);
+            Some(build_module_menu(data, guild_id, ModuleType::BotAddingProtection, page, &l10n).await?);
     } else if modules::moderation_protection::handle_interaction(ctx, interaction, data, guild_id)
         .await?
     {
         updated_reply =
-            Some(build_module_menu(data, guild_id, ModuleType::ModerationProtection, &l10n).await?);
+            Some(build_module_menu(data, guild_id, ModuleType::ModerationProtection, page, &l10n).await?);
     } else if modules::logging::handle_interaction(ctx, interaction, data, guild_id).await? {
-        updated_reply = Some(build_module_menu(data, guild_id, ModuleType::Logging, &l10n).await?);
+        updated_reply = Some(build_module_menu(data, guild_id, ModuleType::Logging, page, &l10n).await?);
     } else if let Some(components) = whitelist::handle_interaction(ctx, interaction, data).await? {
         updated_reply = Some(components);
     } else if custom_id == "config_back_to_main" {
@@ -450,7 +556,7 @@ pub async fn handle_interaction(
             "logging" => ModuleType::Logging,
             _ => return Ok(()),
         };
-        updated_reply = Some(build_module_menu(data, guild_id, module_type, &l10n).await?);
+        updated_reply = Some(build_module_menu(data, guild_id, module_type, 0, &l10n).await?);
     } else if custom_id == "config_general_log_channel" {
         if let serenity::ComponentInteractionDataKind::ChannelSelect { values } =
             &interaction.data.kind
@@ -509,8 +615,32 @@ pub async fn handle_interaction(
                     "Logging" => ModuleType::Logging,
                     _ => return Ok(()),
                 };
-                updated_reply = Some(build_module_menu(data, guild_id, module_type, &l10n).await?);
+                updated_reply = Some(build_module_menu(data, guild_id, module_type, 0, &l10n).await?);
             }
+        }
+    } else if let Some(rest) = custom_id.strip_prefix("config_page_") {
+        let parts: Vec<&str> = rest.split('_').collect();
+        if parts.len() >= 2 {
+            let module_str = parts[0];
+            let page_num: u32 = parts[1].parse().unwrap_or(0);
+            let module_type = match module_str {
+                "channel_protection" | "ChannelProtection" => ModuleType::ChannelProtection,
+                "channel_permission_protection" | "ChannelPermissionProtection" => {
+                    ModuleType::ChannelPermissionProtection
+                }
+                "role_protection" | "RoleProtection" => ModuleType::RoleProtection,
+                "role_permission_protection" | "RolePermissionProtection" => {
+                    ModuleType::RolePermissionProtection
+                }
+                "member_permission_protection" | "MemberPermissionProtection" => {
+                    ModuleType::MemberPermissionProtection
+                }
+                "bot_adding_protection" | "BotAddingProtection" => ModuleType::BotAddingProtection,
+                "moderation_protection" | "ModerationProtection" => ModuleType::ModerationProtection,
+                "logging" | "Logging" => ModuleType::Logging,
+                _ => return Ok(()),
+            };
+            updated_reply = Some(build_module_menu(data, guild_id, module_type, page_num, &l10n).await?);
         }
     } else if custom_id.starts_with("config_module_log_channel_") {
         if let serenity::ComponentInteractionDataKind::ChannelSelect { values } =
@@ -546,7 +676,7 @@ pub async fn handle_interaction(
                 .exec(&data.db)
                 .await?;
 
-                updated_reply = Some(build_module_menu(data, guild_id, module_type, &l10n).await?);
+                updated_reply = Some(build_module_menu(data, guild_id, module_type, page, &l10n).await?);
             }
         }
     } else if custom_id.starts_with("config_module_punishment_") {
@@ -593,7 +723,7 @@ pub async fn handle_interaction(
                 .exec(&data.db)
                 .await?;
 
-                updated_reply = Some(build_module_menu(data, guild_id, module_type, &l10n).await?);
+                updated_reply = Some(build_module_menu(data, guild_id, module_type, page, &l10n).await?);
             }
         }
     } else if let Some(module_str) = custom_id.strip_prefix("config_module_revert_") {
@@ -642,7 +772,7 @@ pub async fn handle_interaction(
         .exec(&data.db)
         .await?;
 
-        updated_reply = Some(build_module_menu(data, guild_id, module_type, &l10n).await?);
+        updated_reply = Some(build_module_menu(data, guild_id, module_type, page, &l10n).await?);
     } else if custom_id.contains("_punish_at_") || custom_id.contains("_punish_interval_") {
         let module_type = if custom_id.contains("ChannelProtection") {
             ModuleType::ChannelProtection
@@ -697,7 +827,7 @@ pub async fn handle_interaction(
         } else {
             am.insert(&data.db).await?;
         }
-        updated_reply = Some(build_module_menu(data, guild_id, module_type, &l10n).await?);
+        updated_reply = Some(build_module_menu(data, guild_id, module_type, page, &l10n).await?);
     } else if custom_id.starts_with("config_module_toggle_") {
         let module_str = custom_id.trim_start_matches("config_module_toggle_");
         let module_type = match module_str {
@@ -742,7 +872,7 @@ pub async fn handle_interaction(
         am.enabled = Set(!current_enabled);
         am.update(&data.db).await?;
 
-        updated_reply = Some(build_module_menu(data, guild_id, module_type, &l10n).await?);
+        updated_reply = Some(build_module_menu(data, guild_id, module_type, page, &l10n).await?);
     } else if custom_id == "config_back_to_main" {
         updated_reply = Some(build_main_menu(data, guild_id, &l10n).await?);
     }

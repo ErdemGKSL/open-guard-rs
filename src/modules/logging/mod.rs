@@ -6,7 +6,7 @@ pub fn module() -> Module {
     Module {
         definition: ModuleDefinition {
             id: "logging",
-            name_key: "module-logging-label",
+            name_key: "module-logging-name",
             desc_key: "module-logging-desc",
         },
         commands: vec![],

@@ -5,138 +5,112 @@ use poise::serenity_prelude as serenity;
 use sea_orm::{ActiveModelTrait, EntityTrait, Set};
 
 pub fn build_ui(
+    page: u32,
     config: &LoggingModuleConfig,
     l10n: &L10nProxy,
 ) -> Vec<serenity::CreateContainerComponent<'static>> {
     let mut components = vec![];
 
-    // Message Logs Toggle
-    let msg_btn_label = if config.log_messages {
-        l10n.t("config-btn-enabled", None)
+    if page == 0 {
+        // Sub-log toggles in one row
+        let msg_btn = serenity::CreateButton::new("config_log_msg_toggle")
+            .label(if config.log_messages {
+                l10n.t("config-log-msg-label", None)
+            } else {
+                format!("~~{}~~", l10n.t("config-log-msg-label", None))
+            })
+            .style(if config.log_messages {
+                serenity::ButtonStyle::Success
+            } else {
+                serenity::ButtonStyle::Secondary
+            });
+
+        let voice_btn = serenity::CreateButton::new("config_log_voice_toggle")
+            .label(if config.log_voice {
+                l10n.t("config-log-voice-label", None)
+            } else {
+                format!("~~{}~~", l10n.t("config-log-voice-label", None))
+            })
+            .style(if config.log_voice {
+                serenity::ButtonStyle::Success
+            } else {
+                serenity::ButtonStyle::Secondary
+            });
+
+        let member_btn = serenity::CreateButton::new("config_log_member_toggle")
+            .label(if config.log_membership {
+                l10n.t("config-log-member-label", None)
+            } else {
+                format!("~~{}~~", l10n.t("config-log-member-label", None))
+            })
+            .style(if config.log_membership {
+                serenity::ButtonStyle::Success
+            } else {
+                serenity::ButtonStyle::Secondary
+            });
+
+        components.push(serenity::CreateContainerComponent::ActionRow(
+            serenity::CreateActionRow::Buttons(vec![msg_btn, voice_btn, member_btn].into()),
+        ));
     } else {
-        l10n.t("config-btn-disabled", None)
-    };
+        // Page 1: Channels
+        // Message Log Channel Select
+        components.push(serenity::CreateContainerComponent::TextDisplay(
+            serenity::CreateTextDisplay::new(l10n.t("config-log-msg-channel-label", None)),
+        ));
+        components.push(serenity::CreateContainerComponent::ActionRow(
+            serenity::CreateActionRow::SelectMenu(
+                serenity::CreateSelectMenu::new(
+                    "config_log_msg_channel",
+                    serenity::CreateSelectMenuKind::Channel {
+                        channel_types: Some(vec![serenity::ChannelType::Text].into()),
+                        default_channels: config
+                            .message_log_channel_id
+                            .map(|id| vec![serenity::ChannelId::new(id as u64).into()].into()),
+                    },
+                )
+                .placeholder(l10n.t("config-log-msg-channel-placeholder", None)),
+            ),
+        ));
 
-    let msg_btn = serenity::CreateButton::new("config_log_msg_toggle")
-        .label(msg_btn_label)
-        .style(if config.log_messages {
-            serenity::ButtonStyle::Success
-        } else {
-            serenity::ButtonStyle::Secondary
-        });
+        // Voice Log Channel Select
+        components.push(serenity::CreateContainerComponent::TextDisplay(
+            serenity::CreateTextDisplay::new(l10n.t("config-log-voice-channel-label", None)),
+        ));
+        components.push(serenity::CreateContainerComponent::ActionRow(
+            serenity::CreateActionRow::SelectMenu(
+                serenity::CreateSelectMenu::new(
+                    "config_log_voice_channel",
+                    serenity::CreateSelectMenuKind::Channel {
+                        channel_types: Some(vec![serenity::ChannelType::Text].into()),
+                        default_channels: config
+                            .voice_log_channel_id
+                            .map(|id| vec![serenity::ChannelId::new(id as u64).into()].into()),
+                    },
+                )
+                .placeholder(l10n.t("config-log-voice-channel-placeholder", None)),
+            ),
+        ));
 
-    components.push(serenity::CreateContainerComponent::Section(
-        serenity::CreateSection::new(
-            vec![serenity::CreateSectionComponent::TextDisplay(
-                serenity::CreateTextDisplay::new(l10n.t("config-log-msg-label", None)),
-            )],
-            serenity::CreateSectionAccessory::Button(msg_btn),
-        ),
-    ));
-
-    // Voice Logs Toggle
-    let voice_btn_label = if config.log_voice {
-        l10n.t("config-btn-enabled", None)
-    } else {
-        l10n.t("config-btn-disabled", None)
-    };
-
-    let voice_btn = serenity::CreateButton::new("config_log_voice_toggle")
-        .label(voice_btn_label)
-        .style(if config.log_voice {
-            serenity::ButtonStyle::Success
-        } else {
-            serenity::ButtonStyle::Secondary
-        });
-
-    components.push(serenity::CreateContainerComponent::Section(
-        serenity::CreateSection::new(
-            vec![serenity::CreateSectionComponent::TextDisplay(
-                serenity::CreateTextDisplay::new(l10n.t("config-log-voice-label", None)),
-            )],
-            serenity::CreateSectionAccessory::Button(voice_btn),
-        ),
-    ));
-
-    // Membership Logs Toggle
-    let member_btn_label = if config.log_membership {
-        l10n.t("config-btn-enabled", None)
-    } else {
-        l10n.t("config-btn-disabled", None)
-    };
-
-    let member_btn = serenity::CreateButton::new("config_log_member_toggle")
-        .label(member_btn_label)
-        .style(if config.log_membership {
-            serenity::ButtonStyle::Success
-        } else {
-            serenity::ButtonStyle::Secondary
-        });
-
-    components.push(serenity::CreateContainerComponent::Section(
-        serenity::CreateSection::new(
-            vec![serenity::CreateSectionComponent::TextDisplay(
-                serenity::CreateTextDisplay::new(l10n.t("config-log-member-label", None)),
-            )],
-            serenity::CreateSectionAccessory::Button(member_btn),
-        ),
-    ));
-
-    // Channel Selects
-    components.push(serenity::CreateContainerComponent::TextDisplay(
-        serenity::CreateTextDisplay::new(format!(
-            "-# {}",
-            l10n.t("config-log-channels-header", None)
-        )),
-    ));
-
-    // Message Log Channel Select
-    components.push(serenity::CreateContainerComponent::ActionRow(
-        serenity::CreateActionRow::SelectMenu(
-            serenity::CreateSelectMenu::new(
-                "config_log_msg_channel",
-                serenity::CreateSelectMenuKind::Channel {
-                    channel_types: Some(vec![serenity::ChannelType::Text].into()),
-                    default_channels: config
-                        .message_log_channel_id
-                        .map(|id| vec![serenity::ChannelId::new(id as u64).into()].into()),
-                },
-            )
-            .placeholder(l10n.t("config-log-msg-channel-placeholder", None)),
-        ),
-    ));
-
-    // Voice Log Channel Select
-    components.push(serenity::CreateContainerComponent::ActionRow(
-        serenity::CreateActionRow::SelectMenu(
-            serenity::CreateSelectMenu::new(
-                "config_log_voice_channel",
-                serenity::CreateSelectMenuKind::Channel {
-                    channel_types: Some(vec![serenity::ChannelType::Text].into()),
-                    default_channels: config
-                        .voice_log_channel_id
-                        .map(|id| vec![serenity::ChannelId::new(id as u64).into()].into()),
-                },
-            )
-            .placeholder(l10n.t("config-log-voice-channel-placeholder", None)),
-        ),
-    ));
-
-    // Membership Log Channel Select
-    components.push(serenity::CreateContainerComponent::ActionRow(
-        serenity::CreateActionRow::SelectMenu(
-            serenity::CreateSelectMenu::new(
-                "config_log_member_channel",
-                serenity::CreateSelectMenuKind::Channel {
-                    channel_types: Some(vec![serenity::ChannelType::Text].into()),
-                    default_channels: config
-                        .membership_log_channel_id
-                        .map(|id| vec![serenity::ChannelId::new(id as u64).into()].into()),
-                },
-            )
-            .placeholder(l10n.t("config-log-member-channel-placeholder", None)),
-        ),
-    ));
+        // Membership Log Channel Select
+        components.push(serenity::CreateContainerComponent::TextDisplay(
+            serenity::CreateTextDisplay::new(l10n.t("config-log-member-channel-label", None)),
+        ));
+        components.push(serenity::CreateContainerComponent::ActionRow(
+            serenity::CreateActionRow::SelectMenu(
+                serenity::CreateSelectMenu::new(
+                    "config_log_member_channel",
+                    serenity::CreateSelectMenuKind::Channel {
+                        channel_types: Some(vec![serenity::ChannelType::Text].into()),
+                        default_channels: config
+                            .membership_log_channel_id
+                            .map(|id| vec![serenity::ChannelId::new(id as u64).into()].into()),
+                    },
+                )
+                .placeholder(l10n.t("config-log-member-channel-placeholder", None)),
+            ),
+        ));
+    }
 
     components
 }
