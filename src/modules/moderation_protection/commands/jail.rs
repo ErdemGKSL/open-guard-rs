@@ -7,13 +7,19 @@ use fluent::FluentArgs;
 use poise::serenity_prelude as serenity;
 
 /// Jail a user, swapping their roles with the jail role
-#[poise::command(slash_command, guild_only, required_permissions = "MODERATE_MEMBERS")]
+#[poise::command(
+    slash_command,
+    guild_only,
+    required_permissions = "MODERATE_MEMBERS",
+    ephemeral
+)]
 pub async fn jail(
     ctx: Context<'_>,
     #[description = "User to jail"] user: serenity::User,
     #[description = "Duration of the jail (e.g. 1d, 1h, 10m30s)"] duration: Option<String>,
     #[description = "Reason for the jail"] reason: Option<String>,
 ) -> Result<(), Error> {
+    ctx.defer_ephemeral().await?;
     let guild_id = ctx.guild_id().unwrap();
     let l10n = ctx.l10n_user();
 
@@ -21,7 +27,11 @@ pub async fn jail(
         match parse_duration(&d) {
             Some(dur) => Some(dur),
             None => {
-                ctx.say(l10n.t("mod-error-invalid-duration", None)).await?;
+                ctx.send(
+                    poise::CreateReply::default()
+                        .content(l10n.t("mod-error-invalid-duration", None)),
+                )
+                .await?;
                 return Ok(());
             }
         }
@@ -77,13 +87,16 @@ pub async fn jail(
 
     if let Some(dur) = duration_parsed {
         args.set("duration", format!("{:?}", dur));
-        ctx.say(l10n.t("mod-jail-success-temp", Some(&args)))
-            .await?;
+        ctx.send(
+            poise::CreateReply::default().content(l10n.t("mod-jail-success-temp", Some(&args))),
+        )
+        .await?;
     } else {
-        ctx.say(l10n.t("mod-jail-success-perm", Some(&args)))
-            .await?;
+        ctx.send(
+            poise::CreateReply::default().content(l10n.t("mod-jail-success-perm", Some(&args))),
+        )
+        .await?;
     }
 
     Ok(())
 }
-

@@ -6,11 +6,17 @@ use fluent::FluentArgs;
 use poise::serenity_prelude as serenity;
 
 /// Unjail a user, restoring their original roles
-#[poise::command(slash_command, guild_only, required_permissions = "MODERATE_MEMBERS")]
+#[poise::command(
+    slash_command,
+    guild_only,
+    required_permissions = "MODERATE_MEMBERS",
+    ephemeral
+)]
 pub async fn unjail(
     ctx: Context<'_>,
     #[description = "User to unjail"] user: serenity::User,
 ) -> Result<(), Error> {
+    ctx.defer_ephemeral().await?;
     let guild_id = ctx.guild_id().unwrap();
     let l10n = ctx.l10n_user();
 
@@ -41,7 +47,10 @@ pub async fn unjail(
 
     let mut args = FluentArgs::new();
     args.set("userId", user.id.get());
-    ctx.say(l10n.t("mod-unjail-success", Some(&args))).await?;
+    ctx.send(
+        poise::CreateReply::default().content(l10n.t("mod-unjail-success", Some(&args))),
+    )
+    .await?;
 
     Ok(())
 }

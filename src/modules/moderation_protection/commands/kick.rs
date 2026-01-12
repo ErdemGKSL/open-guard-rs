@@ -6,12 +6,18 @@ use fluent::FluentArgs;
 use poise::serenity_prelude as serenity;
 
 /// Kick a user from the server
-#[poise::command(slash_command, guild_only, required_permissions = "KICK_MEMBERS")]
+#[poise::command(
+    slash_command,
+    guild_only,
+    required_permissions = "KICK_MEMBERS",
+    ephemeral
+)]
 pub async fn kick(
     ctx: Context<'_>,
     #[description = "User to kick"] user: serenity::User,
     #[description = "Reason for the kick"] reason: Option<String>,
 ) -> Result<(), Error> {
+    ctx.defer_ephemeral().await?;
     let guild_id = ctx.guild_id().unwrap();
     let l10n = ctx.l10n_user();
     let kick_reason = reason
@@ -49,7 +55,10 @@ pub async fn kick(
     let mut args = FluentArgs::new();
     args.set("userId", user.id.get());
     args.set("reason", kick_reason);
-    ctx.say(l10n.t("mod-kick-success", Some(&args))).await?;
+    ctx.send(
+        poise::CreateReply::default().content(l10n.t("mod-kick-success", Some(&args))),
+    )
+    .await?;
 
     Ok(())
 }

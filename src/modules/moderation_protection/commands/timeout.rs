@@ -7,20 +7,30 @@ use fluent::FluentArgs;
 use poise::serenity_prelude as serenity;
 
 /// Timeout a user
-#[poise::command(slash_command, guild_only, required_permissions = "MODERATE_MEMBERS")]
+#[poise::command(
+    slash_command,
+    guild_only,
+    required_permissions = "MODERATE_MEMBERS",
+    ephemeral
+)]
 pub async fn timeout(
     ctx: Context<'_>,
     #[description = "User to timeout"] user: serenity::User,
     #[description = "Duration of the timeout (e.g. 1h, 10m)"] duration: String,
     #[description = "Reason for the timeout"] reason: Option<String>,
 ) -> Result<(), Error> {
+    ctx.defer_ephemeral().await?;
     let guild_id = ctx.guild_id().unwrap();
     let l10n = ctx.l10n_user();
 
     let dur = match parse_duration(&duration) {
         Some(d) => d,
         None => {
-            ctx.say(l10n.t("mod-error-invalid-duration", None)).await?;
+            ctx.send(
+                poise::CreateReply::default()
+                    .content(l10n.t("mod-error-invalid-duration", None)),
+            )
+            .await?;
             return Ok(());
         }
     };
@@ -66,7 +76,10 @@ pub async fn timeout(
     args.set("userId", user.id.get());
     args.set("duration", duration);
     args.set("reason", timeout_reason);
-    ctx.say(l10n.t("mod-timeout-success", Some(&args))).await?;
+    ctx.send(
+        poise::CreateReply::default().content(l10n.t("mod-timeout-success", Some(&args))),
+    )
+    .await?;
 
     Ok(())
 }

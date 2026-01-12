@@ -7,13 +7,19 @@ use fluent::FluentArgs;
 use poise::serenity_prelude as serenity;
 
 /// Ban a user from the server
-#[poise::command(slash_command, guild_only, required_permissions = "BAN_MEMBERS")]
+#[poise::command(
+    slash_command,
+    guild_only,
+    required_permissions = "BAN_MEMBERS",
+    ephemeral
+)]
 pub async fn ban(
     ctx: Context<'_>,
     #[description = "User to ban"] user: serenity::User,
     #[description = "Duration of the ban (e.g. 1d, 1h, 10m30s)"] duration: Option<String>,
     #[description = "Reason for the ban"] reason: Option<String>,
 ) -> Result<(), Error> {
+    ctx.defer_ephemeral().await?;
     let guild_id = ctx.guild_id().unwrap();
     let l10n = ctx.l10n_user();
 
@@ -21,7 +27,11 @@ pub async fn ban(
         match parse_duration(&d) {
             Some(dur) => Some(dur),
             None => {
-                ctx.say(l10n.t("mod-error-invalid-duration", None)).await?;
+                ctx.send(
+                    poise::CreateReply::default()
+                        .content(l10n.t("mod-error-invalid-duration", None)),
+                )
+                .await?;
                 return Ok(());
             }
         }
@@ -55,13 +65,19 @@ pub async fn ban(
         args.set("userId", user.id.get());
         args.set("duration", format!("{:?}", dur));
         args.set("reason", ban_reason.clone());
-        ctx.say(l10n.t("mod-ban-success-temp", Some(&args))).await?;
+        ctx.send(
+            poise::CreateReply::default().content(l10n.t("mod-ban-success-temp", Some(&args))),
+        )
+        .await?;
         format!("{:?}", dur)
     } else {
         let mut args = FluentArgs::new();
         args.set("userId", user.id.get());
         args.set("reason", ban_reason.clone());
-        ctx.say(l10n.t("mod-ban-success-perm", Some(&args))).await?;
+        ctx.send(
+            poise::CreateReply::default().content(l10n.t("mod-ban-success-perm", Some(&args))),
+        )
+        .await?;
         l10n.t("log-val-permanent", None)
     };
 
