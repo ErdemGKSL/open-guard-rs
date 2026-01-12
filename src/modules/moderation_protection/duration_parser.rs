@@ -39,3 +39,4 @@ mod tests {
         assert_eq!(parse_duration("invalid"), None);
     }
 }
+

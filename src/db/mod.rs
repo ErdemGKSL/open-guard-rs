@@ -94,3 +94,4 @@ pub async fn ensure_database_exists(database_url: &str) -> anyhow::Result<()> {
 
     Ok(())
 }
+

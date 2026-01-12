@@ -1,6 +1,6 @@
 use crate::Data;
 use crate::modules::{
-    channel_permission_protection, channel_protection, member_permission_protection,
+    channel_permission_protection, channel_protection, logging, member_permission_protection,
     moderation_protection, role_permission_protection, role_protection,
 };
 use poise::serenity_prelude as serenity;
@@ -217,7 +217,125 @@ impl serenity::EventHandler for Handler {
                     data.cache.store_role(*guild_id, role.clone());
                 }
             }
+            serenity::FullEvent::MessageUpdate {
+                old_if_available,
+                event,
+                ..
+            } => {
+                let data = ctx.data::<Data>().clone();
+                let ctx = ctx.clone();
+                let old_if_available = old_if_available.clone();
+                let event = event.clone();
+                let guild_id = event.message.guild_id;
+
+                if let Some(guild_id) = guild_id {
+                    tokio::spawn(async move {
+                        if let Err(e) = logging::events::messages::handle_message_edit(
+                            &ctx,
+                            guild_id,
+                            old_if_available,
+                            event,
+                            &data,
+                        )
+                        .await
+                        {
+                            error!("Error handling message edit log: {:?}", e);
+                        }
+                    });
+                }
+            }
+            serenity::FullEvent::MessageDelete {
+                channel_id,
+                deleted_message_id,
+                guild_id,
+                ..
+            } => {
+                let data = ctx.data::<Data>().clone();
+                let ctx = ctx.clone();
+                let channel_id = serenity::ChannelId::new(channel_id.get());
+                let deleted_message_id = *deleted_message_id;
+
+                if let Some(guild_id) = guild_id {
+                    let guild_id = *guild_id;
+                    tokio::spawn(async move {
+                        if let Err(e) = logging::events::messages::handle_message_delete(
+                            &ctx,
+                            guild_id,
+                            channel_id,
+                            deleted_message_id,
+                            &data,
+                        )
+                        .await
+                        {
+                            error!("Error handling message delete log: {:?}", e);
+                        }
+                    });
+                }
+            }
+            serenity::FullEvent::VoiceStateUpdate { old, new, .. } => {
+                let data = ctx.data::<Data>().clone();
+                let ctx = ctx.clone();
+                let old = old.clone();
+                let new = new.clone();
+
+                if let Some(guild_id) = new.guild_id {
+                    tokio::spawn(async move {
+                        if let Err(e) = logging::events::voice::handle_voice_state_update(
+                            &ctx, guild_id, old, new, &data,
+                        )
+                        .await
+                        {
+                            error!("Error handling voice state update log: {:?}", e);
+                        }
+                    });
+                }
+            }
+            serenity::FullEvent::GuildMemberAddition {
+                new_member: member, ..
+            } => {
+                let data = ctx.data::<Data>().clone();
+                let ctx = ctx.clone();
+                let member = member.clone();
+                let guild_id = member.guild_id;
+
+                tokio::spawn(async move {
+                    if let Err(e) = logging::events::membership::handle_guild_member_add(
+                        &ctx, guild_id, member, &data,
+                    )
+                    .await
+                    {
+                        error!("Error handling guild member add log: {:?}", e);
+                    }
+                });
+            }
+            serenity::FullEvent::GuildMemberRemoval {
+                guild_id,
+                user,
+                member_data_if_available,
+                ..
+            } => {
+                let data = ctx.data::<Data>().clone();
+                let ctx = ctx.clone();
+                let guild_id = *guild_id;
+                let user = user.clone();
+                let member_data_if_available = member_data_if_available.clone();
+
+                tokio::spawn(async move {
+                    if let Err(e) = logging::events::membership::handle_guild_member_remove(
+                        &ctx,
+                        guild_id,
+                        user,
+                        member_data_if_available,
+                        &data,
+                    )
+                    .await
+                    {
+                        error!("Error handling guild member remove log: {:?}", e);
+                    }
+                });
+            }
             _ => {}
         }
     }
 }
+

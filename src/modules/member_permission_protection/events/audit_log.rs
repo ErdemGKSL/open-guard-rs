@@ -271,6 +271,7 @@ async fn handle_member_role_update(
             &ctx.http,
             guild_id,
             Some(ModuleType::MemberPermissionProtection),
+            None,
             log_level,
             &title,
             &desc,

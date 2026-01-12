@@ -11,3 +11,4 @@ pub use super::temp_bans::Entity as TempBans;
 pub use super::whitelist_role::Entity as WhitelistRoles;
 #[allow(unused_imports)]
 pub use super::whitelist_user::Entity as WhitelistUsers;
+

@@ -1,6 +1,8 @@
 use fluent::{FluentArgs, FluentResource};
 use fluent_bundle::bundle::FluentBundle;
 use include_dir::{Dir, include_dir};
+use poise::serenity_prelude as serenity;
+use sea_orm::DatabaseConnection;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -107,6 +109,17 @@ impl LocalizationManager {
             bundles,
             command_locales,
         }
+    }
+
+    pub async fn get_l10n_for_guild(
+        self: &Arc<Self>,
+        _guild_id: serenity::GuildId,
+        _db: &DatabaseConnection,
+    ) -> L10nProxy {
+        // Since preferred_locale is not in guild_configs table yet,
+        // and fetching guild from HTTP every time is expensive,
+        // we default to en-US for system-wide module logs.
+        self.get_proxy("en-US")
     }
 
     pub fn get_proxy(self: &Arc<Self>, locale: &str) -> L10nProxy {
@@ -319,3 +332,4 @@ impl ContextL10nExt for crate::Context<'_> {
         }
     }
 }
+

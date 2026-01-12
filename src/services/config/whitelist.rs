@@ -137,6 +137,7 @@ pub async fn build_whitelist_menu(
             ModuleType::ModerationProtection => {
                 l10n.t("config-whitelist-moderation-protection-header", None)
             }
+            ModuleType::Logging => l10n.t("config-whitelist-logging-header", None),
         }
     } else {
         l10n.t("config-whitelist-global-header", None)
@@ -486,6 +487,7 @@ pub async fn handle_interaction(
                 "member_permission_protection" => Some(ModuleType::MemberPermissionProtection),
                 "bot_adding_protection" => Some(ModuleType::BotAddingProtection),
                 "moderation_protection" => Some(ModuleType::ModerationProtection),
+                "logging" => Some(ModuleType::Logging),
                 _ => None,
             }
         }
@@ -800,3 +802,4 @@ pub async fn handle_interaction(
 
     Ok(None)
 }
+

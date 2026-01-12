@@ -32,3 +32,4 @@ impl std::fmt::Display for WhitelistLevel {
         }
     }
 }
+

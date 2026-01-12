@@ -53,6 +53,10 @@ config-member-permission-protection-desc = Configure member role/permission prot
 
 config-bot-adding-protection-label = Bot Adding Protection
 config-bot-adding-protection-desc = Configure bot adding protection
+config-moderation-protection-label = Moderation Protection
+config-moderation-protection-desc = Logs and limits moderation actions by authorized users
+config-logging-label = Logging
+config-logging-desc = Comprehensive server event logging (Messages, Voice, Members)
 config-punishment-label = Punishment
 config-select-punishment-placeholder = Select punishment...
 config-punishment-type-none = None
@@ -103,6 +107,8 @@ config-whitelist-role-protection-header = **Role Protection Whitelists**
 config-whitelist-role-permission-protection-header = **Role Permission Protection Whitelists**
 config-whitelist-member-permission-protection-header = **Member Permission Protection Whitelists**
 config-whitelist-bot-adding-protection-header = **Bot Adding Protection Whitelists**
+config-whitelist-moderation-protection-header = **Moderation Protection Whitelists**
+config-whitelist-logging-header = **Logging Whitelists**
 config-whitelist-users-label = **Whitelisted Users**
 config-whitelist-delete-user-placeholder = Select user to remove...
 config-whitelist-roles-label = **Whitelisted Roles**
@@ -285,3 +291,33 @@ log-mod-audit-title-whitelisted = Moderation Action (Whitelisted: {$action})
 log-mod-audit-title-limited = Moderation Action (Limited: {$action})
 log-mod-audit-title-logged = Moderation Action (Logged: {$action})
 log-mod-audit-desc = User <@{$userId}> performed a `{$action}` on <@{$targetId}>.
+
+# Logging Module Config
+config-log-msg-label = **Message Logging**
+config-log-voice-label = **Voice Logging**
+config-log-member-label = **Member Logging**
+config-log-channels-header = Per-type Log Channels (Optional)
+config-log-msg-channel-placeholder = Select message log channel...
+config-log-voice-channel-placeholder = Select voice log channel...
+config-log-member-channel-placeholder = Select member log channel...
+
+# Logging Events
+log-msg-delete-title = Message Deleted
+log-msg-delete-desc = A message was deleted in <#{$channelId}>
+log-msg-edit-title = Message Edited
+log-msg-edit-desc = <@{$userId}> edited a message in <#{$channelId}>
+log-msg-edit-before = Before
+log-msg-edit-after = After
+log-voice-join-title = Voice Join
+log-voice-join-desc = <@{$userId}> joined <#{$channelId}>
+log-voice-leave-title = Voice Leave
+log-voice-leave-desc = <@{$userId}> left <#{$channelId}>
+log-voice-move-title = Voice Move
+log-voice-move-desc = <@{$userId}> moved from <#{$oldChannelId}> to <#{$newChannelId}>
+log-voice-state-title = Voice State Change
+log-voice-state-desc = <@{$userId}> changed state: {$state}
+log-member-join-title = Member Joined
+log-member-join-desc = <@{$userId}> joined the server
+log-member-leave-title = Member Left
+log-member-leave-desc = <@{$userId}> left the server
+log-member-leave-roles = Roles

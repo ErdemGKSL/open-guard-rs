@@ -119,3 +119,4 @@ enum Violations {
 
 #[derive(DeriveIden)]
 struct Brin;
+

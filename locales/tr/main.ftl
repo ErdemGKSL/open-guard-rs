@@ -54,6 +54,10 @@ config-member-permission-protection-desc = Üye rol/yetki korumasını yapıland
 
 config-bot-adding-protection-label = Bot Ekleme Koruması
 config-bot-adding-protection-desc = Bot ekleme korumasını yapılandırın
+config-moderation-protection-label = Moderasyon Koruması
+config-moderation-protection-desc = Yetkili kullanıcıların moderasyon işlemlerini kaydeder ve sınırlar
+config-logging-label = Kayıt Tutma (Logging)
+config-logging-desc = Kapsamlı sunucu olayı kaydı (Mesajlar, Ses, Üyeler)
 config-punishment-label = Ceza
 config-select-punishment-placeholder = Ceza seçin...
 config-punishment-type-none = Yok
@@ -101,6 +105,8 @@ config-whitelist-role-protection-header = **Rol Koruması Beyaz Listeleri**
 config-whitelist-role-permission-protection-header = **Rol Yetki Koruması Beyaz Listeleri**
 config-whitelist-member-permission-protection-header = **Üye Yetki Koruması Beyaz Listeleri**
 config-whitelist-bot-adding-protection-header = **Bot Ekleme Koruması Beyaz Listeleri**
+config-whitelist-moderation-protection-header = **Moderasyon Koruması Beyaz Listeleri**
+config-whitelist-logging-header = **Kayıt Tutma Beyaz Listeleri**
 config-whitelist-users-label = **Beyaz Listedeki Kullanıcılar**
 config-whitelist-delete-user-placeholder = Kaldırılacak kullanıcıyı seçin...
 config-whitelist-roles-label = **Beyaz Listedeki Roller**
@@ -284,3 +290,33 @@ log-mod-audit-title-whitelisted = Moderasyon İşlemi (Beyaz Listede: {$action})
 log-mod-audit-title-limited = Moderasyon İşlemi (Sınırlı: {$action})
 log-mod-audit-title-logged = Moderasyon İşlemi (Kaydedildi: {$action})
 log-mod-audit-desc = <@{$userId}> kullanıcısı, <@{$targetId}> üzerinde `{$action}` işlemi gerçekleştirdi.
+
+# Logging Modül Ayarları
+config-log-msg-label = **Mesaj Kayıtları**
+config-log-voice-label = **Ses Kayıtları**
+config-log-member-label = **Üye Kayıtları**
+config-log-channels-header = Tür Bazlı Kayıt Kanalları (İsteğe Bağlı)
+config-log-msg-channel-placeholder = Mesaj kayıt kanalı seçin...
+config-log-voice-channel-placeholder = Ses kayıt kanalı seçin...
+config-log-member-channel-placeholder = Üye kayıt kanalı seçin...
+
+# Kayıt Olayları
+log-msg-delete-title = Mesaj Silindi
+log-msg-delete-desc = <#{$channelId}> kanalında bir mesaj silindi
+log-msg-edit-title = Mesaj Düzenlendi
+log-msg-edit-desc = <@{$userId}>, <#{$channelId}> kanalında bir mesajı düzenledi
+log-msg-edit-before = Önceki
+log-msg-edit-after = Sonraki
+log-voice-join-title = Ses Kanalına Katılım
+log-voice-join-desc = <@{$userId}>, <#{$channelId}> kanalına katıldı
+log-voice-leave-title = Ses Kanalından Ayrılış
+log-voice-leave-desc = <@{$userId}>, <#{$channelId}> kanalından ayrıldı
+log-voice-move-title = Ses Kanalı Değişikliği
+log-voice-move-desc = <@{$userId}>, <#{$oldChannelId}> kanalından <#{$newChannelId}> kanalına geçti
+log-voice-state-title = Ses Durumu Değişikliği
+log-voice-state-desc = <@{$userId}> durumunu değiştirdi: {$state}
+log-member-join-title = Üye Katıldı
+log-member-join-desc = <@{$userId}> sunucuya katıldı
+log-member-leave-title = Üye Ayrıldı
+log-member-leave-desc = <@{$userId}> sunucudan ayrıldı
+log-member-leave-roles = Roller

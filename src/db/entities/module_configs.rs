@@ -29,6 +29,8 @@ pub enum ModuleType {
     BotAddingProtection,
     #[sea_orm(string_value = "moderation_protection")]
     ModerationProtection,
+    #[sea_orm(string_value = "logging")]
+    Logging,
 }
 
 impl std::fmt::Display for ModuleType {
@@ -41,6 +43,7 @@ impl std::fmt::Display for ModuleType {
             ModuleType::MemberPermissionProtection => write!(f, "member_permission_protection"),
             ModuleType::BotAddingProtection => write!(f, "bot_adding_protection"),
             ModuleType::ModerationProtection => write!(f, "moderation_protection"),
+            ModuleType::Logging => write!(f, "logging"),
         }
     }
 }
@@ -135,3 +138,21 @@ pub struct ModerationProtectionModuleConfig {
     #[serde(default)]
     pub punish_when: Vec<String>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct LoggingModuleConfig {
+    #[serde(default)]
+    pub log_messages: bool,
+    #[serde(default)]
+    pub log_voice: bool,
+    #[serde(default)]
+    pub log_membership: bool,
+    #[serde(default)]
+    pub message_log_channel_id: Option<i64>,
+    #[serde(default)]
+    pub voice_log_channel_id: Option<i64>,
+    #[serde(default)]
+    pub membership_log_channel_id: Option<i64>,
+}
+

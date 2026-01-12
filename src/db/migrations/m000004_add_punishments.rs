@@ -90,3 +90,4 @@ enum GuildConfigs {
     Table,
     JailRoleId,
 }
+

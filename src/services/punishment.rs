@@ -224,6 +224,7 @@ impl PunishmentService {
                         http,
                         guild_id,
                         Some(ModuleType::ModerationProtection),
+                        None,
                         crate::services::logger::LogLevel::Warn,
                         &l10n.t("log-mod-punish-title", None),
                         &l10n.t("log-mod-punish-desc", Some(&user_args)),
@@ -240,3 +241,4 @@ impl PunishmentService {
         Ok(())
     }
 }
+

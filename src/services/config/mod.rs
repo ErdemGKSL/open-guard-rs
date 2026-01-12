@@ -180,6 +180,15 @@ pub async fn build_main_menu(
             "ModerationProtection",
         )
         .description(l10n.t("config-moderation-protection-desc", None)),
+        serenity::CreateSelectMenuOption::new(
+            format!(
+                "{} - {}",
+                l10n.t("config-logging-label", None),
+                get_status(ModuleType::Logging)
+            ),
+            "Logging",
+        )
+        .description(l10n.t("config-logging-desc", None)),
     ];
 
     inner_components.push(create_select_menu_row(
@@ -232,6 +241,7 @@ pub async fn build_module_menu(
         }
         ModuleType::BotAddingProtection => l10n.t("config-bot-adding-protection-label", None),
         ModuleType::ModerationProtection => l10n.t("config-moderation-protection-label", None),
+        ModuleType::Logging => l10n.t("config-logging-label", None),
     };
 
     let mut inner_components = create_module_config_payload(
@@ -302,6 +312,13 @@ pub async fn build_module_menu(
             serenity::CreateSeparator::new(true),
         ));
         inner_components.extend(modules::moderation_protection::build_ui(&mp_config, l10n));
+    } else if module == ModuleType::Logging {
+        let logging_config: crate::db::entities::module_configs::LoggingModuleConfig =
+            serde_json::from_value(m_config.config).unwrap_or_default();
+        inner_components.push(serenity::CreateContainerComponent::Separator(
+            serenity::CreateSeparator::new(true),
+        ));
+        inner_components.extend(modules::logging::build_ui(&logging_config, l10n));
     }
 
     // Add back button at the very end
@@ -415,6 +432,8 @@ pub async fn handle_interaction(
     {
         updated_reply =
             Some(build_module_menu(data, guild_id, ModuleType::ModerationProtection, &l10n).await?);
+    } else if modules::logging::handle_interaction(ctx, interaction, data, guild_id).await? {
+        updated_reply = Some(build_module_menu(data, guild_id, ModuleType::Logging, &l10n).await?);
     } else if let Some(components) = whitelist::handle_interaction(ctx, interaction, data).await? {
         updated_reply = Some(components);
     } else if custom_id == "config_back_to_main" {
@@ -428,6 +447,7 @@ pub async fn handle_interaction(
             "member_permission_protection" => ModuleType::MemberPermissionProtection,
             "bot_adding_protection" => ModuleType::BotAddingProtection,
             "moderation_protection" => ModuleType::ModerationProtection,
+            "logging" => ModuleType::Logging,
             _ => return Ok(()),
         };
         updated_reply = Some(build_module_menu(data, guild_id, module_type, &l10n).await?);
@@ -486,6 +506,7 @@ pub async fn handle_interaction(
                     "MemberPermissionProtection" => ModuleType::MemberPermissionProtection,
                     "BotAddingProtection" => ModuleType::BotAddingProtection,
                     "ModerationProtection" => ModuleType::ModerationProtection,
+                    "Logging" => ModuleType::Logging,
                     _ => return Ok(()),
                 };
                 updated_reply = Some(build_module_menu(data, guild_id, module_type, &l10n).await?);
@@ -575,16 +596,22 @@ pub async fn handle_interaction(
                 updated_reply = Some(build_module_menu(data, guild_id, module_type, &l10n).await?);
             }
         }
-    } else if custom_id.starts_with("config_module_revert_") {
-        let module_str = custom_id.trim_start_matches("config_module_revert_");
+    } else if let Some(module_str) = custom_id.strip_prefix("config_module_revert_") {
         let module_type = match module_str {
-            "ChannelProtection" => ModuleType::ChannelProtection,
-            "ChannelPermissionProtection" => ModuleType::ChannelPermissionProtection,
-            "RoleProtection" => ModuleType::RoleProtection,
-            "RolePermissionProtection" => ModuleType::RolePermissionProtection,
-            "MemberPermissionProtection" => ModuleType::MemberPermissionProtection,
-            "BotAddingProtection" => ModuleType::BotAddingProtection,
-            "ModerationProtection" => ModuleType::ModerationProtection,
+            "channel_protection" | "ChannelProtection" => ModuleType::ChannelProtection,
+            "channel_permission_protection" | "ChannelPermissionProtection" => {
+                ModuleType::ChannelPermissionProtection
+            }
+            "role_protection" | "RoleProtection" => ModuleType::RoleProtection,
+            "role_permission_protection" | "RolePermissionProtection" => {
+                ModuleType::RolePermissionProtection
+            }
+            "member_permission_protection" | "MemberPermissionProtection" => {
+                ModuleType::MemberPermissionProtection
+            }
+            "bot_adding_protection" | "BotAddingProtection" => ModuleType::BotAddingProtection,
+            "moderation_protection" | "ModerationProtection" => ModuleType::ModerationProtection,
+            "logging" | "Logging" => ModuleType::Logging,
             _ => return Ok(()),
         };
 
@@ -631,6 +658,8 @@ pub async fn handle_interaction(
             ModuleType::BotAddingProtection
         } else if custom_id.contains("ModerationProtection") {
             ModuleType::ModerationProtection
+        } else if custom_id.contains("Logging") {
+            ModuleType::Logging
         } else {
             return Ok(());
         };
@@ -685,6 +714,7 @@ pub async fn handle_interaction(
             }
             "bot_adding_protection" | "BotAddingProtection" => ModuleType::BotAddingProtection,
             "moderation_protection" | "ModerationProtection" => ModuleType::ModerationProtection,
+            "logging" | "Logging" => ModuleType::Logging,
             _ => return Ok(()),
         };
 
@@ -724,3 +754,4 @@ pub async fn handle_interaction(
 
     Ok(())
 }
+

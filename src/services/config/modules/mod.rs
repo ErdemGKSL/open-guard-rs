@@ -1,7 +1,9 @@
 pub mod bot_adding_protection;
 pub mod channel_permission_protection;
 pub mod channel_protection;
+pub mod logging;
 pub mod member_permission_protection;
 pub mod moderation_protection;
 pub mod role_permission_protection;
 pub mod role_protection;
+

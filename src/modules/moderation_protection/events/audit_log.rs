@@ -304,6 +304,7 @@ async fn handle_moderation_action(
             &ctx.http,
             guild_id,
             Some(ModuleType::ModerationProtection),
+            None,
             log_level,
             &title,
             &desc,

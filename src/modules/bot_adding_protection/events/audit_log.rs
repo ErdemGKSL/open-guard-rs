@@ -178,6 +178,7 @@ async fn handle_bot_add(
             &ctx.http,
             guild_id,
             Some(ModuleType::BotAddingProtection),
+            None,
             log_level,
             &title,
             &desc,

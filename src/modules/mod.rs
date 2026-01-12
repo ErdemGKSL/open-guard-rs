@@ -1,6 +1,7 @@
 pub mod bot_adding_protection;
 pub mod channel_permission_protection;
 pub mod channel_protection;
+pub mod logging;
 pub mod member_permission_protection;
 pub mod moderation_protection;
 pub mod role_permission_protection;
@@ -29,6 +30,7 @@ pub fn get_modules() -> Vec<Module> {
         member_permission_protection::module(),
         crate::modules::bot_adding_protection::module(),
         crate::modules::moderation_protection::module(),
+        crate::modules::logging::module(),
     ]
 }
 
@@ -52,3 +54,4 @@ pub fn commands() -> Vec<poise::Command<Data, Error>> {
 pub fn definitions() -> Vec<ModuleDefinition> {
     get_modules().into_iter().map(|m| m.definition).collect()
 }
+

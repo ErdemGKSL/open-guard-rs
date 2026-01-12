@@ -37,3 +37,4 @@ impl MigrationTrait for Migration {
 enum ModuleConfigs {
     Table,
 }
+

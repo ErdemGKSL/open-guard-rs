@@ -45,27 +45,31 @@ impl LoggerService {
     }
 
     /// Logs a structured message to the configured log channel for a guild or module.
-    /// If no log channel is configured for the module, it falls back to the general guild log channel.
-    /// If neither is configured, it does nothing.
+    /// Priority: preferred_channel_id > module log channel > general guild log channel.
+    /// If none are configured, it does nothing.
     pub async fn log_action(
         &self,
         http: &serenity::Http,
         guild_id: serenity::GuildId,
         module: Option<ModuleType>,
+        preferred_channel_id: Option<i64>,
         level: LogLevel,
         title: &str,
         desc: &str,
         fields: Vec<(&str, String)>,
     ) -> Result<(), Error> {
-        let mut target_channel_id = None;
+        let mut target_channel_id = preferred_channel_id;
 
-        // 1. Try module-specific channel
-        if let Some(module_type) = module {
-            let m_config = module_configs::Entity::find_by_id((guild_id.get() as i64, module_type))
-                .one(&self.db)
-                .await?;
+        // 1. Try module-specific channel if preferred not set
+        if target_channel_id.is_none() {
+            if let Some(module_type) = module {
+                let m_config =
+                    module_configs::Entity::find_by_id((guild_id.get() as i64, module_type))
+                        .one(&self.db)
+                        .await?;
 
-            target_channel_id = m_config.and_then(|c| c.log_channel_id);
+                target_channel_id = m_config.and_then(|c| c.log_channel_id);
+            }
         }
 
         // 2. Fallback to general guild channel if not found
@@ -157,6 +161,7 @@ impl LoggerService {
             ctx.serenity_context().http.as_ref(),
             guild_id,
             module,
+            None,
             level,
             title,
             desc,
@@ -165,3 +170,4 @@ impl LoggerService {
         .await
     }
 }
+

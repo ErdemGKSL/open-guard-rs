@@ -92,3 +92,4 @@ async fn save_config(
     config_active.update(&data.db).await?;
     Ok(())
 }
+

@@ -70,6 +70,7 @@ impl TempBanService {
                                         &http,
                                         guild_id,
                                         Some(ModuleType::ModerationProtection),
+                                        None,
                                         LogLevel::Audit,
                                         &l10n.t("log-mod-unban-title", None),
                                         &l10n.t("log-mod-unban-desc", Some(&user_args)),
@@ -102,3 +103,4 @@ impl TempBanService {
         });
     }
 }
+
