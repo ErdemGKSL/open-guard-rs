@@ -201,15 +201,6 @@ pub async fn handle_interaction(
     )
     .await?;
 
-    // interaction
-    //     .create_response(
-    //         &ctx.http,
-    //         serenity::CreateInteractionResponse::UpdateMessage(
-    //             serenity::CreateInteractionResponseMessage::new().components(components),
-    //         ),
-    //     )
-    //     .await?;
-
     interaction
         .edit_response(
             &ctx.http,
