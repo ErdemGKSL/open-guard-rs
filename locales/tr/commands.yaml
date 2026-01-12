@@ -1,9 +1,45 @@
 help:
   name: "yardım"
-  description: "Yardım mesajını göster"
+  desc: "Yardım mesajını göster"
 config:
   name: "yapılandırma"
-  description: "Bot yapılandırması ve modül yönetimi"
+  desc: "Bot yapılandırması ve modül yönetimi"
 status:
   name: "durum"
-  description: "Bot durumunu, gecikmeyi ve sistem kaynak kullanımını göster"
+  desc: "Bot durumunu, gecikmeyi ve sistem kaynak kullanımını göster"
+ban:
+  name: "yasakla"
+  desc: "Bir kullanıcıyı sunucudan yasaklar"
+  options:
+    user:
+      name: "kullanıcı"
+      desc: "Yasaklanacak kullanıcı"
+    duration:
+      name: "süre"
+      desc: "Yasaklanma süresi (örn. 1d, 1h, 10m30s)"
+    reason:
+      name: "sebep"
+      desc: "Yasaklanma sebebi"
+kick:
+  name: "at"
+  desc: "Bir kullanıcıyı sunucudan atar"
+  options:
+    user:
+      name: "kullanıcı"
+      desc: "Atılacak kullanıcı"
+    reason:
+      name: "sebep"
+      desc: "Atılma sebebi"
+timeout:
+  name: "sustur"
+  desc: "Bir kullanıcıyı susturur"
+  options:
+    user:
+      name: "kullanıcı"
+      desc: "Susturulacak kullanıcı"
+    duration:
+      name: "süre"
+      desc: "Susturulma süresi (örn. 1h, 10m)"
+    reason:
+      name: "sebep"
+      desc: "Susturulma sebebi"

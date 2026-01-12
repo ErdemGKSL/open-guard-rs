@@ -1,9 +1,9 @@
+use crate::db::entities::module_configs::{ChannelProtectionModuleConfig, ModuleType};
 use crate::db::entities::{guild_configs, module_configs};
-use crate::db::entities::module_configs::{ModuleType, ChannelProtectionModuleConfig};
-use crate::services::localization::{L10nProxy, ContextL10nExt};
+use crate::services::localization::{ContextL10nExt, L10nProxy};
 use crate::{Data, Error};
 use poise::serenity_prelude as serenity;
-use sea_orm::{EntityTrait, ActiveModelTrait, Set, QueryFilter, ColumnTrait};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, Set};
 
 pub mod builders;
 pub mod modules;
@@ -22,14 +22,14 @@ pub async fn config(ctx: crate::Context<'_>) -> Result<(), Error> {
     let l10n = ctx.l10n_guild();
     ctx.defer_ephemeral().await?;
     let components = build_main_menu(&ctx.data(), ctx.guild_id().unwrap(), &l10n).await?;
-    
+
     ctx.send(
         poise::CreateReply::default()
             .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL)
             .components(components),
     )
     .await?;
-    
+
     Ok(())
 }
 
@@ -90,7 +90,10 @@ pub async fn build_main_menu(
     inner_components.push(serenity::CreateContainerComponent::Separator(
         serenity::CreateSeparator::new(false),
     ));
-    inner_components.push(create_whitelist_section("config_whitelist_view_global".to_string(), l10n));
+    inner_components.push(create_whitelist_section(
+        "config_whitelist_view_global".to_string(),
+        l10n,
+    ));
 
     // Modules Section
     inner_components.extend(create_header(l10n.t("config-modules-header", None), true));
@@ -101,7 +104,11 @@ pub async fn build_main_menu(
         .await?;
 
     let get_status = |m: ModuleType| {
-        let enabled = m_configs.iter().find(|c| c.module_type == m).map(|c| c.enabled).unwrap_or(true);
+        let enabled = m_configs
+            .iter()
+            .find(|c| c.module_type == m)
+            .map(|c| c.enabled)
+            .unwrap_or(true);
         if enabled {
             format!("🟢 {}", l10n.t("config-btn-enabled", None))
         } else {
@@ -111,35 +118,68 @@ pub async fn build_main_menu(
 
     let options = vec![
         serenity::CreateSelectMenuOption::new(
-            format!("{} - {}", l10n.t("config-channel-protection-label", None), get_status(ModuleType::ChannelProtection)),
+            format!(
+                "{} - {}",
+                l10n.t("config-channel-protection-label", None),
+                get_status(ModuleType::ChannelProtection)
+            ),
             "ChannelProtection",
         )
         .description(l10n.t("config-channel-protection-desc", None)),
         serenity::CreateSelectMenuOption::new(
-            format!("{} - {}", l10n.t("config-channel-permission-protection-label", None), get_status(ModuleType::ChannelPermissionProtection)),
+            format!(
+                "{} - {}",
+                l10n.t("config-channel-permission-protection-label", None),
+                get_status(ModuleType::ChannelPermissionProtection)
+            ),
             "ChannelPermissionProtection",
         )
         .description(l10n.t("config-channel-permission-protection-desc", None)),
         serenity::CreateSelectMenuOption::new(
-            format!("{} - {}", l10n.t("config-role-protection-label", None), get_status(ModuleType::RoleProtection)),
+            format!(
+                "{} - {}",
+                l10n.t("config-role-protection-label", None),
+                get_status(ModuleType::RoleProtection)
+            ),
             "RoleProtection",
         )
         .description(l10n.t("config-role-protection-desc", None)),
         serenity::CreateSelectMenuOption::new(
-            format!("{} - {}", l10n.t("config-role-permission-protection-label", None), get_status(ModuleType::RolePermissionProtection)),
+            format!(
+                "{} - {}",
+                l10n.t("config-role-permission-protection-label", None),
+                get_status(ModuleType::RolePermissionProtection)
+            ),
             "RolePermissionProtection",
         )
         .description(l10n.t("config-role-permission-protection-desc", None)),
         serenity::CreateSelectMenuOption::new(
-            format!("{} - {}", l10n.t("config-member-permission-protection-label", None), get_status(ModuleType::MemberPermissionProtection)),
+            format!(
+                "{} - {}",
+                l10n.t("config-member-permission-protection-label", None),
+                get_status(ModuleType::MemberPermissionProtection)
+            ),
             "MemberPermissionProtection",
         )
         .description(l10n.t("config-member-permission-protection-desc", None)),
         serenity::CreateSelectMenuOption::new(
-            format!("{} - {}", l10n.t("config-bot-adding-protection-label", None), get_status(ModuleType::BotAddingProtection)),
+            format!(
+                "{} - {}",
+                l10n.t("config-bot-adding-protection-label", None),
+                get_status(ModuleType::BotAddingProtection)
+            ),
             "BotAddingProtection",
         )
         .description(l10n.t("config-bot-adding-protection-desc", None)),
+        serenity::CreateSelectMenuOption::new(
+            format!(
+                "{} - {}",
+                l10n.t("config-moderation-protection-label", None),
+                get_status(ModuleType::ModerationProtection)
+            ),
+            "ModerationProtection",
+        )
+        .description(l10n.t("config-moderation-protection-desc", None)),
     ];
 
     inner_components.push(create_select_menu_row(
@@ -151,7 +191,7 @@ pub async fn build_main_menu(
     ));
 
     Ok(vec![serenity::CreateComponent::Container(
-        serenity::CreateContainer::new(inner_components)
+        serenity::CreateContainer::new(inner_components),
     )])
 }
 
@@ -180,11 +220,18 @@ pub async fn build_module_menu(
 
     let name = match module {
         ModuleType::ChannelProtection => l10n.t("config-channel-protection-label", None),
-        ModuleType::ChannelPermissionProtection => l10n.t("config-channel-permission-protection-label", None),
+        ModuleType::ChannelPermissionProtection => {
+            l10n.t("config-channel-permission-protection-label", None)
+        }
         ModuleType::RoleProtection => l10n.t("config-role-protection-label", None),
-        ModuleType::RolePermissionProtection => l10n.t("config-role-permission-protection-label", None),
-        ModuleType::MemberPermissionProtection => l10n.t("config-member-permission-protection-label", None),
+        ModuleType::RolePermissionProtection => {
+            l10n.t("config-role-permission-protection-label", None)
+        }
+        ModuleType::MemberPermissionProtection => {
+            l10n.t("config-member-permission-protection-label", None)
+        }
         ModuleType::BotAddingProtection => l10n.t("config-bot-adding-protection-label", None),
+        ModuleType::ModerationProtection => l10n.t("config-moderation-protection-label", None),
     };
 
     let mut inner_components = create_module_config_payload(
@@ -200,33 +247,67 @@ pub async fn build_module_menu(
     );
 
     if module == ModuleType::ChannelProtection {
-        let cp_config: ChannelProtectionModuleConfig = serde_json::from_value(m_config.config).unwrap_or_default();
-        inner_components.push(serenity::CreateContainerComponent::Separator(serenity::CreateSeparator::new(true)));
+        let cp_config: ChannelProtectionModuleConfig =
+            serde_json::from_value(m_config.config).unwrap_or_default();
+        inner_components.push(serenity::CreateContainerComponent::Separator(
+            serenity::CreateSeparator::new(true),
+        ));
         inner_components.extend(modules::channel_protection::build_ui(&cp_config, l10n));
     } else if module == ModuleType::ChannelPermissionProtection {
         let cpp_config: crate::db::entities::module_configs::ChannelPermissionProtectionModuleConfig = serde_json::from_value(m_config.config).unwrap_or_default();
-        inner_components.push(serenity::CreateContainerComponent::Separator(serenity::CreateSeparator::new(true)));
-        inner_components.extend(modules::channel_permission_protection::build_ui(&cpp_config, l10n));
+        inner_components.push(serenity::CreateContainerComponent::Separator(
+            serenity::CreateSeparator::new(true),
+        ));
+        inner_components.extend(modules::channel_permission_protection::build_ui(
+            &cpp_config,
+            l10n,
+        ));
     } else if module == ModuleType::RoleProtection {
-        let rp_config: crate::db::entities::module_configs::RoleProtectionModuleConfig = serde_json::from_value(m_config.config).unwrap_or_default();
-        inner_components.push(serenity::CreateContainerComponent::Separator(serenity::CreateSeparator::new(true)));
+        let rp_config: crate::db::entities::module_configs::RoleProtectionModuleConfig =
+            serde_json::from_value(m_config.config).unwrap_or_default();
+        inner_components.push(serenity::CreateContainerComponent::Separator(
+            serenity::CreateSeparator::new(true),
+        ));
         inner_components.extend(modules::role_protection::build_ui(&rp_config, l10n));
     } else if module == ModuleType::RolePermissionProtection {
-        let rpp_config: crate::db::entities::module_configs::RolePermissionProtectionModuleConfig = serde_json::from_value(m_config.config).unwrap_or_default();
-        inner_components.push(serenity::CreateContainerComponent::Separator(serenity::CreateSeparator::new(true)));
-        inner_components.extend(modules::role_permission_protection::build_ui(&rpp_config, l10n));
+        let rpp_config: crate::db::entities::module_configs::RolePermissionProtectionModuleConfig =
+            serde_json::from_value(m_config.config).unwrap_or_default();
+        inner_components.push(serenity::CreateContainerComponent::Separator(
+            serenity::CreateSeparator::new(true),
+        ));
+        inner_components.extend(modules::role_permission_protection::build_ui(
+            &rpp_config,
+            l10n,
+        ));
     } else if module == ModuleType::MemberPermissionProtection {
         let mpp_config: crate::db::entities::module_configs::MemberPermissionProtectionModuleConfig = serde_json::from_value(m_config.config).unwrap_or_default();
-        inner_components.push(serenity::CreateContainerComponent::Separator(serenity::CreateSeparator::new(true)));
-        inner_components.extend(modules::member_permission_protection::build_ui(&mpp_config, l10n));
+        inner_components.push(serenity::CreateContainerComponent::Separator(
+            serenity::CreateSeparator::new(true),
+        ));
+        inner_components.extend(modules::member_permission_protection::build_ui(
+            &mpp_config,
+            l10n,
+        ));
     } else if module == ModuleType::BotAddingProtection {
-        let bap_config: crate::db::entities::module_configs::BotAddingProtectionModuleConfig = serde_json::from_value(m_config.config).unwrap_or_default();
-        inner_components.push(serenity::CreateContainerComponent::Separator(serenity::CreateSeparator::new(true)));
+        let bap_config: crate::db::entities::module_configs::BotAddingProtectionModuleConfig =
+            serde_json::from_value(m_config.config).unwrap_or_default();
+        inner_components.push(serenity::CreateContainerComponent::Separator(
+            serenity::CreateSeparator::new(true),
+        ));
         inner_components.extend(modules::bot_adding_protection::build_ui(&bap_config, l10n));
+    } else if module == ModuleType::ModerationProtection {
+        let mp_config: crate::db::entities::module_configs::ModerationProtectionModuleConfig =
+            serde_json::from_value(m_config.config).unwrap_or_default();
+        inner_components.push(serenity::CreateContainerComponent::Separator(
+            serenity::CreateSeparator::new(true),
+        ));
+        inner_components.extend(modules::moderation_protection::build_ui(&mp_config, l10n));
     }
 
     // Add back button at the very end
-    inner_components.push(serenity::CreateContainerComponent::Separator(serenity::CreateSeparator::new(false)));
+    inner_components.push(serenity::CreateContainerComponent::Separator(
+        serenity::CreateSeparator::new(false),
+    ));
     inner_components.push(serenity::CreateContainerComponent::Section(
         serenity::CreateSection::new(
             vec![serenity::CreateSectionComponent::TextDisplay(
@@ -235,13 +316,13 @@ pub async fn build_module_menu(
             serenity::CreateSectionAccessory::Button(
                 serenity::CreateButton::new("config_back_to_main")
                     .label(l10n.t("config-back-label", None))
-                    .style(serenity::ButtonStyle::Secondary)
+                    .style(serenity::ButtonStyle::Secondary),
             ),
-        )
+        ),
     ));
 
     Ok(vec![serenity::CreateComponent::Container(
-        serenity::CreateContainer::new(inner_components)
+        serenity::CreateContainer::new(inner_components),
     )])
 }
 
@@ -273,17 +354,67 @@ pub async fn handle_interaction(
 
     // Try module-specific handlers first
     if modules::channel_protection::handle_interaction(ctx, interaction, data, guild_id).await? {
-        updated_reply = Some(build_module_menu(data, guild_id, ModuleType::ChannelProtection, &l10n).await?);
-    } else if modules::channel_permission_protection::handle_interaction(ctx, interaction, data, guild_id).await? {
-        updated_reply = Some(build_module_menu(data, guild_id, ModuleType::ChannelPermissionProtection, &l10n).await?);
-    } else if modules::role_protection::handle_interaction(ctx, interaction, data, guild_id).await? {
-        updated_reply = Some(build_module_menu(data, guild_id, ModuleType::RoleProtection, &l10n).await?);
-    } else if modules::role_permission_protection::handle_interaction(ctx, interaction, data, guild_id).await? {
-        updated_reply = Some(build_module_menu(data, guild_id, ModuleType::RolePermissionProtection, &l10n).await?);
-    } else if modules::member_permission_protection::handle_interaction(ctx, interaction, data, guild_id).await? {
-        updated_reply = Some(build_module_menu(data, guild_id, ModuleType::MemberPermissionProtection, &l10n).await?);
-    } else if modules::bot_adding_protection::handle_interaction(ctx, interaction, data, guild_id).await? {
-        updated_reply = Some(build_module_menu(data, guild_id, ModuleType::BotAddingProtection, &l10n).await?);
+        updated_reply =
+            Some(build_module_menu(data, guild_id, ModuleType::ChannelProtection, &l10n).await?);
+    } else if modules::channel_permission_protection::handle_interaction(
+        ctx,
+        interaction,
+        data,
+        guild_id,
+    )
+    .await?
+    {
+        updated_reply = Some(
+            build_module_menu(
+                data,
+                guild_id,
+                ModuleType::ChannelPermissionProtection,
+                &l10n,
+            )
+            .await?,
+        );
+    } else if modules::role_protection::handle_interaction(ctx, interaction, data, guild_id).await?
+    {
+        updated_reply =
+            Some(build_module_menu(data, guild_id, ModuleType::RoleProtection, &l10n).await?);
+    } else if modules::role_permission_protection::handle_interaction(
+        ctx,
+        interaction,
+        data,
+        guild_id,
+    )
+    .await?
+    {
+        updated_reply = Some(
+            build_module_menu(data, guild_id, ModuleType::RolePermissionProtection, &l10n).await?,
+        );
+    } else if modules::member_permission_protection::handle_interaction(
+        ctx,
+        interaction,
+        data,
+        guild_id,
+    )
+    .await?
+    {
+        updated_reply = Some(
+            build_module_menu(
+                data,
+                guild_id,
+                ModuleType::MemberPermissionProtection,
+                &l10n,
+            )
+            .await?,
+        );
+    } else if modules::bot_adding_protection::handle_interaction(ctx, interaction, data, guild_id)
+        .await?
+    {
+        updated_reply =
+            Some(build_module_menu(data, guild_id, ModuleType::BotAddingProtection, &l10n).await?);
+    } else if modules::moderation_protection::handle_interaction(ctx, interaction, data, guild_id)
+        .await?
+    {
+        updated_reply =
+            Some(build_module_menu(data, guild_id, ModuleType::ModerationProtection, &l10n).await?);
     } else if let Some(components) = whitelist::handle_interaction(ctx, interaction, data).await? {
         updated_reply = Some(components);
     } else if custom_id == "config_back_to_main" {
@@ -296,11 +427,14 @@ pub async fn handle_interaction(
             "role_permission_protection" => ModuleType::RolePermissionProtection,
             "member_permission_protection" => ModuleType::MemberPermissionProtection,
             "bot_adding_protection" => ModuleType::BotAddingProtection,
+            "moderation_protection" => ModuleType::ModerationProtection,
             _ => return Ok(()),
         };
         updated_reply = Some(build_module_menu(data, guild_id, module_type, &l10n).await?);
     } else if custom_id == "config_general_log_channel" {
-        if let serenity::ComponentInteractionDataKind::ChannelSelect { values } = &interaction.data.kind {
+        if let serenity::ComponentInteractionDataKind::ChannelSelect { values } =
+            &interaction.data.kind
+        {
             if let Some(channel_id) = values.first() {
                 guild_configs::Entity::insert(guild_configs::ActiveModel {
                     guild_id: Set(guild_id.get() as i64),
@@ -319,7 +453,9 @@ pub async fn handle_interaction(
             }
         }
     } else if custom_id == "config_jail_role" {
-        if let serenity::ComponentInteractionDataKind::RoleSelect { values } = &interaction.data.kind {
+        if let serenity::ComponentInteractionDataKind::RoleSelect { values } =
+            &interaction.data.kind
+        {
             if let Some(role_id) = values.first() {
                 guild_configs::Entity::insert(guild_configs::ActiveModel {
                     guild_id: Set(guild_id.get() as i64),
@@ -338,7 +474,9 @@ pub async fn handle_interaction(
             }
         }
     } else if custom_id == "config_navigate_modules" {
-        if let serenity::ComponentInteractionDataKind::StringSelect { values } = &interaction.data.kind {
+        if let serenity::ComponentInteractionDataKind::StringSelect { values } =
+            &interaction.data.kind
+        {
             if let Some(module_str) = values.first() {
                 let module_type = match module_str.as_str() {
                     "ChannelProtection" => ModuleType::ChannelProtection,
@@ -347,13 +485,16 @@ pub async fn handle_interaction(
                     "RolePermissionProtection" => ModuleType::RolePermissionProtection,
                     "MemberPermissionProtection" => ModuleType::MemberPermissionProtection,
                     "BotAddingProtection" => ModuleType::BotAddingProtection,
+                    "ModerationProtection" => ModuleType::ModerationProtection,
                     _ => return Ok(()),
                 };
                 updated_reply = Some(build_module_menu(data, guild_id, module_type, &l10n).await?);
             }
         }
     } else if custom_id.starts_with("config_module_log_channel_") {
-        if let serenity::ComponentInteractionDataKind::ChannelSelect { values } = &interaction.data.kind {
+        if let serenity::ComponentInteractionDataKind::ChannelSelect { values } =
+            &interaction.data.kind
+        {
             if let Some(channel_id) = values.first() {
                 let module_str = custom_id.trim_start_matches("config_module_log_channel_");
                 let module_type = match module_str {
@@ -363,6 +504,7 @@ pub async fn handle_interaction(
                     "RolePermissionProtection" => ModuleType::RolePermissionProtection,
                     "MemberPermissionProtection" => ModuleType::MemberPermissionProtection,
                     "BotAddingProtection" => ModuleType::BotAddingProtection,
+                    "ModerationProtection" => ModuleType::ModerationProtection,
                     _ => return Ok(()),
                 };
 
@@ -387,7 +529,9 @@ pub async fn handle_interaction(
             }
         }
     } else if custom_id.starts_with("config_module_punishment_") {
-        if let serenity::ComponentInteractionDataKind::StringSelect { values } = &interaction.data.kind {
+        if let serenity::ComponentInteractionDataKind::StringSelect { values } =
+            &interaction.data.kind
+        {
             if let Some(p_str) = values.first() {
                 let module_str = custom_id.trim_start_matches("config_module_punishment_");
                 let module_type = match module_str {
@@ -397,6 +541,7 @@ pub async fn handle_interaction(
                     "RolePermissionProtection" => ModuleType::RolePermissionProtection,
                     "MemberPermissionProtection" => ModuleType::MemberPermissionProtection,
                     "BotAddingProtection" => ModuleType::BotAddingProtection,
+                    "ModerationProtection" => ModuleType::ModerationProtection,
                     _ => return Ok(()),
                 };
 
@@ -439,25 +584,27 @@ pub async fn handle_interaction(
             "RolePermissionProtection" => ModuleType::RolePermissionProtection,
             "MemberPermissionProtection" => ModuleType::MemberPermissionProtection,
             "BotAddingProtection" => ModuleType::BotAddingProtection,
+            "ModerationProtection" => ModuleType::ModerationProtection,
             _ => return Ok(()),
         };
 
-        let module_configs::Model { revert, .. } = match module_configs::Entity::find_by_id((guild_id.get() as i64, module_type))
-            .one(&data.db)
-            .await?
-        {
-            Some(m) => m,
-            None => {
-                // If no config exists, create it with default values
-                module_configs::ActiveModel {
-                    guild_id: Set(guild_id.get() as i64),
-                    module_type: Set(module_type),
-                    ..Default::default()
-                }
-                .insert(&data.db)
+        let module_configs::Model { revert, .. } =
+            match module_configs::Entity::find_by_id((guild_id.get() as i64, module_type))
+                .one(&data.db)
                 .await?
-            }
-        };
+            {
+                Some(m) => m,
+                None => {
+                    // If no config exists, create it with default values
+                    module_configs::ActiveModel {
+                        guild_id: Set(guild_id.get() as i64),
+                        module_type: Set(module_type),
+                        ..Default::default()
+                    }
+                    .insert(&data.db)
+                    .await?
+                }
+            };
 
         module_configs::Entity::update(module_configs::ActiveModel {
             guild_id: Set(guild_id.get() as i64),
@@ -482,6 +629,8 @@ pub async fn handle_interaction(
             ModuleType::MemberPermissionProtection
         } else if custom_id.contains("BotAddingProtection") {
             ModuleType::BotAddingProtection
+        } else if custom_id.contains("ModerationProtection") {
+            ModuleType::ModerationProtection
         } else {
             return Ok(());
         };
@@ -524,11 +673,18 @@ pub async fn handle_interaction(
         let module_str = custom_id.trim_start_matches("config_module_toggle_");
         let module_type = match module_str {
             "channel_protection" | "ChannelProtection" => ModuleType::ChannelProtection,
-            "channel_permission_protection" | "ChannelPermissionProtection" => ModuleType::ChannelPermissionProtection,
+            "channel_permission_protection" | "ChannelPermissionProtection" => {
+                ModuleType::ChannelPermissionProtection
+            }
             "role_protection" | "RoleProtection" => ModuleType::RoleProtection,
-            "role_permission_protection" | "RolePermissionProtection" => ModuleType::RolePermissionProtection,
-            "member_permission_protection" | "MemberPermissionProtection" => ModuleType::MemberPermissionProtection,
+            "role_permission_protection" | "RolePermissionProtection" => {
+                ModuleType::RolePermissionProtection
+            }
+            "member_permission_protection" | "MemberPermissionProtection" => {
+                ModuleType::MemberPermissionProtection
+            }
             "bot_adding_protection" | "BotAddingProtection" => ModuleType::BotAddingProtection,
+            "moderation_protection" | "ModerationProtection" => ModuleType::ModerationProtection,
             _ => return Ok(()),
         };
 
@@ -540,7 +696,7 @@ pub async fn handle_interaction(
             Some(m) => {
                 let enabled = m.enabled;
                 (m.into(), enabled)
-            },
+            }
             None => {
                 let am = module_configs::ActiveModel {
                     guild_id: Set(guild_id.get() as i64),
@@ -555,7 +711,7 @@ pub async fn handle_interaction(
 
         am.enabled = Set(!current_enabled);
         am.update(&data.db).await?;
-        
+
         updated_reply = Some(build_module_menu(data, guild_id, module_type, &l10n).await?);
     } else if custom_id == "config_back_to_main" {
         updated_reply = Some(build_main_menu(data, guild_id, &l10n).await?);

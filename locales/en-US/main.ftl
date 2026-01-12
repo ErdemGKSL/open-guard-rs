@@ -1,23 +1,24 @@
 module-config-name = Configuration
-module-config-description = Bot settings and module configuration.
+module-config-desc = Bot settings and module configuration.
 
 module-channel-protection-name = Channel Protection
-module-channel-protection-desc = Protect channels from unauthorized creation or deletion.
+module-channel-protection-desc = Prevents unauthorized channel creation, deletion, or updates.
 
 module-channel-permission-protection-name = Channel Permission Protection
 module-channel-permission-protection-desc = Protect channel permission overwrites from unauthorized changes.
 
 module-role-protection-name = Role Protection
-module-role-protection-description = Protect roles from unauthorized creation or deletion.
+module-role-protection-desc = Protect roles from unauthorized creation or deletion.
 
 module-role-permission-protection-name = Role Permission Protection
 module-role-permission-protection-desc = Protect role permissions from unauthorized changes.
 
 module-member-permission-protection-name = Member Permission Protection
-module-member-permission-protection-description = Protect members from being granted dangerous permissions via roles.
+module-member-permission-protection-desc = Protect members from being granted dangerous permissions via roles.
 
 module-bot-adding-protection-name = Bot Adding Protection
-module-bot-adding-protection-description = Automatically kicks newly added bots and punishes the user who added them.
+module-moderation-protection-name = Moderation Protection
+module-bot-adding-protection-desc = Automatically kicks newly added bots and punishes the user who added them.
 
 help-title = Bot Help Menu
 
@@ -174,8 +175,7 @@ log-status-not-enabled = ℹ️ **Protection not enabled**\n> This protection is
 log-field-acting-user = Acting User
 log-field-target-member = Target Member
 log-field-added-perms = Added Perms
-log-field-action-status = Action Status
-log-field-role-id = Role ID
+log-field-action-status = Status
 log-field-role = Role
 log-field-channel = Channel
 log-field-user = User
@@ -240,3 +240,9 @@ status-system = 🖥️ System Resources
 status-no-guild = ❌ Not in a guild.
 status-refresh-btn = Refresh
 status-metrics = Metrics
+
+mod-error-invalid-duration = Invalid duration format! Use something like 1d, 1h, or 10m30s.
+mod-ban-success-temp = ✅ Banned <@{$userId}> for {$duration} (Reason: {$reason})
+mod-ban-success-perm = ✅ Banned <@{$userId}> permanently (Reason: {$reason})
+mod-kick-success = ✅ Kicked <@{$userId}> (Reason: {$reason})
+mod-timeout-success = ✅ Timed out <@{$userId}> for {$duration} (Reason: {$reason})

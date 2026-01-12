@@ -7,7 +7,7 @@ pub fn module() -> Module {
         definition: ModuleDefinition {
             id: "channel_protection",
             name_key: "module-channel-protection-name",
-            description_key: "module-channel-protection-desc",
+            desc_key: "module-channel-protection-desc",
         },
         commands: vec![],
     }

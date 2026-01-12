@@ -1,9 +1,45 @@
 help:
   name: "help"
-  description: "Show help message"
+  desc: "Show help message"
 config:
   name: "config"
-  description: "Bot configuration and module management"
+  desc: "Bot configuration and module management"
 status:
   name: "status"
-  description: "Show bot status, latency, and system resource usage"
+  desc: "Show bot status, latency, and system resource usage"
+ban:
+  name: "ban"
+  desc: "Ban a user from the server"
+  options:
+    user:
+      name: "user"
+      desc: "User to ban"
+    duration:
+      name: "duration"
+      desc: "Duration of the ban (e.g. 1d, 1h, 10m30s)"
+    reason:
+      name: "reason"
+      desc: "Reason for the ban"
+kick:
+  name: "kick"
+  desc: "Kick a user from the server"
+  options:
+    user:
+      name: "user"
+      desc: "User to kick"
+    reason:
+      name: "reason"
+      desc: "Reason for the kick"
+timeout:
+  name: "timeout"
+  desc: "Timeout a user"
+  options:
+    user:
+      name: "user"
+      desc: "User to timeout"
+    duration:
+      name: "duration"
+      desc: "Duration of the timeout (e.g. 1h, 10m)"
+    reason:
+      name: "reason"
+      desc: "Reason for the timeout"

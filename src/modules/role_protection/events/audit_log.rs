@@ -2,8 +2,8 @@ use crate::db::entities::module_configs::{self, ModuleType, RoleProtectionModule
 use crate::services::logger::LogLevel;
 use crate::{Data, Error};
 use poise::serenity_prelude as serenity;
-use serenity::model::guild::audit_log::{Action, RoleAction};
 use sea_orm::EntityTrait;
+use serenity::model::guild::audit_log::{Action, RoleAction};
 
 pub async fn handle_audit_log(
     ctx: &serenity::Context,
@@ -11,20 +11,24 @@ pub async fn handle_audit_log(
     guild_id: serenity::GuildId,
     data: &Data,
 ) -> Result<(), Error> {
-    let config_model = match module_configs::Entity::find_by_id((guild_id.get() as i64, ModuleType::RoleProtection))
-        .one(&data.db)
-        .await?
+    let config_model = match module_configs::Entity::find_by_id((
+        guild_id.get() as i64,
+        ModuleType::RoleProtection,
+    ))
+    .one(&data.db)
+    .await?
     {
         Some(m) => {
             if !m.enabled {
                 return Ok(());
             }
             m
-        },
+        }
         None => return Ok(()),
     };
 
-    let config: RoleProtectionModuleConfig = serde_json::from_value(config_model.config.clone()).unwrap_or_default();
+    let config: RoleProtectionModuleConfig =
+        serde_json::from_value(config_model.config.clone()).unwrap_or_default();
 
     let user_id = match entry.user_id {
         Some(id) => id,
@@ -37,21 +41,59 @@ pub async fn handle_audit_log(
     }
 
     // Check whitelist
-    let whitelist_level = data.whitelist.get_whitelist_level(ctx, guild_id, user_id, ModuleType::RoleProtection).await?;
+    let whitelist_level = data
+        .whitelist
+        .get_whitelist_level(ctx, guild_id, user_id, ModuleType::RoleProtection)
+        .await?;
 
     // Match on the audit log action to triggers variants error
     match entry.action {
         Action::Role(RoleAction::Create) => {
-            handle_role_create(ctx, entry, guild_id, data, &config_model, user_id, whitelist_level, &config).await?;
+            handle_role_create(
+                ctx,
+                entry,
+                guild_id,
+                data,
+                &config_model,
+                user_id,
+                whitelist_level,
+                &config,
+            )
+            .await?;
         }
         Action::Role(RoleAction::Delete) => {
-            handle_role_delete(ctx, entry, guild_id, data, &config_model, user_id, whitelist_level, &config).await?;
+            handle_role_delete(
+                ctx,
+                entry,
+                guild_id,
+                data,
+                &config_model,
+                user_id,
+                whitelist_level,
+                &config,
+            )
+            .await?;
         }
         Action::Role(RoleAction::Update) => {
             // Only process if there are non-permission changes to avoid double handling with RolePermissionProtection
-            let has_other_changes = entry.changes.iter().any(|c| !matches!(c, serenity::model::guild::audit_log::Change::Permissions { .. }));
+            let has_other_changes = entry.changes.iter().any(|c| {
+                !matches!(
+                    c,
+                    serenity::model::guild::audit_log::Change::Permissions { .. }
+                )
+            });
             if has_other_changes {
-                handle_role_update(ctx, entry, guild_id, data, &config_model, user_id, whitelist_level, &config).await?;
+                handle_role_update(
+                    ctx,
+                    entry,
+                    guild_id,
+                    data,
+                    &config_model,
+                    user_id,
+                    whitelist_level,
+                    &config,
+                )
+                .await?;
             }
         }
         _ => {}
@@ -71,7 +113,8 @@ async fn handle_role_create(
     config: &RoleProtectionModuleConfig,
 ) -> Result<(), Error> {
     let role_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
-    let should_punish = config.punish_when.is_empty() || config.punish_when.contains(&"create".to_string());
+    let should_punish =
+        config.punish_when.is_empty() || config.punish_when.contains(&"create".to_string());
 
     let guild = match guild_id.to_partial_guild(&ctx.http).await {
         Ok(g) => g,
@@ -109,13 +152,18 @@ async fn handle_role_create(
                 args.set("type", format!("{:?}", p));
                 l10n.t("log-status-punished", Some(&args))
             }
-            crate::services::punishment::ViolationResult::ViolationRecorded { current, threshold } => {
+            crate::services::punishment::ViolationResult::ViolationRecorded {
+                current,
+                threshold,
+            } => {
                 let mut args = fluent::FluentArgs::new();
                 args.set("current", current);
                 args.set("threshold", threshold);
                 l10n.t("log-status-violation", Some(&args))
             }
-            crate::services::punishment::ViolationResult::None => l10n.t("log-status-blocked", None),
+            crate::services::punishment::ViolationResult::None => {
+                l10n.t("log-status-blocked", None)
+            }
         };
 
         // Revert
@@ -162,7 +210,7 @@ async fn handle_role_create(
     let mut desc_args = fluent::FluentArgs::new();
     desc_args.set("roleId", role_id);
     desc_args.set("userId", user_id.get());
-    let description = l10n.t("log-role-desc-create", Some(&desc_args));
+    let desc = l10n.t("log-role-desc-create", Some(&desc_args));
 
     data.logger
         .log_action(
@@ -171,7 +219,7 @@ async fn handle_role_create(
             Some(ModuleType::RoleProtection),
             log_level,
             &title,
-            &description,
+            &desc,
             vec![
                 (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
                 (&l10n.t("log-field-role-id", None), role_id.to_string()),
@@ -194,7 +242,8 @@ async fn handle_role_delete(
     config: &RoleProtectionModuleConfig,
 ) -> Result<(), Error> {
     let role_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
-    let should_punish = config.punish_when.is_empty() || config.punish_when.contains(&"delete".to_string());
+    let should_punish =
+        config.punish_when.is_empty() || config.punish_when.contains(&"delete".to_string());
 
     let guild = match guild_id.to_partial_guild(&ctx.http).await {
         Ok(g) => g,
@@ -232,13 +281,18 @@ async fn handle_role_delete(
                 args.set("type", format!("{:?}", p));
                 l10n.t("log-status-punished", Some(&args))
             }
-            crate::services::punishment::ViolationResult::ViolationRecorded { current, threshold } => {
+            crate::services::punishment::ViolationResult::ViolationRecorded {
+                current,
+                threshold,
+            } => {
                 let mut args = fluent::FluentArgs::new();
                 args.set("current", current);
                 args.set("threshold", threshold);
                 l10n.t("log-status-violation", Some(&args))
             }
-            crate::services::punishment::ViolationResult::None => l10n.t("log-status-blocked", None),
+            crate::services::punishment::ViolationResult::None => {
+                l10n.t("log-status-blocked", None)
+            }
         };
 
         // Revert
@@ -246,7 +300,10 @@ async fn handle_role_delete(
             // Wait for the role to be stored in cache
             let mut cached_role = None;
             for _ in 0..10 {
-                if let Some(r) = data.cache.take_role(guild_id, serenity::RoleId::new(role_id)) {
+                if let Some(r) = data
+                    .cache
+                    .take_role(guild_id, serenity::RoleId::new(role_id))
+                {
                     cached_role = Some(r);
                     break;
                 }
@@ -296,7 +353,7 @@ async fn handle_role_delete(
     let mut desc_args = fluent::FluentArgs::new();
     desc_args.set("roleId", role_id);
     desc_args.set("userId", user_id.get());
-    let description = l10n.t("log-role-desc-delete", Some(&desc_args));
+    let desc = l10n.t("log-role-desc-delete", Some(&desc_args));
 
     data.logger
         .log_action(
@@ -305,7 +362,7 @@ async fn handle_role_delete(
             Some(ModuleType::RoleProtection),
             log_level,
             &title,
-            &description,
+            &desc,
             vec![
                 (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
                 (&l10n.t("log-field-role-id", None), role_id.to_string()),
@@ -328,7 +385,8 @@ async fn handle_role_update(
     config: &RoleProtectionModuleConfig,
 ) -> Result<(), Error> {
     let role_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
-    let should_punish = config.punish_when.is_empty() || config.punish_when.contains(&"update".to_string());
+    let should_punish =
+        config.punish_when.is_empty() || config.punish_when.contains(&"update".to_string());
 
     let guild = match guild_id.to_partial_guild(&ctx.http).await {
         Ok(g) => g,
@@ -366,13 +424,18 @@ async fn handle_role_update(
                 args.set("type", format!("{:?}", p));
                 l10n.t("log-status-punished", Some(&args))
             }
-            crate::services::punishment::ViolationResult::ViolationRecorded { current, threshold } => {
+            crate::services::punishment::ViolationResult::ViolationRecorded {
+                current,
+                threshold,
+            } => {
                 let mut args = fluent::FluentArgs::new();
                 args.set("current", current);
                 args.set("threshold", threshold);
                 l10n.t("log-status-violation", Some(&args))
             }
-            crate::services::punishment::ViolationResult::None => l10n.t("log-status-blocked", None),
+            crate::services::punishment::ViolationResult::None => {
+                l10n.t("log-status-blocked", None)
+            }
         };
 
         // Revert
@@ -454,7 +517,7 @@ async fn handle_role_update(
     let mut desc_args = fluent::FluentArgs::new();
     desc_args.set("roleId", role_id);
     desc_args.set("userId", user_id.get());
-    let description = l10n.t("log-role-desc-update", Some(&desc_args));
+    let desc = l10n.t("log-role-desc-update", Some(&desc_args));
 
     data.logger
         .log_action(
@@ -463,7 +526,7 @@ async fn handle_role_update(
             Some(ModuleType::RoleProtection),
             log_level,
             &title,
-            &description,
+            &desc,
             vec![
                 (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
                 (&l10n.t("log-field-role", None), format!("<@&{}>", role_id)),
@@ -474,5 +537,3 @@ async fn handle_role_update(
 
     Ok(())
 }
-
-

@@ -2,6 +2,7 @@ pub mod bot_adding_protection;
 pub mod channel_permission_protection;
 pub mod channel_protection;
 pub mod member_permission_protection;
+pub mod moderation_protection;
 pub mod role_permission_protection;
 pub mod role_protection;
 
@@ -11,7 +12,7 @@ use crate::{Data, Error};
 pub struct ModuleDefinition {
     pub id: &'static str,
     pub name_key: &'static str,
-    pub description_key: &'static str,
+    pub desc_key: &'static str,
 }
 
 pub struct Module {
@@ -26,7 +27,8 @@ pub fn get_modules() -> Vec<Module> {
         role_protection::module(),
         role_permission_protection::module(),
         member_permission_protection::module(),
-        bot_adding_protection::module(),
+        crate::modules::bot_adding_protection::module(),
+        crate::modules::moderation_protection::module(),
     ]
 }
 

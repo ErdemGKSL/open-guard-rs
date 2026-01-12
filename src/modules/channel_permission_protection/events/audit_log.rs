@@ -1,4 +1,6 @@
-use crate::db::entities::module_configs::{self, ChannelPermissionProtectionModuleConfig, ModuleType};
+use crate::db::entities::module_configs::{
+    self, ChannelPermissionProtectionModuleConfig, ModuleType,
+};
 use crate::services::logger::LogLevel;
 use crate::{Data, Error};
 use poise::serenity_prelude as serenity;
@@ -12,10 +14,12 @@ pub async fn handle_audit_log(
     data: &Data,
 ) -> Result<(), Error> {
     // Fetch module config
-    let config_model =
-        module_configs::Entity::find_by_id((guild_id.get() as i64, ModuleType::ChannelPermissionProtection))
-            .one(&data.db)
-            .await?;
+    let config_model = module_configs::Entity::find_by_id((
+        guild_id.get() as i64,
+        ModuleType::ChannelPermissionProtection,
+    ))
+    .one(&data.db)
+    .await?;
 
     let config_model = match config_model {
         Some(m) => {
@@ -23,7 +27,7 @@ pub async fn handle_audit_log(
                 return Ok(());
             }
             m
-        },
+        }
         None => return Ok(()), // Module not configured for this guild
     };
 
@@ -41,7 +45,15 @@ pub async fn handle_audit_log(
     }
 
     // Check whitelist
-    let whitelist_level = data.whitelist.get_whitelist_level(ctx, guild_id, user_id, ModuleType::ChannelPermissionProtection).await?;
+    let whitelist_level = data
+        .whitelist
+        .get_whitelist_level(
+            ctx,
+            guild_id,
+            user_id,
+            ModuleType::ChannelPermissionProtection,
+        )
+        .await?;
 
     // Check if we should ignore private channels (ownership check)
     if config.ignore_private_channels {
@@ -50,7 +62,10 @@ pub async fn handle_audit_log(
             if let Ok(serenity::Channel::Guild(channel)) = ctx.http.get_channel(channel_id).await {
                 let is_owner = channel.permission_overwrites.iter().any(|overwrite| {
                     if let serenity::PermissionOverwriteType::Member(id) = overwrite.kind {
-                        id == user_id && overwrite.allow.contains(serenity::Permissions::MANAGE_ROLES)
+                        id == user_id
+                            && overwrite
+                                .allow
+                                .contains(serenity::Permissions::MANAGE_ROLES)
                     } else {
                         false
                     }
@@ -66,13 +81,43 @@ pub async fn handle_audit_log(
     // Match on the audit log action to triggers variants error
     match entry.action {
         Action::ChannelOverwrite(ChannelOverwriteAction::Create) => {
-            handle_overwrite_create(ctx, entry, guild_id, data, &config_model, user_id, whitelist_level, &config).await?;
+            handle_overwrite_create(
+                ctx,
+                entry,
+                guild_id,
+                data,
+                &config_model,
+                user_id,
+                whitelist_level,
+                &config,
+            )
+            .await?;
         }
         Action::ChannelOverwrite(ChannelOverwriteAction::Delete) => {
-            handle_overwrite_delete(ctx, entry, guild_id, data, &config_model, user_id, whitelist_level, &config).await?;
+            handle_overwrite_delete(
+                ctx,
+                entry,
+                guild_id,
+                data,
+                &config_model,
+                user_id,
+                whitelist_level,
+                &config,
+            )
+            .await?;
         }
         Action::ChannelOverwrite(ChannelOverwriteAction::Update) => {
-            handle_overwrite_update(ctx, entry, guild_id, data, &config_model, user_id, whitelist_level, &config).await?;
+            handle_overwrite_update(
+                ctx,
+                entry,
+                guild_id,
+                data,
+                &config_model,
+                user_id,
+                whitelist_level,
+                &config,
+            )
+            .await?;
         }
         _ => {}
     }
@@ -97,7 +142,8 @@ async fn handle_overwrite_create(
         .map(|id| id.get())
         .unwrap_or(0);
     let target_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
-    let should_punish = config.punish_when.is_empty() || config.punish_when.contains(&"create".to_string());
+    let should_punish =
+        config.punish_when.is_empty() || config.punish_when.contains(&"create".to_string());
 
     let guild = match guild_id.to_partial_guild(&ctx.http).await {
         Ok(g) => g,
@@ -135,13 +181,18 @@ async fn handle_overwrite_create(
                 args.set("type", format!("{:?}", p));
                 l10n.t("log-status-punished", Some(&args))
             }
-            crate::services::punishment::ViolationResult::ViolationRecorded { current, threshold } => {
+            crate::services::punishment::ViolationResult::ViolationRecorded {
+                current,
+                threshold,
+            } => {
                 let mut args = fluent::FluentArgs::new();
                 args.set("current", current);
                 args.set("threshold", threshold);
                 l10n.t("log-status-violation", Some(&args))
             }
-            crate::services::punishment::ViolationResult::None => l10n.t("log-status-blocked", None),
+            crate::services::punishment::ViolationResult::None => {
+                l10n.t("log-status-blocked", None)
+            }
         };
 
         // Revert
@@ -188,7 +239,7 @@ async fn handle_overwrite_create(
     let mut desc_args = fluent::FluentArgs::new();
     desc_args.set("channelId", channel_id);
     desc_args.set("userId", user_id.get());
-    let description = l10n.t("log-chan-perm-desc-create", Some(&desc_args));
+    let desc = l10n.t("log-chan-perm-desc-create", Some(&desc_args));
 
     data.logger
         .log_action(
@@ -197,10 +248,13 @@ async fn handle_overwrite_create(
             Some(ModuleType::ChannelPermissionProtection),
             log_level,
             &title,
-            &description,
+            &desc,
             vec![
                 (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
-                (&l10n.t("log-field-channel", None), format!("<#{}>", channel_id)),
+                (
+                    &l10n.t("log-field-channel", None),
+                    format!("<#{}>", channel_id),
+                ),
                 (&l10n.t("log-field-action-status", None), status),
             ],
         )
@@ -226,7 +280,8 @@ async fn handle_overwrite_delete(
         .map(|id| id.get())
         .unwrap_or(0);
     let target_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
-    let should_punish = config.punish_when.is_empty() || config.punish_when.contains(&"delete".to_string());
+    let should_punish =
+        config.punish_when.is_empty() || config.punish_when.contains(&"delete".to_string());
 
     let guild = match guild_id.to_partial_guild(&ctx.http).await {
         Ok(g) => g,
@@ -264,13 +319,18 @@ async fn handle_overwrite_delete(
                 args.set("type", format!("{:?}", p));
                 l10n.t("log-status-punished", Some(&args))
             }
-            crate::services::punishment::ViolationResult::ViolationRecorded { current, threshold } => {
+            crate::services::punishment::ViolationResult::ViolationRecorded {
+                current,
+                threshold,
+            } => {
                 let mut args = fluent::FluentArgs::new();
                 args.set("current", current);
                 args.set("threshold", threshold);
                 l10n.t("log-status-violation", Some(&args))
             }
-            crate::services::punishment::ViolationResult::None => l10n.t("log-status-blocked", None),
+            crate::services::punishment::ViolationResult::None => {
+                l10n.t("log-status-blocked", None)
+            }
         };
 
         // Revert
@@ -353,7 +413,7 @@ async fn handle_overwrite_delete(
     let mut desc_args = fluent::FluentArgs::new();
     desc_args.set("channelId", channel_id);
     desc_args.set("userId", user_id.get());
-    let description = l10n.t("log-chan-perm-desc-delete", Some(&desc_args));
+    let desc = l10n.t("log-chan-perm-desc-delete", Some(&desc_args));
 
     data.logger
         .log_action(
@@ -362,10 +422,13 @@ async fn handle_overwrite_delete(
             Some(ModuleType::ChannelPermissionProtection),
             log_level,
             &title,
-            &description,
+            &desc,
             vec![
                 (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
-                (&l10n.t("log-field-channel", None), format!("<#{}>", channel_id)),
+                (
+                    &l10n.t("log-field-channel", None),
+                    format!("<#{}>", channel_id),
+                ),
                 (&l10n.t("log-field-action-status", None), status),
             ],
         )
@@ -391,7 +454,8 @@ async fn handle_overwrite_update(
         .map(|id| id.get())
         .unwrap_or(0);
     let target_id = entry.target_id.map(|id| id.get()).unwrap_or(0);
-    let should_punish = config.punish_when.is_empty() || config.punish_when.contains(&"update".to_string());
+    let should_punish =
+        config.punish_when.is_empty() || config.punish_when.contains(&"update".to_string());
 
     let guild = match guild_id.to_partial_guild(&ctx.http).await {
         Ok(g) => g,
@@ -429,13 +493,18 @@ async fn handle_overwrite_update(
                 args.set("type", format!("{:?}", p));
                 l10n.t("log-status-punished", Some(&args))
             }
-            crate::services::punishment::ViolationResult::ViolationRecorded { current, threshold } => {
+            crate::services::punishment::ViolationResult::ViolationRecorded {
+                current,
+                threshold,
+            } => {
                 let mut args = fluent::FluentArgs::new();
                 args.set("current", current);
                 args.set("threshold", threshold);
                 l10n.t("log-status-violation", Some(&args))
             }
-            crate::services::punishment::ViolationResult::None => l10n.t("log-status-blocked", None),
+            crate::services::punishment::ViolationResult::None => {
+                l10n.t("log-status-blocked", None)
+            }
         };
 
         // Revert
@@ -461,11 +530,12 @@ async fn handle_overwrite_update(
                     .get_channel(serenity::GenericChannelId::new(channel_id))
                     .await;
                 if let Ok(serenity::Channel::Guild(channel)) = channel {
-                    let current_overwrite = channel.permission_overwrites.iter().find(|o| match o.kind {
-                        serenity::PermissionOverwriteType::Role(id) => id.get() == target_id,
-                        serenity::PermissionOverwriteType::Member(id) => id.get() == target_id,
-                        _ => false,
-                    });
+                    let current_overwrite =
+                        channel.permission_overwrites.iter().find(|o| match o.kind {
+                            serenity::PermissionOverwriteType::Role(id) => id.get() == target_id,
+                            serenity::PermissionOverwriteType::Member(id) => id.get() == target_id,
+                            _ => false,
+                        });
 
                     let final_allow = allow.unwrap_or_else(|| {
                         current_overwrite
@@ -541,7 +611,7 @@ async fn handle_overwrite_update(
     let mut desc_args = fluent::FluentArgs::new();
     desc_args.set("channelId", channel_id);
     desc_args.set("userId", user_id.get());
-    let description = l10n.t("log-chan-perm-desc-update", Some(&desc_args));
+    let desc = l10n.t("log-chan-perm-desc-update", Some(&desc_args));
 
     data.logger
         .log_action(
@@ -550,10 +620,13 @@ async fn handle_overwrite_update(
             Some(ModuleType::ChannelPermissionProtection),
             log_level,
             &title,
-            &description,
+            &desc,
             vec![
                 (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
-                (&l10n.t("log-field-channel", None), format!("<#{}>", channel_id)),
+                (
+                    &l10n.t("log-field-channel", None),
+                    format!("<#{}>", channel_id),
+                ),
                 (&l10n.t("log-field-action-status", None), status),
             ],
         )
@@ -561,6 +634,3 @@ async fn handle_overwrite_update(
 
     Ok(())
 }
-
-
-

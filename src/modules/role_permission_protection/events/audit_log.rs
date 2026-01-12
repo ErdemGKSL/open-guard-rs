@@ -2,8 +2,8 @@ use crate::db::entities::module_configs::{self, ModuleType, RolePermissionProtec
 use crate::services::logger::LogLevel;
 use crate::{Data, Error};
 use poise::serenity_prelude as serenity;
-use serenity::model::guild::audit_log::{Action, RoleAction, Change};
 use sea_orm::EntityTrait;
+use serenity::model::guild::audit_log::{Action, Change, RoleAction};
 
 pub async fn handle_audit_log(
     ctx: &serenity::Context,
@@ -11,20 +11,24 @@ pub async fn handle_audit_log(
     guild_id: serenity::GuildId,
     data: &Data,
 ) -> Result<(), Error> {
-    let config_model = match module_configs::Entity::find_by_id((guild_id.get() as i64, ModuleType::RolePermissionProtection))
-        .one(&data.db)
-        .await?
+    let config_model = match module_configs::Entity::find_by_id((
+        guild_id.get() as i64,
+        ModuleType::RolePermissionProtection,
+    ))
+    .one(&data.db)
+    .await?
     {
         Some(m) => {
             if !m.enabled {
                 return Ok(());
             }
             m
-        },
+        }
         None => return Ok(()),
     };
 
-    let _config: RolePermissionProtectionModuleConfig = serde_json::from_value(config_model.config.clone()).unwrap_or_default();
+    let _config: RolePermissionProtectionModuleConfig =
+        serde_json::from_value(config_model.config.clone()).unwrap_or_default();
 
     let user_id = match entry.user_id {
         Some(id) => id,
@@ -37,14 +41,29 @@ pub async fn handle_audit_log(
     }
 
     // Check whitelist
-    let whitelist_level = data.whitelist.get_whitelist_level(ctx, guild_id, user_id, ModuleType::RolePermissionProtection).await?;
+    let whitelist_level = data
+        .whitelist
+        .get_whitelist_level(ctx, guild_id, user_id, ModuleType::RolePermissionProtection)
+        .await?;
 
     match entry.action {
         Action::Role(RoleAction::Update) => {
             // Check if permissions changed
-            let has_perm_change = entry.changes.iter().any(|c| matches!(c, Change::Permissions { .. }));
+            let has_perm_change = entry
+                .changes
+                .iter()
+                .any(|c| matches!(c, Change::Permissions { .. }));
             if has_perm_change {
-                handle_role_permission_update(ctx, entry, guild_id, data, &config_model, user_id, whitelist_level).await?;
+                handle_role_permission_update(
+                    ctx,
+                    entry,
+                    guild_id,
+                    data,
+                    &config_model,
+                    user_id,
+                    whitelist_level,
+                )
+                .await?;
             }
         }
         _ => {}
@@ -98,13 +117,18 @@ async fn handle_role_permission_update(
                 args.set("type", format!("{:?}", p));
                 l10n.t("log-status-punished", Some(&args))
             }
-            crate::services::punishment::ViolationResult::ViolationRecorded { current, threshold } => {
+            crate::services::punishment::ViolationResult::ViolationRecorded {
+                current,
+                threshold,
+            } => {
                 let mut args = fluent::FluentArgs::new();
                 args.set("current", current);
                 args.set("threshold", threshold);
                 l10n.t("log-status-violation", Some(&args))
             }
-            crate::services::punishment::ViolationResult::None => l10n.t("log-status-blocked", None),
+            crate::services::punishment::ViolationResult::None => {
+                l10n.t("log-status-blocked", None)
+            }
         };
 
         // Revert
@@ -158,7 +182,7 @@ async fn handle_role_permission_update(
     let mut desc_args = fluent::FluentArgs::new();
     desc_args.set("roleId", role_id);
     desc_args.set("userId", user_id.get());
-    let description = l10n.t("log-role-perm-desc-update", Some(&desc_args));
+    let desc = l10n.t("log-role-perm-desc-update", Some(&desc_args));
 
     data.logger
         .log_action(
@@ -167,7 +191,7 @@ async fn handle_role_permission_update(
             Some(ModuleType::RolePermissionProtection),
             log_level,
             &title,
-            &description,
+            &desc,
             vec![
                 (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
                 (&l10n.t("log-field-role", None), format!("<@&{}>", role_id)),
@@ -178,4 +202,3 @@ async fn handle_role_permission_update(
 
     Ok(())
 }
-

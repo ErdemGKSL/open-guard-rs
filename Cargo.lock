@@ -1682,6 +1682,7 @@ dependencies = [
  "intl-memoizer",
  "papaya",
  "poise",
+ "regex",
  "sea-orm",
  "sea-orm-migration",
  "serde",

@@ -1,0 +1,94 @@
+use crate::Data;
+use crate::db::entities::module_configs::{self, ModerationProtectionModuleConfig, ModuleType};
+use crate::services::localization::L10nProxy;
+use poise::serenity_prelude as serenity;
+use sea_orm::{ActiveModelTrait, EntityTrait, Set};
+
+pub fn build_ui(
+    config: &ModerationProtectionModuleConfig,
+    l10n: &L10nProxy,
+) -> Vec<serenity::CreateContainerComponent<'static>> {
+    let mut components = vec![];
+
+    // Punish When Multi-Select
+    let options = vec![
+        serenity::CreateSelectMenuOption::new(l10n.t("config-mp-punish-ban", None), "ban")
+            .default_selection(config.punish_when.contains(&"ban".to_string())),
+        serenity::CreateSelectMenuOption::new(l10n.t("config-mp-punish-kick", None), "kick")
+            .default_selection(config.punish_when.contains(&"kick".to_string())),
+        serenity::CreateSelectMenuOption::new(l10n.t("config-mp-punish-timeout", None), "timeout")
+            .default_selection(config.punish_when.contains(&"timeout".to_string())),
+    ];
+
+    let select_menu = serenity::CreateSelectMenu::new(
+        "config_mp_punish_when",
+        serenity::CreateSelectMenuKind::String {
+            options: options.into(),
+        },
+    )
+    .placeholder(l10n.t("config-mp-punish-when-placeholder", None))
+    .min_values(0)
+    .max_values(3);
+
+    components.push(serenity::CreateContainerComponent::ActionRow(
+        serenity::CreateActionRow::SelectMenu(select_menu),
+    ));
+
+    components
+}
+
+pub async fn handle_interaction(
+    _ctx: &serenity::Context,
+    interaction: &serenity::ComponentInteraction,
+    data: &Data,
+    guild_id: serenity::GuildId,
+) -> Result<bool, crate::Error> {
+    let custom_id = &interaction.data.custom_id;
+
+    if custom_id == "config_mp_punish_when" {
+        if let serenity::ComponentInteractionDataKind::StringSelect { values } =
+            &interaction.data.kind
+        {
+            let (config_active, mut config) = get_config(data, guild_id).await?;
+            config.punish_when = values.to_vec();
+            save_config(data, config_active, config).await?;
+            return Ok(true);
+        }
+    }
+
+    Ok(false)
+}
+
+async fn get_config(
+    data: &Data,
+    guild_id: serenity::GuildId,
+) -> Result<
+    (
+        module_configs::ActiveModel,
+        ModerationProtectionModuleConfig,
+    ),
+    crate::Error,
+> {
+    let db = &data.db;
+    let m_config = module_configs::Entity::find_by_id((
+        guild_id.get() as i64,
+        ModuleType::ModerationProtection,
+    ))
+    .one(db)
+    .await?
+    .ok_or_else(|| anyhow::anyhow!("Config not found"))?;
+
+    let config: ModerationProtectionModuleConfig =
+        serde_json::from_value(m_config.config.clone()).unwrap_or_default();
+    Ok((m_config.into(), config))
+}
+
+async fn save_config(
+    data: &Data,
+    mut config_active: module_configs::ActiveModel,
+    config: ModerationProtectionModuleConfig,
+) -> Result<(), crate::Error> {
+    config_active.config = Set(serde_json::to_value(config)?);
+    config_active.update(&data.db).await?;
+    Ok(())
+}

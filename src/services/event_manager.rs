@@ -1,7 +1,7 @@
 use crate::Data;
 use crate::modules::{
     channel_permission_protection, channel_protection, member_permission_protection,
-    role_permission_protection, role_protection,
+    moderation_protection, role_permission_protection, role_protection,
 };
 use poise::serenity_prelude as serenity;
 use tracing::{error, info};
@@ -136,6 +136,25 @@ impl serenity::EventHandler for Handler {
                         .await
                         {
                             error!("Error handling audit log for bot adding protection: {:?}", e);
+                        }
+                    });
+                }
+
+                // Moderation Protection
+                {
+                    let ctx = ctx.clone();
+                    let entry = entry.clone();
+                    let data = data.clone();
+                    tokio::spawn(async move {
+                        if let Err(e) = moderation_protection::events::audit_log::handle_audit_log(
+                            &ctx, &entry, guild_id, &data,
+                        )
+                        .await
+                        {
+                            error!(
+                                "Error handling audit log for moderation protection: {:?}",
+                                e
+                            );
                         }
                     });
                 }

@@ -27,6 +27,8 @@ pub enum ModuleType {
     MemberPermissionProtection,
     #[sea_orm(string_value = "bot_adding_protection")]
     BotAddingProtection,
+    #[sea_orm(string_value = "moderation_protection")]
+    ModerationProtection,
 }
 
 impl std::fmt::Display for ModuleType {
@@ -38,6 +40,7 @@ impl std::fmt::Display for ModuleType {
             ModuleType::RolePermissionProtection => write!(f, "role_permission_protection"),
             ModuleType::MemberPermissionProtection => write!(f, "member_permission_protection"),
             ModuleType::BotAddingProtection => write!(f, "bot_adding_protection"),
+            ModuleType::ModerationProtection => write!(f, "moderation_protection"),
         }
     }
 }
@@ -125,3 +128,10 @@ pub struct MemberPermissionProtectionModuleConfig {}
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct BotAddingProtectionModuleConfig {}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct ModerationProtectionModuleConfig {
+    #[serde(default)]
+    pub punish_when: Vec<String>,
+}

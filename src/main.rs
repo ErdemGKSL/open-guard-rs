@@ -36,6 +36,7 @@ pub struct Data {
     pub whitelist: Arc<services::whitelist::WhitelistService>,
     pub cache: Arc<services::cache::ObjectCacheService>,
     pub module_definitions: Vec<modules::ModuleDefinition>,
+    pub temp_ban: Arc<services::temp_ban::TempBanService>,
     pub shard_count: AtomicU32,
 }
 
@@ -98,6 +99,9 @@ async fn main() -> anyhow::Result<()> {
 
     // Initialize object cache service
     let cache = Arc::new(services::cache::ObjectCacheService::new());
+
+    // Initialize temp ban service
+    let temp_ban = Arc::new(services::temp_ban::TempBanService::new(db.clone()));
 
     // Load and translate commands
     let mut commands = modules::commands();
@@ -206,17 +210,21 @@ async fn main() -> anyhow::Result<()> {
         .framework(Box::new(framework))
         .event_handler(Arc::new(services::event_manager::Handler))
         .data(Arc::new(Data {
-            db,
+            db: db.clone(),
             l10n,
             logger,
             punishment,
             whitelist,
             cache,
             module_definitions: modules::definitions(),
+            temp_ban: temp_ban.clone(),
             shard_count: AtomicU32::new(shard_count.load(Ordering::Relaxed)),
         }) as _)
         .await
         .context("Failed to create client")?;
+
+    // Start unban runner
+    temp_ban.start_unban_runner(client.http.clone());
 
     info!("Bot is ready!");
     client.start_autosharded().await.context("Client error")?;

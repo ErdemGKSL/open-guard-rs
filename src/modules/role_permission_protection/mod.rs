@@ -7,7 +7,7 @@ pub fn module() -> Module {
         definition: ModuleDefinition {
             id: "role_permission_protection",
             name_key: "module-role-permission-protection-name",
-            description_key: "module-role-permission-protection-desc",
+            desc_key: "module-role-permission-protection-desc",
         },
         commands: vec![],
     }

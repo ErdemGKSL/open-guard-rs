@@ -2,8 +2,8 @@ use crate::db::entities::module_configs::{self, ModuleType};
 use crate::services::logger::LogLevel;
 use crate::{Data, Error};
 use poise::serenity_prelude as serenity;
-use serenity::model::guild::audit_log::{Action, MemberAction, Change};
 use sea_orm::EntityTrait;
+use serenity::model::guild::audit_log::{Action, Change, MemberAction};
 
 pub async fn handle_audit_log(
     ctx: &serenity::Context,
@@ -11,16 +11,19 @@ pub async fn handle_audit_log(
     guild_id: serenity::GuildId,
     data: &Data,
 ) -> Result<(), Error> {
-    let config_model = match module_configs::Entity::find_by_id((guild_id.get() as i64, ModuleType::MemberPermissionProtection))
-        .one(&data.db)
-        .await?
+    let config_model = match module_configs::Entity::find_by_id((
+        guild_id.get() as i64,
+        ModuleType::MemberPermissionProtection,
+    ))
+    .one(&data.db)
+    .await?
     {
         Some(m) => {
             if !m.enabled {
                 return Ok(());
             }
             m
-        },
+        }
         None => return Ok(()),
     };
 
@@ -35,11 +38,28 @@ pub async fn handle_audit_log(
     }
 
     // Check whitelist
-    let whitelist_level = data.whitelist.get_whitelist_level(ctx, guild_id, user_id, ModuleType::MemberPermissionProtection).await?;
+    let whitelist_level = data
+        .whitelist
+        .get_whitelist_level(
+            ctx,
+            guild_id,
+            user_id,
+            ModuleType::MemberPermissionProtection,
+        )
+        .await?;
 
     match entry.action {
         Action::Member(MemberAction::RoleUpdate) => {
-            handle_member_role_update(ctx, entry, guild_id, data, &config_model, user_id, whitelist_level).await?;
+            handle_member_role_update(
+                ctx,
+                entry,
+                guild_id,
+                data,
+                &config_model,
+                user_id,
+                whitelist_level,
+            )
+            .await?;
         }
         _ => {}
     }
@@ -92,14 +112,17 @@ async fn handle_member_role_update(
         Ok(g) => g,
         Err(_) => return Ok(()),
     };
-    
+
     // Get target member current state
-    let member = match guild_id.member(&ctx.http, serenity::UserId::new(target_user_id)).await {
+    let member = match guild_id
+        .member(&ctx.http, serenity::UserId::new(target_user_id))
+        .await
+    {
         Ok(m) => m,
         Err(_) => return Ok(()),
     };
 
-    let dangerous_permissions = serenity::Permissions::ADMINISTRATOR 
+    let dangerous_permissions = serenity::Permissions::ADMINISTRATOR
         | serenity::Permissions::MANAGE_GUILD
         | serenity::Permissions::MANAGE_ROLES
         | serenity::Permissions::MANAGE_CHANNELS
@@ -115,7 +138,7 @@ async fn handle_member_role_update(
     // We compare "Before" and "After" permissions
     // Before = Current member roles - Added roles + Removed roles
     // After = Current member roles
-    
+
     let current_roles: Vec<serenity::RoleId> = member.roles.iter().cloned().collect();
 
     let mut roles_before = current_roles.clone();
@@ -179,13 +202,18 @@ async fn handle_member_role_update(
                 args.set("type", format!("{:?}", p));
                 l10n.t("log-status-punished", Some(&args))
             }
-            crate::services::punishment::ViolationResult::ViolationRecorded { current, threshold } => {
+            crate::services::punishment::ViolationResult::ViolationRecorded {
+                current,
+                threshold,
+            } => {
                 let mut args = fluent::FluentArgs::new();
                 args.set("current", current);
                 args.set("threshold", threshold);
                 l10n.t("log-status-violation", Some(&args))
             }
-            crate::services::punishment::ViolationResult::None => l10n.t("log-status-blocked", None),
+            crate::services::punishment::ViolationResult::None => {
+                l10n.t("log-status-blocked", None)
+            }
         };
 
         if config.revert {
@@ -231,7 +259,7 @@ async fn handle_member_role_update(
     let mut desc_args = fluent::FluentArgs::new();
     desc_args.set("userId", user_id.get());
     desc_args.set("targetId", target_user_id);
-    let description = l10n.t("log-member-perm-desc", Some(&desc_args));
+    let desc = l10n.t("log-member-perm-desc", Some(&desc_args));
 
     data.logger
         .log_action(
@@ -240,7 +268,7 @@ async fn handle_member_role_update(
             Some(ModuleType::MemberPermissionProtection),
             log_level,
             &title,
-            &description,
+            &desc,
             vec![
                 (
                     &l10n.t("log-field-acting-user", None),

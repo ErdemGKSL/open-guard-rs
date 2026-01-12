@@ -1,5 +1,5 @@
 module-config-name = Yapılandırma
-module-config-description = Bot ayarları ve modül yapılandırması.
+module-config-desc = Bot ayarları ve modül yapılandırması.
 
 module-channel-protection-name = Kanal Koruması
 module-channel-protection-desc = Kanalları yetkisiz oluşturma veya silme işlemlerinden korur.
@@ -8,16 +8,18 @@ module-channel-permission-protection-name = Kanal Yetki Koruması
 module-channel-permission-protection-desc = Kanal yetki değişimlerini yetkisiz işlemlerden korur.
 
 module-role-protection-name = Rol Koruması
-module-role-protection-description = Rolleri yetkisiz oluşturma veya silme işlemlerinden korur.
+module-role-protection-desc = Rolleri yetkisiz oluşturma veya silme işlemlerinden korur.
 
 module-role-permission-protection-name = Rol Yetki Koruması
 module-role-permission-protection-desc = Rol yetki değişimlerini yetkisiz işlemlerden korur.
 
 module-member-permission-protection-name = Üye Yetki Koruması
-module-member-permission-protection-description = Üyelere roller aracılığıyla tehlikeli yetkiler verilmesini engeller.
+module-member-permission-protection-desc = Üyelere roller aracılığıyla tehlikeli yetkiler verilmesini engeller.
 
 module-bot-adding-protection-name = Bot Ekleme Koruması
-module-bot-adding-protection-description = Yeni eklenen botları otomatik olarak atar ve ekleyen kullanıcıyı cezalandırır.
+module-moderation-protection-name = Moderasyon Koruması
+module-bot-adding-protection-desc = Yeni eklenen botları otomatik olarak atar ve ekleyen kullanıcıyı cezalandırır.
+module-moderation-protection-desc = Ban, kick ve susturma işlemlerini sınırlandırır. Komutlar bu sınırları baypas eder.
 
 help-title = Bot Yardım Menüsü
 
@@ -237,3 +239,9 @@ status-system = 🖥️ Sistem Kaynakları
 status-no-guild = ❌ Sunucuda değil.
 status-refresh-btn = Yenile
 status-metrics = İstatistikler
+
+mod-error-invalid-duration = Geçersiz süre formatı! 1d, 1h veya 10m30s gibi bir format kullanın.
+mod-ban-success-temp = ✅ <@{$userId}> kullanıcısı {$duration} süreliğine yasaklandı (Sebep: {$reason})
+mod-ban-success-perm = ✅ <@{$userId}> kullanıcısı kalıcı olarak yasaklandı (Sebep: {$reason})
+mod-kick-success = ✅ <@{$userId}> kullanıcısı atıldı (Sebep: {$reason})
+mod-timeout-success = ✅ <@{$userId}> kullanıcısı {$duration} süreliğine susturuldu (Sebep: {$reason})

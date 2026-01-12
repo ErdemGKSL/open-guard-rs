@@ -1,6 +1,7 @@
 pub mod guild_configs;
 pub mod module_configs;
 pub mod prelude;
+pub mod temp_bans;
 pub mod violations;
 pub mod whitelist_role;
 pub mod whitelist_user;

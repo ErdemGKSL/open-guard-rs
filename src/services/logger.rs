@@ -27,8 +27,8 @@ impl LogLevel {
 
     pub fn color(&self) -> u32 {
         match self {
-            LogLevel::Info => 0x3498db, // Blue
-            LogLevel::Warn => 0xf1c40f, // Yellow
+            LogLevel::Info => 0x3498db,  // Blue
+            LogLevel::Warn => 0xf1c40f,  // Yellow
             LogLevel::Error => 0xe74c3c, // Red
             LogLevel::Audit => 0x95a5a6, // Gray
         }
@@ -54,7 +54,7 @@ impl LoggerService {
         module: Option<ModuleType>,
         level: LogLevel,
         title: &str,
-        description: &str,
+        desc: &str,
         fields: Vec<(&str, String)>,
     ) -> Result<(), Error> {
         let mut target_channel_id = None;
@@ -95,7 +95,7 @@ impl LoggerService {
 
         // Description
         inner_components.push(serenity::CreateContainerComponent::TextDisplay(
-            serenity::CreateTextDisplay::new(description),
+            serenity::CreateTextDisplay::new(desc),
         ));
 
         // Optional fields
@@ -132,7 +132,7 @@ impl LoggerService {
         module: Option<ModuleType>,
         level: LogLevel,
         title: &str,
-        description: &str,
+        desc: &str,
         additional_fields: Vec<(&str, String)>,
     ) -> Result<(), Error> {
         let guild_id = ctx
@@ -141,8 +141,14 @@ impl LoggerService {
 
         let l10n = ctx.l10n_guild();
         let mut fields = vec![
-            (l10n.t("config-log-field-user", None).leak() as &str, format!("<@{}>", ctx.author().id)),
-            (l10n.t("config-log-field-channel", None).leak() as &str, format!("<#{}>", ctx.channel_id())),
+            (
+                l10n.t("config-log-field-user", None).leak() as &str,
+                format!("<@{}>", ctx.author().id),
+            ),
+            (
+                l10n.t("config-log-field-channel", None).leak() as &str,
+                format!("<#{}>", ctx.channel_id()),
+            ),
         ];
 
         fields.extend(additional_fields);
@@ -153,7 +159,7 @@ impl LoggerService {
             module,
             level,
             title,
-            description,
+            desc,
             fields,
         )
         .await

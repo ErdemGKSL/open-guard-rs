@@ -16,7 +16,7 @@ static LOCALES_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/locales");
 #[derive(Debug, Deserialize)]
 pub struct CommandLocale {
     pub name: Option<String>,
-    pub description: Option<String>,
+    pub desc: Option<String>,
     #[serde(default)]
     pub options: HashMap<String, OptionLocale>,
     #[serde(default)]
@@ -26,7 +26,7 @@ pub struct CommandLocale {
 #[derive(Debug, Deserialize)]
 pub struct OptionLocale {
     pub name: Option<String>,
-    pub description: Option<String>,
+    pub desc: Option<String>,
     #[serde(default)]
     pub choices: HashMap<String, String>,
 }
@@ -178,7 +178,7 @@ impl LocalizationManager {
                     cmd.name = name.clone().into();
                 }
             }
-            if let Some(desc) = &loc.description {
+            if let Some(desc) = &loc.desc {
                 cmd.description_localizations
                     .to_mut()
                     .push((locale_str.to_string().into(), desc.clone().into()));
@@ -199,7 +199,7 @@ impl LocalizationManager {
                             param.name = name.clone().into();
                         }
                     }
-                    if let Some(desc) = &opt_loc.description {
+                    if let Some(desc) = &opt_loc.desc {
                         param
                             .description_localizations
                             .to_mut()
