@@ -111,7 +111,7 @@ pub async fn get_status_components(
         l10n.t("status-latency", None),
         total_latency.num_milliseconds(),
         l10n.t("status-shard", None),
-        shard_id,
+        shard_id.get() + 1,
         shard_count
     );
 
@@ -183,6 +183,11 @@ pub async fn handle_interaction(
     };
 
     let start_time = interaction.id.created_at().to_utc();
+
+    interaction
+        .create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge)
+        .await?;
+
     let end_time = Utc::now();
 
     let components = get_status_components(
@@ -196,12 +201,19 @@ pub async fn handle_interaction(
     )
     .await?;
 
+    // interaction
+    //     .create_response(
+    //         &ctx.http,
+    //         serenity::CreateInteractionResponse::UpdateMessage(
+    //             serenity::CreateInteractionResponseMessage::new().components(components),
+    //         ),
+    //     )
+    //     .await?;
+
     interaction
-        .create_response(
+        .edit_response(
             &ctx.http,
-            serenity::CreateInteractionResponse::UpdateMessage(
-                serenity::CreateInteractionResponseMessage::new().components(components),
-            ),
+            serenity::EditInteractionResponse::new().components(components),
         )
         .await?;
 
