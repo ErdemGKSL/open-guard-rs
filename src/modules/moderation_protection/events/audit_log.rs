@@ -11,6 +11,17 @@ pub async fn handle_audit_log(
     guild_id: serenity::GuildId,
     data: &Data,
 ) -> Result<(), Error> {
+    // Check action type first to avoid unnecessary database calls
+    if !matches!(
+        entry.action,
+        Action::Member(MemberAction::BanAdd)
+            | Action::Member(MemberAction::BanRemove)
+            | Action::Member(MemberAction::Kick)
+            | Action::Member(MemberAction::Update)
+    ) {
+        return Ok(());
+    }
+
     // Fetch module config
     let config_model = module_configs::Entity::find_by_id((
         guild_id.get() as i64,

@@ -11,6 +11,11 @@ pub async fn handle_audit_log(
     guild_id: serenity::GuildId,
     data: &Data,
 ) -> Result<(), Error> {
+    // Check action type first to avoid unnecessary database calls
+    if !matches!(entry.action, Action::Role(RoleAction::Update)) {
+        return Ok(());
+    }
+
     let config_model = match module_configs::Entity::find_by_id((
         guild_id.get() as i64,
         ModuleType::RolePermissionProtection,
