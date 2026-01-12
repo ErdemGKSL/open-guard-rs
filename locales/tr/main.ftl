@@ -178,6 +178,12 @@ log-field-role-id = Rol ID
 log-field-role = Rol
 log-field-channel = Kanal
 log-field-user = Kullanıcı
+log-field-reason = Sebep
+log-field-duration = Süre
+log-field-type = Tür
+log-val-permanent = Kalıcı
+log-val-no-reason = Sebep belirtilmedi
+log-val-temp-ban-expired = Süreli yasaklama sona erdi
 
 log-member-perm-title-whitelisted = Yetki Paylaşımı (Beyaz Listede)
 log-member-perm-title-blocked = Yetki Paylaşımı (Engellendi)
@@ -245,7 +251,36 @@ mod-ban-success-temp = ✅ <@{$userId}> kullanıcısı {$duration} süreliğine 
 mod-ban-success-perm = ✅ <@{$userId}> kullanıcısı kalıcı olarak yasaklandı (Sebep: {$reason})
 mod-kick-success = ✅ <@{$userId}> kullanıcısı atıldı (Sebep: {$reason})
 mod-timeout-success = ✅ <@{$userId}> kullanıcısı {$duration} süreliğine susturuldu (Sebep: {$reason})
+mod-jail-success-temp = ✅ <@{$userId}> kullanıcısı {$duration} süreliğine hapsedildi (Sebep: {$reason})
+mod-jail-success-perm = ✅ <@{$userId}> kullanıcısı kalıcı olarak hapsedildi (Sebep: {$reason})
+mod-unjail-success = ✅ <@{$userId}> kullanıcısının hapis cezası kaldırıldı
 
 mod-warn-remaining-2 = ⚠️ **Moderasyon Sınırı Uyarısı**\nGerçekleştirebileceğiniz son **2** moderasyon işleminiz kaldı.
 mod-warn-remaining-1 = ⚠️ **Moderasyon Sınırı Uyarısı**\nGerçekleştirebileceğiniz son **1** moderasyon işleminiz kaldı.
 mod-warn-limit-reached = 🛑 **Moderasyon Sınırı Aşıldı**\nGerçekleştirebileceğiniz başka moderasyon işlemi kalmadı. Lütfen devam etmeyin yoksa sizi cezalandırmak zorunda kalacağım! (Sıradaki ceza: **{$punishment}**)
+
+# Moderasyon Kayıtları
+log-mod-jail-title = Kullanıcı Hapsedildi
+log-mod-jail-desc = <@{$userId}> kullanıcısı hapsedildi.
+log-mod-unjail-title = Kullanıcı Hapisten Çıkarıldı
+log-mod-unjail-desc = <@{$userId}> kullanıcısı hapisten çıkarıldı.
+log-mod-unban-title = Kullanıcı Yasağı Kaldırıldı
+log-mod-unban-desc = <@{$userId}> kullanıcısının yasağı kaldırıldı (süreli yasak sona erdi).
+log-mod-punish-title = Otomatik Ceza Uygulandı
+log-mod-punish-desc = <@{$userId}> kullanıcısına otomatik ceza uygulandı.
+
+log-mod-jail-cmd-title = Hapsetme Komutu Çalıştırıldı
+log-mod-jail-cmd-desc = Moderatör <@{$modId}>, <@{$userId}> kullanıcısını hapsetti.
+log-mod-unjail-cmd-title = Hapisten Çıkarma Komutu Çalıştırıldı
+log-mod-unjail-cmd-desc = Moderatör <@{$modId}>, <@{$userId}> kullanıcısını hapisten çıkardı.
+log-mod-ban-cmd-title = Yasaklama Komutu Çalıştırıldı
+log-mod-ban-cmd-desc = Moderatör <@{$modId}>, <@{$userId}> kullanıcısını yasakladı.
+log-mod-kick-cmd-title = Atma Komutu Çalıştırıldı
+log-mod-kick-cmd-desc = Moderatör <@{$modId}>, <@{$userId}> kullanıcısını attı.
+log-mod-timeout-cmd-title = Susturma Komutu Çalıştırıldı
+log-mod-timeout-cmd-desc = Moderatör <@{$modId}>, <@{$userId}> kullanıcısını susturdu.
+
+log-mod-audit-title-whitelisted = Moderasyon İşlemi (Beyaz Listede: {$action})
+log-mod-audit-title-limited = Moderasyon İşlemi (Sınırlı: {$action})
+log-mod-audit-title-logged = Moderasyon İşlemi (Kaydedildi: {$action})
+log-mod-audit-desc = <@{$userId}> kullanıcısı, <@{$targetId}> üzerinde `{$action}` işlemi gerçekleştirdi.

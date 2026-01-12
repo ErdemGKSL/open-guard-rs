@@ -13,6 +13,7 @@ pub mod m000006_create_whitelist_tables;
 pub mod m000007_update_whitelist_indexes;
 pub mod m000008_add_enabled_to_module_config;
 pub mod m000009_create_temp_bans;
+pub mod m000010_create_jails;
 
 use sea_orm_migration::prelude::*;
 
@@ -31,6 +32,7 @@ impl MigratorTrait for Migrator {
             Box::new(m000007_update_whitelist_indexes::Migration),
             Box::new(m000008_add_enabled_to_module_config::Migration),
             Box::new(m000009_create_temp_bans::Migration),
+            Box::new(m000010_create_jails::Migration),
         ]
     }
 }

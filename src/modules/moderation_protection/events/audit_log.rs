@@ -110,6 +110,20 @@ pub async fn handle_audit_log(
                 .await?;
             }
         }
+        Action::Member(MemberAction::BanRemove) => {
+            handle_moderation_action(
+                ctx,
+                entry,
+                guild_id,
+                data,
+                &config_model,
+                user_id,
+                whitelist_level,
+                &config,
+                "unban",
+            )
+            .await?;
+        }
         _ => {}
     }
 
@@ -259,12 +273,15 @@ async fn handle_moderation_action(
 
     // Logging...
     let is_whitelisted = whitelist_level.is_some();
+    let mut title_args = fluent::FluentArgs::new();
+    title_args.set("action", action_type);
+
     let title = if is_whitelisted {
-        format!("Moderation Action (Whitelisted: {})", action_type)
+        l10n.t("log-mod-audit-title-whitelisted", Some(&title_args))
     } else if should_punish {
-        format!("Moderation Action (Limited: {})", action_type)
+        l10n.t("log-mod-audit-title-limited", Some(&title_args))
     } else {
-        format!("Moderation Action (Logged: {})", action_type)
+        l10n.t("log-mod-audit-title-logged", Some(&title_args))
     };
 
     let log_level = if is_whitelisted {
@@ -275,10 +292,12 @@ async fn handle_moderation_action(
         LogLevel::Info
     };
 
-    let desc = format!(
-        "User <@{}> performed a `{}` on <@{}>.",
-        user_id, action_type, target_id
-    );
+    let mut desc_args = fluent::FluentArgs::new();
+    desc_args.set("userId", user_id.get());
+    desc_args.set("action", action_type);
+    desc_args.set("targetId", target_id);
+
+    let desc = l10n.t("log-mod-audit-desc", Some(&desc_args));
 
     data.logger
         .log_action(

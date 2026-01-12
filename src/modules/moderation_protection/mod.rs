@@ -11,6 +11,12 @@ pub fn module() -> Module {
             name_key: "module-moderation-protection-name",
             desc_key: "module-moderation-protection-desc",
         },
-        commands: vec![commands::ban(), commands::kick(), commands::timeout()],
+        commands: vec![
+            commands::ban(),
+            commands::jail(),
+            commands::kick(),
+            commands::timeout(),
+            commands::unjail(),
+        ],
     }
 }

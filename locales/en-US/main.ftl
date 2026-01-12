@@ -179,6 +179,12 @@ log-field-action-status = Status
 log-field-role = Role
 log-field-channel = Channel
 log-field-user = User
+log-field-reason = Reason
+log-field-duration = Duration
+log-field-type = Type
+log-val-permanent = Permanent
+log-val-no-reason = No reason provided
+log-val-temp-ban-expired = Temporary ban expired
 
 log-member-perm-title-whitelisted = Permission Sharing (Whitelisted)
 log-member-perm-title-blocked = Permission Sharing (Blocked)
@@ -246,7 +252,36 @@ mod-ban-success-temp = ✅ Banned <@{$userId}> for {$duration} (Reason: {$reason
 mod-ban-success-perm = ✅ Banned <@{$userId}> permanently (Reason: {$reason})
 mod-kick-success = ✅ Kicked <@{$userId}> (Reason: {$reason})
 mod-timeout-success = ✅ Timed out <@{$userId}> for {$duration} (Reason: {$reason})
+mod-jail-success-temp = ✅ Jailed <@{$userId}> for {$duration} (Reason: {$reason})
+mod-jail-success-perm = ✅ Jailed <@{$userId}> permanently (Reason: {$reason})
+mod-unjail-success = ✅ Unjailed <@{$userId}>
 
 mod-warn-remaining-2 = ⚠️ **Moderation Limit Warning**\nYou have last **2** moderation actions to execute.
 mod-warn-remaining-1 = ⚠️ **Moderation Limit Warning**\nYou have last **1** moderation action to execute.
 mod-warn-limit-reached = 🛑 **Moderation Limit Reached**\nYou don't have any more moderation actions that you can execute. Please don't do that or I will punish you! (Next punishment: **{$punishment}**)
+
+# Moderation Logging
+log-mod-jail-title = User Jailed
+log-mod-jail-desc = User <@{$userId}> has been jailed.
+log-mod-unjail-title = User Unjailed
+log-mod-unjail-desc = User <@{$userId}> has been unjailed.
+log-mod-unban-title = User Unbanned
+log-mod-unban-desc = User <@{$userId}> has been unbanned (temporary ban expired).
+log-mod-punish-title = Automated Punishment Applied
+log-mod-punish-desc = User <@{$userId}> has been automatically punished.
+
+log-mod-jail-cmd-title = Jail Command Executed
+log-mod-jail-cmd-desc = Moderator <@{$modId}> jailed <@{$userId}>
+log-mod-unjail-cmd-title = Unjail Command Executed
+log-mod-unjail-cmd-desc = Moderator <@{$modId}> unjailed <@{$userId}>
+log-mod-ban-cmd-title = Ban Command Executed
+log-mod-ban-cmd-desc = Moderator <@{$modId}> banned <@{$userId}>
+log-mod-kick-cmd-title = Kick Command Executed
+log-mod-kick-cmd-desc = Moderator <@{$modId}> kicked <@{$userId}>
+log-mod-timeout-cmd-title = Timeout Command Executed
+log-mod-timeout-cmd-desc = Moderator <@{$modId}> timed out <@{$userId}>
+
+log-mod-audit-title-whitelisted = Moderation Action (Whitelisted: {$action})
+log-mod-audit-title-limited = Moderation Action (Limited: {$action})
+log-mod-audit-title-logged = Moderation Action (Logged: {$action})
+log-mod-audit-desc = User <@{$userId}> performed a `{$action}` on <@{$targetId}>.

@@ -1,5 +1,7 @@
+use crate::db::entities::module_configs::ModuleType;
 use crate::modules::moderation_protection::duration_parser::parse_duration;
 use crate::services::localization::ContextL10nExt;
+use crate::services::logger::LogLevel;
 use crate::{Context, Error};
 use fluent::FluentArgs;
 use poise::serenity_prelude as serenity;
@@ -29,14 +31,14 @@ pub async fn ban(
 
     let ban_reason = reason
         .clone()
-        .unwrap_or_else(|| "No reason provided".to_string());
+        .unwrap_or_else(|| l10n.t("log-val-no-reason", None));
 
     // Perform the ban
     guild_id
         .ban(ctx.http(), user.id, 0, Some(&ban_reason))
         .await?;
 
-    if let Some(dur) = duration_parsed {
+    let expires_at_str = if let Some(dur) = duration_parsed {
         // Store temp ban in DB
         let expires_at = chrono::Utc::now() + dur;
         let model = crate::db::entities::temp_bans::ActiveModel {
@@ -51,15 +53,42 @@ pub async fn ban(
 
         let mut args = FluentArgs::new();
         args.set("userId", user.id.get());
-        args.set("duration", dur.to_string());
-        args.set("reason", ban_reason);
+        args.set("duration", format!("{:?}", dur));
+        args.set("reason", ban_reason.clone());
         ctx.say(l10n.t("mod-ban-success-temp", Some(&args))).await?;
+        format!("{:?}", dur)
     } else {
         let mut args = FluentArgs::new();
         args.set("userId", user.id.get());
-        args.set("reason", ban_reason);
+        args.set("reason", ban_reason.clone());
         ctx.say(l10n.t("mod-ban-success-perm", Some(&args))).await?;
-    }
+        l10n.t("log-val-permanent", None)
+    };
+
+    // Log action
+    let l10n_guild = ctx.l10n_guild();
+    let mut log_args = FluentArgs::new();
+    log_args.set("modId", ctx.author().id.get());
+    log_args.set("userId", user.id.get());
+
+    ctx.data()
+        .logger
+        .log_context(
+            &ctx,
+            Some(ModuleType::ModerationProtection),
+            LogLevel::Audit,
+            &l10n_guild.t("log-mod-ban-cmd-title", None),
+            &l10n_guild.t("log-mod-ban-cmd-desc", Some(&log_args)),
+            vec![
+                (
+                    &l10n_guild.t("log-field-user", None),
+                    format!("<@{}>", user.id),
+                ),
+                (&l10n_guild.t("log-field-duration", None), expires_at_str),
+                (&l10n_guild.t("log-field-reason", None), ban_reason),
+            ],
+        )
+        .await?;
 
     Ok(())
 }

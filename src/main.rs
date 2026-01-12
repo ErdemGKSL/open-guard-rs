@@ -37,6 +37,7 @@ pub struct Data {
     pub cache: Arc<services::cache::ObjectCacheService>,
     pub module_definitions: Vec<modules::ModuleDefinition>,
     pub temp_ban: Arc<services::temp_ban::TempBanService>,
+    pub jail: Arc<services::jail::JailService>,
     pub shard_count: AtomicU32,
 }
 
@@ -91,9 +92,6 @@ async fn main() -> anyhow::Result<()> {
     // Initialize logger service
     let logger = Arc::new(services::logger::LoggerService::new(db.clone()));
 
-    // Initialize punishment service
-    let punishment = Arc::new(services::punishment::PunishmentService::new(db.clone()));
-
     // Initialize whitelist service
     let whitelist = Arc::new(services::whitelist::WhitelistService::new(db.clone()));
 
@@ -101,7 +99,24 @@ async fn main() -> anyhow::Result<()> {
     let cache = Arc::new(services::cache::ObjectCacheService::new());
 
     // Initialize temp ban service
-    let temp_ban = Arc::new(services::temp_ban::TempBanService::new(db.clone()));
+    let temp_ban = Arc::new(services::temp_ban::TempBanService::new(
+        db.clone(),
+        logger.clone(),
+        l10n.clone(),
+    ));
+
+    // Initialize jail service
+    let jail = Arc::new(services::jail::JailService::new(
+        db.clone(),
+        logger.clone(),
+        l10n.clone(),
+    ));
+
+    // Initialize punishment service
+    let mut punishment_svc =
+        services::punishment::PunishmentService::new(db.clone(), logger.clone(), l10n.clone());
+    punishment_svc.set_jail_service(jail.clone());
+    let punishment = Arc::new(punishment_svc);
 
     // Load and translate commands
     let mut commands = modules::commands();
@@ -218,6 +233,7 @@ async fn main() -> anyhow::Result<()> {
             cache,
             module_definitions: modules::definitions(),
             temp_ban: temp_ban.clone(),
+            jail: jail.clone(),
             shard_count: AtomicU32::new(shard_count.load(Ordering::Relaxed)),
         }) as _)
         .await
@@ -225,6 +241,9 @@ async fn main() -> anyhow::Result<()> {
 
     // Start unban runner
     temp_ban.start_unban_runner(client.http.clone());
+
+    // Start unjail runner
+    jail.start_unjail_runner(client.http.clone());
 
     info!("Bot is ready!");
     client.start_autosharded().await.context("Client error")?;

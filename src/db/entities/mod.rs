@@ -1,4 +1,5 @@
 pub mod guild_configs;
+pub mod jails;
 pub mod module_configs;
 pub mod prelude;
 pub mod temp_bans;

@@ -1,15 +1,18 @@
 use crate::Error;
 use crate::db::entities::{
-    guild_configs,
     module_configs::{self, ModuleType, PunishmentType},
     violations,
 };
 use chrono::Utc;
+use fluent::FluentArgs;
 use poise::serenity_prelude as serenity;
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 
 pub struct PunishmentService {
     db: DatabaseConnection,
+    logger: std::sync::Arc<crate::services::logger::LoggerService>,
+    l10n: std::sync::Arc<crate::services::localization::LocalizationManager>,
+    jail: Option<std::sync::Arc<crate::services::jail::JailService>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -20,8 +23,21 @@ pub enum ViolationResult {
 }
 
 impl PunishmentService {
-    pub fn new(db: DatabaseConnection) -> Self {
-        Self { db }
+    pub fn new(
+        db: DatabaseConnection,
+        logger: std::sync::Arc<crate::services::logger::LoggerService>,
+        l10n: std::sync::Arc<crate::services::localization::LocalizationManager>,
+    ) -> Self {
+        Self {
+            db,
+            logger,
+            l10n,
+            jail: None,
+        }
+    }
+
+    pub fn set_jail_service(&mut self, jail: std::sync::Arc<crate::services::jail::JailService>) {
+        self.jail = Some(jail);
     }
 
     /// Handles a violation by incrementing the counter and applying punishment if threshold is reached.
@@ -87,8 +103,16 @@ impl PunishmentService {
         };
 
         if current_count >= threshold {
-            if let Err(e) = self.punish(http, guild_id, user_id, config.punishment, reason).await {
-                tracing::error!("Failed to punish user {} in guild {}: {:?}", user_id, guild_id, e);
+            if let Err(e) = self
+                .punish(http, guild_id, user_id, config.punishment, reason)
+                .await
+            {
+                tracing::error!(
+                    "Failed to punish user {} in guild {}: {:?}",
+                    user_id,
+                    guild_id,
+                    e
+                );
             }
 
             // Reset count after punishment
@@ -114,21 +138,23 @@ impl PunishmentService {
         reason: &str,
     ) -> Result<(), Error> {
         match punishment {
-            PunishmentType::None => Ok(()),
+            PunishmentType::None => {}
             PunishmentType::Unperm => {
                 let member = guild_id.member(http, user_id).await?;
                 let guild = guild_id.to_partial_guild(http).await?;
                 let bot_id = http.get_current_user().await?.id;
                 let bot_member = guild_id.member(http, bot_id).await?;
-                
+
                 // Get bot's highest role position
-                let bot_highest_role_pos = bot_member.roles.iter()
+                let bot_highest_role_pos = bot_member
+                    .roles
+                    .iter()
                     .filter_map(|role_id| guild.roles.get(role_id))
                     .map(|role| role.position)
                     .max()
                     .unwrap_or(0);
 
-                let dangerous_permissions = serenity::Permissions::ADMINISTRATOR 
+                let dangerous_permissions = serenity::Permissions::ADMINISTRATOR
                     | serenity::Permissions::MANAGE_GUILD
                     | serenity::Permissions::MANAGE_ROLES
                     | serenity::Permissions::MANAGE_CHANNELS
@@ -145,50 +171,72 @@ impl PunishmentService {
 
                 for role_id in &member.roles {
                     if let Some(role) = guild.roles.get(role_id) {
-                        // Keep the role if:
-                        // 1. It's managed (integration/booster role)
-                        // 2. It's higher than or equal to bot's highest role (outside our reach/safety)
-                        // 3. It DOES NOT have dangerous permissions
-                        if role.managed() || role.position >= bot_highest_role_pos || !role.permissions.intersects(dangerous_permissions) {
+                        if role.managed()
+                            || role.position >= bot_highest_role_pos
+                            || !role.permissions.intersects(dangerous_permissions)
+                        {
                             new_roles.push(*role_id);
                         }
                     } else {
-                        // If role is not found in guild roles map, keep it just in case?
-                        // Usually this means it's @everyone or something went wrong.
                         new_roles.push(*role_id);
                     }
                 }
 
-                // If roles changed, apply it
                 if new_roles.len() != member.roles.len() as usize {
-                    guild_id.edit_member(http, user_id, serenity::EditMember::default().roles(new_roles).audit_log_reason(reason)).await?;
+                    guild_id
+                        .edit_member(
+                            http,
+                            user_id,
+                            serenity::EditMember::default()
+                                .roles(new_roles)
+                                .audit_log_reason(reason),
+                        )
+                        .await?;
                 }
-                
-                Ok(())
             }
             PunishmentType::Ban => {
                 guild_id.ban(http, user_id, 0, Some(reason)).await?;
-                Ok(())
             }
             PunishmentType::Kick => {
                 guild_id.kick(http, user_id, Some(reason)).await?;
-                Ok(())
             }
             PunishmentType::Jail => {
-                let g_config = guild_configs::Entity::find_by_id(guild_id.get() as i64)
-                    .one(&self.db)
-                    .await?;
-
-                if let Some(config) = g_config {
-                    if let Some(role_id) = config.jail_role_id {
-                        let member = guild_id.member(http, user_id).await?;
-                        member
-                            .add_role(http, serenity::RoleId::new(role_id as u64), Some(reason))
-                            .await?;
-                    }
+                if let Some(jail_service) = &self.jail {
+                    jail_service
+                        .jail_user(http, guild_id, user_id, None, reason)
+                        .await?;
                 }
-                Ok(())
             }
         }
+
+        // Log automated punishment
+        if punishment != PunishmentType::None {
+            if let Ok(guild) = guild_id.to_partial_guild(http).await {
+                let locale = guild.preferred_locale.to_string();
+                let l10n = self.l10n.get_proxy(&locale);
+
+                let mut user_args = FluentArgs::new();
+                user_args.set("userId", user_id.get());
+
+                let _ = self
+                    .logger
+                    .log_action(
+                        http,
+                        guild_id,
+                        Some(ModuleType::ModerationProtection),
+                        crate::services::logger::LogLevel::Warn,
+                        &l10n.t("log-mod-punish-title", None),
+                        &l10n.t("log-mod-punish-desc", Some(&user_args)),
+                        vec![
+                            (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
+                            (&l10n.t("log-field-type", None), format!("{:?}", punishment)),
+                            (&l10n.t("log-field-reason", None), reason.to_string()),
+                        ],
+                    )
+                    .await;
+            }
+        }
+
+        Ok(())
     }
 }
