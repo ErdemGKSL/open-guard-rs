@@ -228,6 +228,7 @@ async fn main() -> anyhow::Result<()> {
     cache_settings.cache_users = true;
     cache_settings.cache_guilds = true;
     cache_settings.cache_channels = true;
+    cache_settings.time_to_live = std::time::Duration::from_hours(6);
 
     // Build the client with both poise framework and custom event handler
     let mut client = serenity::ClientBuilder::new(token, intents)

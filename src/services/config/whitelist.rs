@@ -4,8 +4,7 @@ use crate::db::entities::{
 use crate::services::localization::L10nProxy;
 use crate::{Data, Error};
 use poise::serenity_prelude as serenity;
-use sea_orm::{ActiveModelTrait, ColumnTrait, Condition, EntityTrait, QueryFilter, Set};
-use strum::IntoEnumIterator;
+use sea_orm::{ActiveModelTrait, ColumnTrait, Condition, EntityTrait, Iterable, QueryFilter, Set};
 
 /// Checks if a member has "Head" level permissions for a specific module or globally.
 pub async fn check_permission(
