@@ -5,6 +5,7 @@ pub mod help;
 pub mod jail;
 pub mod localization;
 pub mod logger;
+pub mod logging_cleanup;
 pub mod punishment;
 pub mod status;
 pub mod temp_ban;

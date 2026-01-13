@@ -255,6 +255,10 @@ async fn main() -> anyhow::Result<()> {
     // Start unjail runner
     jail.start_unjail_runner(client.http.clone());
 
+    // Start logging cleanup runner
+    let logging_cleanup = Arc::new(services::logging_cleanup::LoggingCleanupService::new(db));
+    logging_cleanup.start_cleanup_runner();
+
     info!("Bot is ready!");
     client.start_autosharded().await.context("Client error")?;
 
