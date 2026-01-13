@@ -1,5 +1,5 @@
 use crate::db::entities::module_configs::ModuleType;
-use crate::db::entities::{guild_configs, jails};
+use crate::db::entities::{guild_configs, jails, module_configs};
 use crate::services::logger::{LogLevel, LoggerService};
 use chrono::{Duration, Utc};
 use fluent::FluentArgs;
@@ -149,7 +149,8 @@ impl JailService {
 
         let old_roles_ids: Vec<String> = serde_json::from_value(record.old_roles)?;
 
-        let mut member = guild_id.member(http, user_id).await?;
+        // Restoration of roles logic
+        let mut member_result = guild_id.member(http, user_id).await;
         let guild = guild_id.to_partial_guild(http).await?;
 
         // Get jail role id
@@ -162,47 +163,102 @@ impl JailService {
             .jail_role_id
             .map(|id| serenity::RoleId::new(id as u64));
 
-        let mut new_roles = Vec::new();
+        match member_result {
+            Ok(ref mut member) => {
+                let mut new_roles = Vec::new();
 
-        // Keep current managed roles or roles above bot (though they should have been kept anyway)
-        let current_user = http.get_current_user().await?;
-        let bot_member = guild_id.member(http, current_user.id).await?;
-        let bot_highest_role_pos = bot_member
-            .roles
-            .iter()
-            .filter_map(|r| guild.roles.get(r).map(|role| role.position))
-            .max()
-            .unwrap_or(0);
+                // Keep current managed roles or roles above bot
+                let current_user = http.get_current_user().await?;
+                let bot_member = guild_id.member(http, current_user.id).await?;
+                let bot_highest_role_pos = bot_member
+                    .roles
+                    .iter()
+                    .filter_map(|r| guild.roles.get(r).map(|role| role.position))
+                    .max()
+                    .unwrap_or(0);
 
-        for role_id in &member.roles {
-            if let Some(role) = guild.roles.get(role_id) {
-                if (role.managed() || role.position >= bot_highest_role_pos)
-                    && Some(*role_id) != jail_role_id
-                {
-                    new_roles.push(*role_id);
+                for role_id in &member.roles {
+                    if let Some(role) = guild.roles.get(role_id) {
+                        if (role.managed() || role.position >= bot_highest_role_pos)
+                            && Some(*role_id) != jail_role_id
+                        {
+                            new_roles.push(*role_id);
+                        }
+                    }
+                }
+
+                // Restore old roles
+                for role_str in old_roles_ids {
+                    if let Ok(id) = role_str.parse::<u64>() {
+                        let role_id = serenity::RoleId::new(id);
+                        if !new_roles.contains(&role_id) {
+                            new_roles.push(role_id);
+                        }
+                    }
+                }
+
+                // Apply changes
+                member
+                    .edit(
+                        http,
+                        serenity::EditMember::new()
+                            .roles(new_roles)
+                            .audit_log_reason("Jail expired or removed"),
+                    )
+                    .await?;
+            }
+            Err(serenity::Error::Http(http_err))
+                if http_err.status_code() == Some(serenity::http::StatusCode::NOT_FOUND) =>
+            {
+                // User is not in the guild anymore.
+                // We should remove the jail role from their sticky roles if Sticky Roles is enabled.
+                let sticky_enabled = {
+                    let m_config = module_configs::Entity::find_by_id((
+                        guild_id.get() as i64,
+                        ModuleType::StickyRoles,
+                    ))
+                    .one(&self.db)
+                    .await?;
+                    m_config.map(|m| m.enabled).unwrap_or(false)
+                };
+
+                if sticky_enabled {
+                    use crate::db::entities::member_old_roles;
+                    let stored_roles_record = member_old_roles::Entity::find_by_id((
+                        guild_id.get() as i64,
+                        user_id.get() as i64,
+                    ))
+                    .one(&self.db)
+                    .await?;
+
+                    if let Some(record) = stored_roles_record {
+                        let mut role_ids: Vec<u64> =
+                            serde_json::from_value(record.role_ids.clone())?;
+                        if let Some(j_id) = jail_role_id {
+                            let jail_id_val = j_id.get();
+                            if role_ids.contains(&jail_id_val) {
+                                role_ids.retain(|id| *id != jail_id_val);
+
+                                // Restore the original roles to the tracking as well
+                                for r_str in old_roles_ids {
+                                    if let Ok(id) = r_str.parse::<u64>() {
+                                        if !role_ids.contains(&id) {
+                                            role_ids.push(id);
+                                        }
+                                    }
+                                }
+
+                                let mut active: member_old_roles::ActiveModel = record.into();
+                                active.role_ids = Set(serde_json::to_value(role_ids)?);
+                                active.updated_at = Set(Utc::now().into());
+                                active.update(&self.db).await?;
+                            }
+                        }
+                    }
                 }
             }
+            Err(e) => return Err(e.into()),
         }
-
-        // Restore old roles
-        for role_str in old_roles_ids {
-            if let Ok(id) = role_str.parse::<u64>() {
-                let role_id = serenity::RoleId::new(id);
-                if !new_roles.contains(&role_id) {
-                    new_roles.push(role_id);
-                }
-            }
-        }
-
-        // Apply changes
-        member
-            .edit(
-                http,
-                serenity::EditMember::new()
-                    .roles(new_roles)
-                    .audit_log_reason("Jail expired or removed"),
-            )
-            .await?;
 
         // Delete record
         jails::Entity::delete_by_id(record.id)

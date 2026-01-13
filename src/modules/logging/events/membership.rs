@@ -36,7 +36,7 @@ pub async fn get_membership_logging_config(
 
 /// Upsert the logging guild entry to track last access time.
 /// This is used for cleanup of stale guilds.
-async fn touch_logging_guild(guild_id: serenity::GuildId, data: &Data) -> Result<(), Error> {
+pub async fn touch_logging_guild(guild_id: serenity::GuildId, data: &Data) -> Result<(), Error> {
     let now = Utc::now();
     let model = logging_guilds::ActiveModel {
         guild_id: Set(guild_id.get() as i64),
@@ -135,15 +135,173 @@ pub async fn get_member_roles(
 }
 
 /// Delete the member's stored roles from the database.
-pub async fn delete_member_roles(
+
+/// Delete all member role records for a guild.
+/// Used when membership logging is disabled.
+pub async fn delete_all_guild_member_roles(
     guild_id: serenity::GuildId,
-    user_id: serenity::UserId,
     data: &Data,
-) -> Result<(), Error> {
-    member_old_roles::Entity::delete_by_id((guild_id.get() as i64, user_id.get() as i64))
+) -> Result<u64, Error> {
+    use sea_orm::ColumnTrait;
+    use sea_orm::QueryFilter;
+
+    let result = member_old_roles::Entity::delete_many()
+        .filter(member_old_roles::Column::GuildId.eq(guild_id.get() as i64))
         .exec(&data.db)
         .await?;
+
+    // Also delete the logging guild entry
+    logging_guilds::Entity::delete_by_id(guild_id.get() as i64)
+        .exec(&data.db)
+        .await
+        .ok();
+
+    Ok(result.rows_affected)
+}
+
+/// Internal function to touch logging guild with db connection directly.
+async fn touch_logging_guild_with_db(
+    guild_id: serenity::GuildId,
+    db: &sea_orm::DatabaseConnection,
+) -> Result<(), Error> {
+    let now = Utc::now();
+    let model = logging_guilds::ActiveModel {
+        guild_id: Set(guild_id.get() as i64),
+        last_accessed_at: Set(now.into()),
+    };
+
+    logging_guilds::Entity::insert(model)
+        .on_conflict(
+            sea_orm::sea_query::OnConflict::column(logging_guilds::Column::GuildId)
+                .update_column(logging_guilds::Column::LastAccessedAt)
+                .to_owned(),
+        )
+        .exec(db)
+        .await?;
+
     Ok(())
+}
+
+/// Internal function to store member roles with db connection directly.
+async fn store_member_roles_with_db(
+    guild_id: serenity::GuildId,
+    user_id: serenity::UserId,
+    roles: &[serenity::RoleId],
+    db: &sea_orm::DatabaseConnection,
+) -> Result<(), Error> {
+    let role_ids: Vec<u64> = roles.iter().map(|r| r.get()).collect();
+    let now = Utc::now();
+
+    let model = member_old_roles::ActiveModel {
+        guild_id: Set(guild_id.get() as i64),
+        user_id: Set(user_id.get() as i64),
+        role_ids: Set(json!(role_ids)),
+        updated_at: Set(now.into()),
+    };
+
+    member_old_roles::Entity::insert(model)
+        .on_conflict(
+            sea_orm::sea_query::OnConflict::columns([
+                member_old_roles::Column::GuildId,
+                member_old_roles::Column::UserId,
+            ])
+            .update_columns([
+                member_old_roles::Column::RoleIds,
+                member_old_roles::Column::UpdatedAt,
+            ])
+            .to_owned(),
+        )
+        .exec(db)
+        .await?;
+
+    Ok(())
+}
+
+/// Fetch all members from the guild and store their roles in the database.
+/// Used when membership logging is enabled.
+/// This is run in the background to not block the interaction.
+/// Takes DatabaseConnection directly so it can be used in spawned tasks.
+/// Filters out managed roles (bot/integration roles) as they can't be restored.
+pub async fn fetch_and_store_all_members(
+    http: std::sync::Arc<serenity::Http>,
+    guild_id: serenity::GuildId,
+    db: sea_orm::DatabaseConnection,
+) -> Result<usize, Error> {
+    use serenity::nonmax::NonMaxU16;
+    use std::collections::HashSet;
+    use tracing::{error, info};
+
+    // Touch the logging guild first
+    touch_logging_guild_with_db(guild_id, &db).await?;
+
+    // Fetch guild roles to identify managed roles
+    let guild_roles = guild_id.roles(&http).await.unwrap_or_default();
+    let managed_role_ids: HashSet<serenity::RoleId> = guild_roles
+        .into_iter()
+        .filter(|role| role.managed())
+        .map(|role| role.id)
+        .collect();
+
+    let mut last_id: Option<serenity::UserId> = None;
+    let mut total_members = 0;
+
+    loop {
+        match guild_id
+            .members(&http, Some(NonMaxU16::new(1000).unwrap()), last_id)
+            .await
+        {
+            Ok(members) => {
+                let count = members.len();
+                total_members += count;
+
+                // Store each member's roles (excluding managed roles)
+                for member in &members {
+                    let roles: Vec<serenity::RoleId> = member
+                        .roles
+                        .iter()
+                        .filter(|r| !managed_role_ids.contains(r))
+                        .cloned()
+                        .collect();
+
+                    if let Err(e) =
+                        store_member_roles_with_db(guild_id, member.user.id, &roles, &db).await
+                    {
+                        error!(
+                            "Failed to store roles for member {} in guild {}: {:?}",
+                            member.user.id, guild_id, e
+                        );
+                    }
+                }
+
+                info!(
+                    "Stored roles for {} members (total: {}) in guild {}",
+                    count, total_members, guild_id
+                );
+
+                if count < 1000 {
+                    break;
+                }
+
+                if let Some(last_member) = members.last() {
+                    last_id = Some(last_member.user.id);
+                }
+            }
+            Err(e) => {
+                error!(
+                    "Failed to fetch members for guild {} at offset {:?}: {:?}",
+                    guild_id, last_id, e
+                );
+                break;
+            }
+        }
+    }
+
+    info!(
+        "Finished storing roles for {} members in guild {}",
+        total_members, guild_id
+    );
+
+    Ok(total_members)
 }
 
 pub async fn handle_guild_member_add(
@@ -229,8 +387,8 @@ pub async fn handle_guild_member_remove(
         fields.push((Box::leak(label.into_boxed_str()) as &str, role_mentions));
     }
 
-    // Clean up the stored roles after logging
-    delete_member_roles(guild_id, user.id, data).await?;
+    // We don't clean up the stored roles here anymore because Sticky Roles needs them.
+    // Stale data is handled by the LoggingCleanupService (30 day inactivity).
 
     data.logger
         .log_action(

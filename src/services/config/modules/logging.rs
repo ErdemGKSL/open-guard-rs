@@ -116,7 +116,7 @@ pub fn build_ui(
 }
 
 pub async fn handle_interaction(
-    _ctx: &serenity::Context,
+    ctx: &serenity::Context,
     interaction: &serenity::ComponentInteraction,
     data: &Data,
     guild_id: serenity::GuildId,
@@ -139,8 +139,53 @@ pub async fn handle_interaction(
 
     if custom_id == "config_log_member_toggle" {
         let (config_active, mut config) = get_config(data, guild_id).await?;
+        let was_enabled = config.log_membership;
         config.log_membership = !config.log_membership;
-        save_config(data, config_active, config).await?;
+        save_config(data, config_active, config.clone()).await?;
+
+        // Handle member roles storage based on toggle state
+        if config.log_membership && !was_enabled {
+            // Enabling: fetch all members and store their roles in background
+            let http = ctx.http.clone();
+            let db = data.db.clone();
+            tokio::spawn(async move {
+                if let Err(e) =
+                    crate::modules::logging::events::membership::fetch_and_store_all_members(
+                        http, guild_id, db,
+                    )
+                    .await
+                {
+                    tracing::error!(
+                        "Failed to fetch and store members for guild {}: {:?}",
+                        guild_id,
+                        e
+                    );
+                }
+            });
+        } else if !config.log_membership && was_enabled {
+            // Disabling: delete all member roles for this guild ONLY IF sticky roles is also disabled
+            let is_sticky_enabled =
+                crate::modules::sticky_roles::events::tracking::get_sticky_roles_config(
+                    guild_id, data,
+                )
+                .await?
+                .is_some();
+            if !is_sticky_enabled {
+                if let Err(e) =
+                    crate::modules::logging::events::membership::delete_all_guild_member_roles(
+                        guild_id, data,
+                    )
+                    .await
+                {
+                    tracing::error!(
+                        "Failed to delete member roles for guild {}: {:?}",
+                        guild_id,
+                        e
+                    );
+                }
+            }
+        }
+
         return Ok(true);
     }
 

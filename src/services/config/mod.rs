@@ -189,6 +189,15 @@ pub async fn build_main_menu(
             "Logging",
         )
         .description(l10n.t("config-logging-desc", None)),
+        serenity::CreateSelectMenuOption::new(
+            format!(
+                "{} - {}",
+                l10n.t("config-sticky-roles-label", None),
+                get_status(ModuleType::StickyRoles)
+            ),
+            "StickyRoles",
+        )
+        .description(l10n.t("config-sticky-roles-desc", None)),
     ];
 
     inner_components.push(create_select_menu_row(
@@ -243,6 +252,7 @@ pub async fn build_module_menu(
         ModuleType::BotAddingProtection => l10n.t("config-bot-adding-protection-label", None),
         ModuleType::ModerationProtection => l10n.t("config-moderation-protection-label", None),
         ModuleType::Logging => l10n.t("config-logging-label", None),
+        ModuleType::StickyRoles => l10n.t("config-sticky-roles-label", None),
     };
 
     let mut inner_components = if module == ModuleType::Logging && page == 1 {
@@ -385,6 +395,13 @@ pub async fn build_module_menu(
                 serde_json::from_value(m_config.config).unwrap_or_default();
             inner_components.extend(modules::logging::build_ui(page, &logging_config, l10n));
         }
+    } else if module == ModuleType::StickyRoles {
+        let sr_config: crate::db::entities::module_configs::StickyRolesModuleConfig =
+            serde_json::from_value(m_config.config).unwrap_or_default();
+        inner_components.push(serenity::CreateContainerComponent::Separator(
+            serenity::CreateSeparator::new(true),
+        ));
+        inner_components.extend(modules::sticky_roles::build_ui(&sr_config, l10n));
     }
 
     // Add pagination row for Logging
@@ -558,6 +575,9 @@ pub async fn handle_interaction(
     } else if modules::logging::handle_interaction(ctx, interaction, data, guild_id).await? {
         updated_reply =
             Some(build_module_menu(data, guild_id, ModuleType::Logging, page, &l10n).await?);
+    } else if modules::sticky_roles::handle_interaction(ctx, interaction, data, guild_id).await? {
+        updated_reply =
+            Some(build_module_menu(data, guild_id, ModuleType::StickyRoles, page, &l10n).await?);
     } else if let Some(components) = whitelist::handle_interaction(ctx, interaction, data).await? {
         updated_reply = Some(components);
     } else if custom_id == "config_back_to_main" {
@@ -572,6 +592,7 @@ pub async fn handle_interaction(
             "bot_adding_protection" => ModuleType::BotAddingProtection,
             "moderation_protection" => ModuleType::ModerationProtection,
             "logging" => ModuleType::Logging,
+            "sticky_roles" => ModuleType::StickyRoles,
             _ => return Ok(()),
         };
         updated_reply = Some(build_module_menu(data, guild_id, module_type, 0, &l10n).await?);
@@ -631,6 +652,7 @@ pub async fn handle_interaction(
                     "BotAddingProtection" => ModuleType::BotAddingProtection,
                     "ModerationProtection" => ModuleType::ModerationProtection,
                     "Logging" => ModuleType::Logging,
+                    "StickyRoles" => ModuleType::StickyRoles,
                     _ => return Ok(()),
                 };
                 updated_reply =
@@ -659,6 +681,7 @@ pub async fn handle_interaction(
                     ModuleType::ModerationProtection
                 }
                 "logging" | "Logging" => ModuleType::Logging,
+                "sticky_roles" | "StickyRoles" => ModuleType::StickyRoles,
                 _ => return Ok(()),
             };
             updated_reply =

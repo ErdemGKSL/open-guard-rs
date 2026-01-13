@@ -300,11 +300,23 @@ impl serenity::EventHandler for Handler {
 
                 tokio::spawn(async move {
                     if let Err(e) = logging::events::membership::handle_guild_member_add(
-                        &ctx, guild_id, member, &data,
+                        &ctx,
+                        guild_id,
+                        member.clone(),
+                        &data,
                     )
                     .await
                     {
                         error!("Error handling guild member add log: {:?}", e);
+                    }
+
+                    if let Err(e) =
+                        crate::modules::sticky_roles::events::tracking::handle_guild_member_add(
+                            &ctx, guild_id, &member, &data,
+                        )
+                        .await
+                    {
+                        error!("Error handling sticky roles for member add: {:?}", e);
                     }
                 });
             }

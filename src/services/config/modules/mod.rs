@@ -6,3 +6,4 @@ pub mod member_permission_protection;
 pub mod moderation_protection;
 pub mod role_permission_protection;
 pub mod role_protection;
+pub mod sticky_roles;

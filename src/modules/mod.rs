@@ -6,6 +6,7 @@ pub mod member_permission_protection;
 pub mod moderation_protection;
 pub mod role_permission_protection;
 pub mod role_protection;
+pub mod sticky_roles;
 
 use crate::{Data, Error};
 
@@ -31,6 +32,7 @@ pub fn get_modules() -> Vec<Module> {
         crate::modules::bot_adding_protection::module(),
         crate::modules::moderation_protection::module(),
         crate::modules::logging::module(),
+        crate::modules::sticky_roles::module(),
     ]
 }
 

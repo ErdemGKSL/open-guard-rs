@@ -31,6 +31,8 @@ pub enum ModuleType {
     ModerationProtection,
     #[sea_orm(string_value = "logging")]
     Logging,
+    #[sea_orm(string_value = "sticky_roles")]
+    StickyRoles,
 }
 
 impl std::fmt::Display for ModuleType {
@@ -44,6 +46,7 @@ impl std::fmt::Display for ModuleType {
             ModuleType::BotAddingProtection => write!(f, "bot_adding_protection"),
             ModuleType::ModerationProtection => write!(f, "moderation_protection"),
             ModuleType::Logging => write!(f, "logging"),
+            ModuleType::StickyRoles => write!(f, "sticky_roles"),
         }
     }
 }
@@ -155,3 +158,7 @@ pub struct LoggingModuleConfig {
     #[serde(default)]
     pub membership_log_channel_id: Option<i64>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct StickyRolesModuleConfig {}
