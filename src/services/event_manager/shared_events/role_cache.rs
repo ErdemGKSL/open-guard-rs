@@ -39,10 +39,7 @@ pub async fn store_member_roles(
     data: &Data,
 ) -> Result<(), Error> {
     // Check if we should store roles
-    // We store roles if:
-    // 1. Membership logging is enabled
-    // 2. Sticky roles is enabled
-
+    // We store roles if either Logging (with membership logging enabled) or Sticky Roles is enabled
     let configs = module_configs::Entity::find()
         .filter(
             module_configs::Column::GuildId
@@ -57,23 +54,15 @@ pub async fn store_member_roles(
         .all(&data.db)
         .await?;
 
-    let mut should_store = false;
-
-    for config in configs {
-        match config.module_type {
-            ModuleType::StickyRoles => {
-                should_store = true;
-            }
-            ModuleType::Logging => {
-                let log_config: LoggingModuleConfig =
-                    serde_json::from_value(config.config).unwrap_or_default();
-                if log_config.log_membership {
-                    should_store = true;
-                }
-            }
-            _ => {}
+    let should_store = configs.iter().any(|config| match config.module_type {
+        ModuleType::StickyRoles => true,
+        ModuleType::Logging => {
+            let log_config: LoggingModuleConfig =
+                serde_json::from_value(config.config.clone()).unwrap_or_default();
+            log_config.log_membership
         }
-    }
+        _ => false,
+    });
 
     if !should_store {
         return Ok(());
@@ -138,53 +127,6 @@ pub async fn handle_guild_member_add(
     member: serenity::Member,
     data: &Data,
 ) -> Result<(), Error> {
-    // 1. Store member roles (if either Logging or Sticky Roles is enabled)
-    // We pass the roles from the new member object.
-    // If it's a new join, roles are likely empty or auto-assigned.
-    // This store is important to initialize the record or update it.
-    // Wait, if they just joined, they usually have NO roles (unless bots added them immediately).
-    // Storing "empty roles" might wipe sticky roles if we are not careful?
-    // Sticky roles logic relies on `get_stored_member_roles`.
-    // If we overwrite with current (empty) roles BEFORE restoring, we lose data!
-    // CRITICAL: We must NOT store roles here blindly.
-    // Sticky roles flow:
-    // 1. User Joins (Roles empty)
-    // 2. We fetch OLD stored roles.
-    // 3. We re-apply them.
-    // 4. THEN we might store the new state (which matches old state).
-    //
-    // So, `handle_guild_member_add` should:
-    // A. RESTORE roles first (if Sticky enabled).
-    // B. LOG the join (if Logging enabled).
-    // C. Store roles? Only if they change?
-    // Actually, `store_member_roles` logic is mostly for `GuildMemberUpdate`.
-    // For `GuildMemberAdd`, we only want to *possibly* update the timestamp (touch stats).
-    // But `store_member_roles` also inserts roles.
-    // If we call `store_member_roles` with empty list, it might wipe previous data if the user had data?
-    // Let's check `store_member_roles` implementation in `tracking.rs`.
-    // It uses `Entity::insert` with `on_conflict(...).update_columns(...)`.
-    // YES, it will overwrite `role_ids` with the passed `roles`.
-    // IF the user rejoined, they have 0 roles. If we overwrite, we delete their sticky roles!
-    //
-    // THEREFORE: We should NOT call `store_member_roles` immediately on join.
-    // We should only "Touch" the guild stats.
-    // The `Sticky Roles` module needs to fetch the *existing* data.
-    //
-    // So the previous `logging` implementation was:
-    // `store_member_roles_internal(guild_id, member.user.id, &member.roles, data).await?;`
-    // This was DESTRUCTIVE if the user had sticky roles!
-    // Good catch. The user said "handle_guild_member_add is also should be handled on shared events".
-    //
-    // Revised Logic for `handle_guild_member_add`:
-    // 1. Touch Stats (always, if any module active).
-    // 2. Restore Sticky Roles (if enabled). This will fetch old roles and apply them.
-    //    Note: If we restore roles, `GuildMemberUpdate` events will trigger?
-    //    Serenity might trigger `GuildMemberUpdate` when we `edit` the member.
-    //    If so, that will trigger data storage, which is fine (it will store the restored roles).
-    // 3. Log Join (if enabled).
-    //
-    // We should NOT store roles here.
-
     // Touch stats
     touch_guild_stats(guild_id, data).await?;
 
@@ -207,6 +149,70 @@ pub async fn handle_guild_member_add(
     .await
     {
         error!("Error logging member join: {:?}", e);
+    }
+
+    Ok(())
+}
+
+pub async fn handle_guild_member_update(
+    _ctx: &serenity::Context,
+    old_if_available: Option<serenity::Member>,
+    new: Option<serenity::Member>,
+    event: serenity::GuildMemberUpdateEvent,
+    data: &Data,
+) -> Result<(), Error> {
+    // Determine if roles changed
+    let roles_changed = if let Some(old) = old_if_available {
+        // If we have old member, compare roles
+        let old_roles = &old.roles;
+        let new_roles = &event.roles;
+
+        if old_roles.len() != new_roles.len() {
+            true
+        } else {
+            // Check if all old roles are in new roles
+            !old_roles.iter().all(|r| new_roles.contains(r))
+        }
+    } else if let Some(_new_member) = new {
+        // If we only have new member (unlikely without old, but possible)
+        // Check event roles vs new_member roles (they should be same)
+        true // Assume changed if we don't know old state
+    } else {
+        // If we have neither old nor new member, we just have the event
+        true
+    };
+
+    if roles_changed {
+        // Store new roles
+        store_member_roles(event.guild_id, event.user.id, &event.roles, data).await?;
+    }
+
+    Ok(())
+}
+
+pub async fn handle_guild_member_remove(
+    ctx: &serenity::Context,
+    guild_id: serenity::GuildId,
+    user: serenity::User,
+    member_data_if_available: Option<serenity::Member>,
+    data: &Data,
+) -> Result<(), Error> {
+    // Store roles before they leave (if possible)
+    if let Some(member) = member_data_if_available.clone() {
+        store_member_roles(guild_id, user.id, &member.roles, data).await?;
+    }
+
+    // Handle Logging (Leave Message)
+    if let Err(e) = crate::modules::logging::events::membership::handle_guild_member_remove(
+        ctx,
+        guild_id,
+        user,
+        member_data_if_available,
+        data,
+    )
+    .await
+    {
+        error!("Error logging member leave: {:?}", e);
     }
 
     Ok(())

@@ -42,18 +42,6 @@ pub async fn touch_logging_guild(guild_id: serenity::GuildId, data: &Data) -> Re
     shared_events::touch_guild_stats(guild_id, data).await
 }
 
-/// Store or update the member's roles in the database.
-/// Only stores if the logging module is enabled.
-pub async fn store_member_roles(
-    guild_id: serenity::GuildId,
-    user_id: serenity::UserId,
-    roles: &[serenity::RoleId],
-    data: &Data,
-) -> Result<(), Error> {
-    // We delegate this to shared_events which handles the check for both modules
-    shared_events::store_member_roles(guild_id, user_id, roles, data).await
-}
-
 /// Get the member's stored roles from the database.
 pub async fn get_member_roles(
     guild_id: serenity::GuildId,

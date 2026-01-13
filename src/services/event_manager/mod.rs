@@ -63,6 +63,44 @@ impl serenity::EventHandler for Handler {
                     error!("Error handling shared guild member add: {:?}", e);
                 }
             }
+            serenity::FullEvent::GuildMemberUpdate {
+                old_if_available,
+                new,
+                event,
+                ..
+            } => {
+                let data = ctx.data::<Data>();
+                if let Err(e) = shared_events::role_cache::handle_guild_member_update(
+                    ctx,
+                    old_if_available.clone(),
+                    new.clone(),
+                    event.clone(),
+                    &data,
+                )
+                .await
+                {
+                    error!("Error handling shared guild member update: {:?}", e);
+                }
+            }
+            serenity::FullEvent::GuildMemberRemoval {
+                guild_id,
+                user,
+                member_data_if_available,
+                ..
+            } => {
+                let data = ctx.data::<Data>();
+                if let Err(e) = shared_events::role_cache::handle_guild_member_remove(
+                    ctx,
+                    *guild_id,
+                    user.clone(),
+                    member_data_if_available.clone(),
+                    &data,
+                )
+                .await
+                {
+                    error!("Error handling shared guild member remove: {:?}", e);
+                }
+            }
             serenity::FullEvent::InteractionCreate { interaction, .. } => {
                 handle_interactions(ctx, interaction).await;
             }
