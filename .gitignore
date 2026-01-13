@@ -2,6 +2,7 @@ target
 .env
 **/*.rs.bk
 **/*.md
+!docs/*.md
 !README.md
 poise
 serenity
