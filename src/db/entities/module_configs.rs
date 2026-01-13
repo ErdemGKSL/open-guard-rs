@@ -155,4 +155,3 @@ pub struct LoggingModuleConfig {
     #[serde(default)]
     pub membership_log_channel_id: Option<i64>,
 }
-

@@ -16,7 +16,7 @@ impl MigrationTrait for Migration {
                     .to_owned(),
             )
             .await?;
-        
+
         manager
             .drop_index(
                 Index::drop()
@@ -116,4 +116,3 @@ enum WhitelistUsers {
     GuildId,
     UserId,
 }
-

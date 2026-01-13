@@ -20,4 +20,3 @@ pub fn module() -> Module {
         ],
     }
 }
-

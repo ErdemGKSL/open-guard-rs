@@ -54,4 +54,3 @@ pub fn commands() -> Vec<poise::Command<Data, Error>> {
 pub fn definitions() -> Vec<ModuleDefinition> {
     get_modules().into_iter().map(|m| m.definition).collect()
 }
-

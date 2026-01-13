@@ -3,6 +3,7 @@ use crate::modules::{
     channel_permission_protection, channel_protection, logging, member_permission_protection,
     moderation_protection, role_permission_protection, role_protection,
 };
+use ::serenity::nonmax::NonMaxU16;
 use poise::serenity_prelude as serenity;
 use tracing::{error, info};
 
@@ -20,6 +21,43 @@ impl serenity::EventHandler for Handler {
                 if is_new.unwrap_or(false) {
                     info!("Joined new guild: {} ({})", guild.name, guild.id);
                 }
+
+                info!("Caching members for guild: {} ({})", guild.name, guild.id);
+                let ctx = ctx.clone();
+                let guild_id = guild.id;
+                tokio::spawn(async move {
+                    let mut last_id: Option<serenity::UserId> = None;
+                    let mut total_members = 0;
+                    loop {
+                        match guild_id
+                            .members(&ctx.http, Some(NonMaxU16::new(1000).unwrap()), last_id)
+                            .await
+                        {
+                            Ok(members) => {
+                                let count = members.len();
+                                total_members += count;
+                                info!(
+                                    "Fetched {} members (total: {}) for guild: {}",
+                                    count, total_members, guild_id
+                                );
+                                if count < 1000 {
+                                    break;
+                                }
+                                if let Some(last_member) = members.last() {
+                                    last_id = Some(last_member.user.id.clone());
+                                }
+                            }
+                            Err(e) => {
+                                error!("Failed to cache members for guild {}: {:?}", guild_id, e);
+                                break;
+                            }
+                        }
+                    }
+                    info!(
+                        "Finished caching members for guild: {} (total: {})",
+                        guild_id, total_members
+                    );
+                });
             }
             serenity::FullEvent::GuildDelete { incomplete, .. } => {
                 info!("Left guild: {}", incomplete.id);
@@ -338,4 +376,3 @@ impl serenity::EventHandler for Handler {
         }
     }
 }
-

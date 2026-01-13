@@ -58,4 +58,3 @@ enum Jails {
     ExpiresAt,
     Reason,
 }
-

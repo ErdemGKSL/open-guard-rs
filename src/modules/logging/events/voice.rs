@@ -130,4 +130,3 @@ pub async fn handle_voice_state_update(
 
     Ok(())
 }
-

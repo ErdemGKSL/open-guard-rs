@@ -225,6 +225,9 @@ async fn main() -> anyhow::Result<()> {
 
     let mut cache_settings = serenity::cache::Settings::default();
     cache_settings.max_messages = 2048;
+    cache_settings.cache_users = true;
+    cache_settings.cache_guilds = true;
+    cache_settings.cache_channels = true;
 
     // Build the client with both poise framework and custom event handler
     let mut client = serenity::ClientBuilder::new(token, intents)

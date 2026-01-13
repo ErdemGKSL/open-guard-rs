@@ -19,8 +19,16 @@ impl MigrationTrait for Migration {
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(WhitelistRoles::GuildId).big_integer().not_null())
-                    .col(ColumnDef::new(WhitelistRoles::RoleId).big_integer().not_null())
+                    .col(
+                        ColumnDef::new(WhitelistRoles::GuildId)
+                            .big_integer()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(WhitelistRoles::RoleId)
+                            .big_integer()
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(WhitelistRoles::Level).string().not_null())
                     .col(ColumnDef::new(WhitelistRoles::ModuleType).string().null())
                     .to_owned(),
@@ -65,8 +73,16 @@ impl MigrationTrait for Migration {
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(WhitelistUsers::GuildId).big_integer().not_null())
-                    .col(ColumnDef::new(WhitelistUsers::UserId).big_integer().not_null())
+                    .col(
+                        ColumnDef::new(WhitelistUsers::GuildId)
+                            .big_integer()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(WhitelistUsers::UserId)
+                            .big_integer()
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(WhitelistUsers::Level).string().not_null())
                     .col(ColumnDef::new(WhitelistUsers::ModuleType).string().null())
                     .to_owned(),
@@ -118,4 +134,3 @@ enum WhitelistUsers {
     Level,
     ModuleType,
 }
-

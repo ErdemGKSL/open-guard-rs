@@ -3,7 +3,10 @@ use crate::services::localization::L10nProxy;
 use poise::serenity_prelude as serenity;
 
 /// Reusable UI: Create a header with a separator
-pub fn create_header(text: String, with_separator: bool) -> Vec<serenity::CreateContainerComponent<'static>> {
+pub fn create_header(
+    text: String,
+    with_separator: bool,
+) -> Vec<serenity::CreateContainerComponent<'static>> {
     let mut components = vec![serenity::CreateContainerComponent::TextDisplay(
         serenity::CreateTextDisplay::new(text),
     )];
@@ -61,7 +64,7 @@ pub fn create_module_config_payload(
                 serenity::CreateTextDisplay::new(format!("⚙️ **{}**", name)),
             )],
             serenity::CreateSectionAccessory::Button(toggle_btn),
-        )
+        ),
     ));
 
     components.push(serenity::CreateContainerComponent::Separator(
@@ -69,7 +72,10 @@ pub fn create_module_config_payload(
     ));
 
     // Whitelist Section (Moved to top)
-    components.push(create_whitelist_section(format!("config_whitelist_view_module_{}", module_type), l10n));
+    components.push(create_whitelist_section(
+        format!("config_whitelist_view_module_{}", module_type),
+        l10n,
+    ));
     components.push(serenity::CreateContainerComponent::Separator(
         serenity::CreateSeparator::new(true),
     ));
@@ -95,7 +101,10 @@ pub fn create_module_config_payload(
 
     // Punishment Section
     components.push(serenity::CreateContainerComponent::TextDisplay(
-        serenity::CreateTextDisplay::new(format!("**{}**", l10n.t("config-punishment-label", None))),
+        serenity::CreateTextDisplay::new(format!(
+            "**{}**",
+            l10n.t("config-punishment-label", None)
+        )),
     ));
 
     use crate::db::entities::module_configs::PunishmentType;
@@ -147,7 +156,7 @@ pub fn create_module_config_payload(
                 serenity::CreateTextDisplay::new(l10n.t("config-revert-label", None)),
             )],
             serenity::CreateSectionAccessory::Button(revert_btn),
-        )
+        ),
     ));
 
     // Display Current Repetition Settings
@@ -162,31 +171,55 @@ pub fn create_module_config_payload(
         serenity::CreateTextDisplay::new(l10n.t("config-repetition-at-label", Some(&args))),
     ));
 
-    components.push(serenity::CreateContainerComponent::ActionRow(serenity::CreateActionRow::Buttons(vec![
-        serenity::CreateButton::new(format!("config_module_punish_at_dec_{:?}", module_type))
-            .label("-")
-            .style(serenity::ButtonStyle::Secondary),
-        serenity::CreateButton::new(format!("config_module_punish_at_inc_{:?}", module_type))
-            .label("+")
-            .style(serenity::ButtonStyle::Secondary),
-    ].into())));
+    components.push(serenity::CreateContainerComponent::ActionRow(
+        serenity::CreateActionRow::Buttons(
+            vec![
+                serenity::CreateButton::new(format!(
+                    "config_module_punish_at_dec_{:?}",
+                    module_type
+                ))
+                .label("-")
+                .style(serenity::ButtonStyle::Secondary),
+                serenity::CreateButton::new(format!(
+                    "config_module_punish_at_inc_{:?}",
+                    module_type
+                ))
+                .label("+")
+                .style(serenity::ButtonStyle::Secondary),
+            ]
+            .into(),
+        ),
+    ));
 
     // Interval Section
-    components.push(serenity::CreateContainerComponent::Separator(serenity::CreateSeparator::new(false)));
+    components.push(serenity::CreateContainerComponent::Separator(
+        serenity::CreateSeparator::new(false),
+    ));
     let mut args = fluent_bundle::FluentArgs::new();
     args.set("count", punishment_at_interval);
     components.push(serenity::CreateContainerComponent::TextDisplay(
         serenity::CreateTextDisplay::new(l10n.t("config-repetition-interval-label", Some(&args))),
     ));
 
-    components.push(serenity::CreateContainerComponent::ActionRow(serenity::CreateActionRow::Buttons(vec![
-        serenity::CreateButton::new(format!("config_module_punish_interval_dec_{:?}", module_type))
-            .label("-")
-            .style(serenity::ButtonStyle::Secondary),
-        serenity::CreateButton::new(format!("config_module_punish_interval_inc_{:?}", module_type))
-            .label("+")
-            .style(serenity::ButtonStyle::Secondary),
-    ].into())));
+    components.push(serenity::CreateContainerComponent::ActionRow(
+        serenity::CreateActionRow::Buttons(
+            vec![
+                serenity::CreateButton::new(format!(
+                    "config_module_punish_interval_dec_{:?}",
+                    module_type
+                ))
+                .label("-")
+                .style(serenity::ButtonStyle::Secondary),
+                serenity::CreateButton::new(format!(
+                    "config_module_punish_interval_inc_{:?}",
+                    module_type
+                ))
+                .label("+")
+                .style(serenity::ButtonStyle::Secondary),
+            ]
+            .into(),
+        ),
+    ));
 
     components
 }
@@ -196,16 +229,17 @@ pub fn create_whitelist_section(
     id: String,
     l10n: &L10nProxy,
 ) -> serenity::CreateContainerComponent<'static> {
-    serenity::CreateContainerComponent::Section(
-        serenity::CreateSection::new(
-            vec![serenity::CreateSectionComponent::TextDisplay(
-                serenity::CreateTextDisplay::new(format!("🛡️ **{}**", l10n.t("config-whitelists-btn", None))),
-            )],
-            serenity::CreateSectionAccessory::Button(
-                serenity::CreateButton::new(id)
-                    .label(l10n.t("config-whitelists-view-btn", None))
-                    .style(serenity::ButtonStyle::Primary),
-            ),
-        )
-    )
+    serenity::CreateContainerComponent::Section(serenity::CreateSection::new(
+        vec![serenity::CreateSectionComponent::TextDisplay(
+            serenity::CreateTextDisplay::new(format!(
+                "🛡️ **{}**",
+                l10n.t("config-whitelists-btn", None)
+            )),
+        )],
+        serenity::CreateSectionAccessory::Button(
+            serenity::CreateButton::new(id)
+                .label(l10n.t("config-whitelists-view-btn", None))
+                .style(serenity::ButtonStyle::Primary),
+        ),
+    ))
 }

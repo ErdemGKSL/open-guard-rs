@@ -104,4 +104,3 @@ pub async fn handle_guild_member_remove(
 
     Ok(())
 }
-

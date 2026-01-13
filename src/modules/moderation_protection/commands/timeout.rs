@@ -27,8 +27,7 @@ pub async fn timeout(
         Some(d) => d,
         None => {
             ctx.send(
-                poise::CreateReply::default()
-                    .content(l10n.t("mod-error-invalid-duration", None)),
+                poise::CreateReply::default().content(l10n.t("mod-error-invalid-duration", None)),
             )
             .await?;
             return Ok(());
@@ -76,11 +75,8 @@ pub async fn timeout(
     args.set("userId", user.id.get());
     args.set("duration", duration);
     args.set("reason", timeout_reason);
-    ctx.send(
-        poise::CreateReply::default().content(l10n.t("mod-timeout-success", Some(&args))),
-    )
-    .await?;
+    ctx.send(poise::CreateReply::default().content(l10n.t("mod-timeout-success", Some(&args))))
+        .await?;
 
     Ok(())
 }
-

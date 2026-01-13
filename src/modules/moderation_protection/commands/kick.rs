@@ -55,11 +55,8 @@ pub async fn kick(
     let mut args = FluentArgs::new();
     args.set("userId", user.id.get());
     args.set("reason", kick_reason);
-    ctx.send(
-        poise::CreateReply::default().content(l10n.t("mod-kick-success", Some(&args))),
-    )
-    .await?;
+    ctx.send(poise::CreateReply::default().content(l10n.t("mod-kick-success", Some(&args))))
+        .await?;
 
     Ok(())
 }
-

@@ -56,4 +56,3 @@ enum TempBans {
     ExpiresAt,
     Reason,
 }
-

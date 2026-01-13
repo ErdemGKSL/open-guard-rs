@@ -47,11 +47,8 @@ pub async fn unjail(
 
     let mut args = FluentArgs::new();
     args.set("userId", user.id.get());
-    ctx.send(
-        poise::CreateReply::default().content(l10n.t("mod-unjail-success", Some(&args))),
-    )
-    .await?;
+    ctx.send(poise::CreateReply::default().content(l10n.t("mod-unjail-success", Some(&args))))
+        .await?;
 
     Ok(())
 }
-

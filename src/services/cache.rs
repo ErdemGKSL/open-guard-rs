@@ -24,9 +24,8 @@ impl ObjectCacheService {
             loop {
                 sleep(Duration::from_secs(30)).await;
                 let now = Instant::now();
-                cleaner_cache.retain(|_, (_, time)| {
-                    now.duration_since(*time) < Duration::from_secs(90)
-                });
+                cleaner_cache
+                    .retain(|_, (_, time)| now.duration_since(*time) < Duration::from_secs(90));
             }
         });
 
@@ -47,24 +46,35 @@ impl ObjectCacheService {
         );
     }
 
-    pub fn take_channel(&self, guild_id: serenity::GuildId, channel_id: serenity::ChannelId) -> Option<serenity::GuildChannel> {
-        self.cache.remove(&(guild_id.get(), channel_id.get())).and_then(|(_, (obj, _))| {
-            if let CachedObject::Channel(c) = obj {
-                Some(c)
-            } else {
-                None
-            }
-        })
+    pub fn take_channel(
+        &self,
+        guild_id: serenity::GuildId,
+        channel_id: serenity::ChannelId,
+    ) -> Option<serenity::GuildChannel> {
+        self.cache
+            .remove(&(guild_id.get(), channel_id.get()))
+            .and_then(|(_, (obj, _))| {
+                if let CachedObject::Channel(c) = obj {
+                    Some(c)
+                } else {
+                    None
+                }
+            })
     }
 
-    pub fn take_role(&self, guild_id: serenity::GuildId, role_id: serenity::RoleId) -> Option<serenity::Role> {
-        self.cache.remove(&(guild_id.get(), role_id.get())).and_then(|(_, (obj, _))| {
-            if let CachedObject::Role(r) = obj {
-                Some(r)
-            } else {
-                None
-            }
-        })
+    pub fn take_role(
+        &self,
+        guild_id: serenity::GuildId,
+        role_id: serenity::RoleId,
+    ) -> Option<serenity::Role> {
+        self.cache
+            .remove(&(guild_id.get(), role_id.get()))
+            .and_then(|(_, (obj, _))| {
+                if let CachedObject::Role(r) = obj {
+                    Some(r)
+                } else {
+                    None
+                }
+            })
     }
 }
-

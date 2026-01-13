@@ -36,4 +36,3 @@ impl MigratorTrait for Migrator {
         ]
     }
 }
-

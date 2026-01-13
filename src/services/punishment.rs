@@ -241,4 +241,3 @@ impl PunishmentService {
         Ok(())
     }
 }
-

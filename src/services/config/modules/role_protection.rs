@@ -1,6 +1,6 @@
-use crate::db::entities::module_configs::{self, RoleProtectionModuleConfig, ModuleType};
-use crate::services::localization::L10nProxy;
 use crate::Data;
+use crate::db::entities::module_configs::{self, ModuleType, RoleProtectionModuleConfig};
+use crate::services::localization::L10nProxy;
 use poise::serenity_prelude as serenity;
 use sea_orm::{ActiveModelTrait, EntityTrait, Set};
 
@@ -46,7 +46,9 @@ pub async fn handle_interaction(
     let custom_id = &interaction.data.custom_id;
 
     if custom_id == "config_rp_punish_when" {
-        if let serenity::ComponentInteractionDataKind::StringSelect { values } = &interaction.data.kind {
+        if let serenity::ComponentInteractionDataKind::StringSelect { values } =
+            &interaction.data.kind
+        {
             let (config_active, mut config) = get_config(data, guild_id).await?;
             config.punish_when = values.to_vec();
             save_config(data, config_active, config).await?;
@@ -62,12 +64,14 @@ async fn get_config(
     guild_id: serenity::GuildId,
 ) -> Result<(module_configs::ActiveModel, RoleProtectionModuleConfig), crate::Error> {
     let db = &data.db;
-    let m_config = module_configs::Entity::find_by_id((guild_id.get() as i64, ModuleType::RoleProtection))
-        .one(db)
-        .await?
-        .ok_or_else(|| anyhow::anyhow!("Config not found"))?;
+    let m_config =
+        module_configs::Entity::find_by_id((guild_id.get() as i64, ModuleType::RoleProtection))
+            .one(db)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("Config not found"))?;
 
-    let config: RoleProtectionModuleConfig = serde_json::from_value(m_config.config.clone()).unwrap_or_default();
+    let config: RoleProtectionModuleConfig =
+        serde_json::from_value(m_config.config.clone()).unwrap_or_default();
     Ok((m_config.into(), config))
 }
 
@@ -80,4 +84,3 @@ async fn save_config(
     config_active.update(&data.db).await?;
     Ok(())
 }
-

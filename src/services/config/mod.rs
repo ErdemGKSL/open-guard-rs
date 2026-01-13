@@ -475,8 +475,9 @@ pub async fn handle_interaction(
 
     // Try module-specific handlers first
     if modules::channel_protection::handle_interaction(ctx, interaction, data, guild_id).await? {
-        updated_reply =
-            Some(build_module_menu(data, guild_id, ModuleType::ChannelProtection, page, &l10n).await?);
+        updated_reply = Some(
+            build_module_menu(data, guild_id, ModuleType::ChannelProtection, page, &l10n).await?,
+        );
     } else if modules::channel_permission_protection::handle_interaction(
         ctx,
         interaction,
@@ -508,7 +509,14 @@ pub async fn handle_interaction(
     .await?
     {
         updated_reply = Some(
-            build_module_menu(data, guild_id, ModuleType::RolePermissionProtection, page, &l10n).await?,
+            build_module_menu(
+                data,
+                guild_id,
+                ModuleType::RolePermissionProtection,
+                page,
+                &l10n,
+            )
+            .await?,
         );
     } else if modules::member_permission_protection::handle_interaction(
         ctx,
@@ -531,15 +539,25 @@ pub async fn handle_interaction(
     } else if modules::bot_adding_protection::handle_interaction(ctx, interaction, data, guild_id)
         .await?
     {
-        updated_reply =
-            Some(build_module_menu(data, guild_id, ModuleType::BotAddingProtection, page, &l10n).await?);
+        updated_reply = Some(
+            build_module_menu(data, guild_id, ModuleType::BotAddingProtection, page, &l10n).await?,
+        );
     } else if modules::moderation_protection::handle_interaction(ctx, interaction, data, guild_id)
         .await?
     {
-        updated_reply =
-            Some(build_module_menu(data, guild_id, ModuleType::ModerationProtection, page, &l10n).await?);
+        updated_reply = Some(
+            build_module_menu(
+                data,
+                guild_id,
+                ModuleType::ModerationProtection,
+                page,
+                &l10n,
+            )
+            .await?,
+        );
     } else if modules::logging::handle_interaction(ctx, interaction, data, guild_id).await? {
-        updated_reply = Some(build_module_menu(data, guild_id, ModuleType::Logging, page, &l10n).await?);
+        updated_reply =
+            Some(build_module_menu(data, guild_id, ModuleType::Logging, page, &l10n).await?);
     } else if let Some(components) = whitelist::handle_interaction(ctx, interaction, data).await? {
         updated_reply = Some(components);
     } else if custom_id == "config_back_to_main" {
@@ -615,7 +633,8 @@ pub async fn handle_interaction(
                     "Logging" => ModuleType::Logging,
                     _ => return Ok(()),
                 };
-                updated_reply = Some(build_module_menu(data, guild_id, module_type, 0, &l10n).await?);
+                updated_reply =
+                    Some(build_module_menu(data, guild_id, module_type, 0, &l10n).await?);
             }
         }
     } else if let Some(rest) = custom_id.strip_prefix("config_page_") {
@@ -636,11 +655,14 @@ pub async fn handle_interaction(
                     ModuleType::MemberPermissionProtection
                 }
                 "bot_adding_protection" | "BotAddingProtection" => ModuleType::BotAddingProtection,
-                "moderation_protection" | "ModerationProtection" => ModuleType::ModerationProtection,
+                "moderation_protection" | "ModerationProtection" => {
+                    ModuleType::ModerationProtection
+                }
                 "logging" | "Logging" => ModuleType::Logging,
                 _ => return Ok(()),
             };
-            updated_reply = Some(build_module_menu(data, guild_id, module_type, page_num, &l10n).await?);
+            updated_reply =
+                Some(build_module_menu(data, guild_id, module_type, page_num, &l10n).await?);
         }
     } else if custom_id.starts_with("config_module_log_channel_") {
         if let serenity::ComponentInteractionDataKind::ChannelSelect { values } =
@@ -676,7 +698,8 @@ pub async fn handle_interaction(
                 .exec(&data.db)
                 .await?;
 
-                updated_reply = Some(build_module_menu(data, guild_id, module_type, page, &l10n).await?);
+                updated_reply =
+                    Some(build_module_menu(data, guild_id, module_type, page, &l10n).await?);
             }
         }
     } else if custom_id.starts_with("config_module_punishment_") {
@@ -723,7 +746,8 @@ pub async fn handle_interaction(
                 .exec(&data.db)
                 .await?;
 
-                updated_reply = Some(build_module_menu(data, guild_id, module_type, page, &l10n).await?);
+                updated_reply =
+                    Some(build_module_menu(data, guild_id, module_type, page, &l10n).await?);
             }
         }
     } else if let Some(module_str) = custom_id.strip_prefix("config_module_revert_") {
@@ -884,4 +908,3 @@ pub async fn handle_interaction(
 
     Ok(())
 }
-

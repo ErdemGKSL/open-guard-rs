@@ -57,4 +57,3 @@ enum ModuleConfigs {
     LogChannelId,
     Config,
 }
-

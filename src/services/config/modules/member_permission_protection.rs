@@ -19,4 +19,3 @@ pub async fn handle_interaction(
 ) -> Result<bool, crate::Error> {
     Ok(false)
 }
-

@@ -34,4 +34,3 @@ enum GuildConfigs {
     Table,
     GuildId,
 }
-

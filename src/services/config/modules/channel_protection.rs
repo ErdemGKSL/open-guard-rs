@@ -1,6 +1,6 @@
+use crate::Data;
 use crate::db::entities::module_configs::{self, ChannelProtectionModuleConfig, ModuleType};
 use crate::services::localization::L10nProxy;
-use crate::Data;
 use poise::serenity_prelude as serenity;
 use sea_orm::{ActiveModelTrait, EntityTrait, Set};
 
@@ -31,7 +31,7 @@ pub fn build_ui(
                 serenity::CreateTextDisplay::new(l10n.t("config-cp-ignore-private-label", None)),
             )],
             serenity::CreateSectionAccessory::Button(ignore_btn),
-        )
+        ),
     ));
 
     // Punish When Multi-Select
@@ -77,7 +77,9 @@ pub async fn handle_interaction(
     }
 
     if custom_id == "config_cp_punish_when" {
-        if let serenity::ComponentInteractionDataKind::StringSelect { values } = &interaction.data.kind {
+        if let serenity::ComponentInteractionDataKind::StringSelect { values } =
+            &interaction.data.kind
+        {
             let (config_active, mut config) = get_config(data, guild_id).await?;
             config.punish_when = values.to_vec();
             save_config(data, config_active, config).await?;
@@ -93,12 +95,14 @@ async fn get_config(
     guild_id: serenity::GuildId,
 ) -> Result<(module_configs::ActiveModel, ChannelProtectionModuleConfig), crate::Error> {
     let db = &data.db;
-    let m_config = module_configs::Entity::find_by_id((guild_id.get() as i64, ModuleType::ChannelProtection))
-        .one(db)
-        .await?
-        .ok_or_else(|| anyhow::anyhow!("Config not found"))?;
+    let m_config =
+        module_configs::Entity::find_by_id((guild_id.get() as i64, ModuleType::ChannelProtection))
+            .one(db)
+            .await?
+            .ok_or_else(|| anyhow::anyhow!("Config not found"))?;
 
-    let config: ChannelProtectionModuleConfig = serde_json::from_value(m_config.config.clone()).unwrap_or_default();
+    let config: ChannelProtectionModuleConfig =
+        serde_json::from_value(m_config.config.clone()).unwrap_or_default();
     Ok((m_config.into(), config))
 }
 
@@ -111,4 +115,3 @@ async fn save_config(
     config_active.update(&data.db).await?;
     Ok(())
 }
-

@@ -1,7 +1,5 @@
 use crate::db::entities::{
-    module_configs::ModuleType,
-    whitelist_role, whitelist_user,
-    whitelists::WhitelistLevel,
+    module_configs::ModuleType, whitelist_role, whitelist_user, whitelists::WhitelistLevel,
 };
 use poise::serenity_prelude as serenity;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
@@ -56,26 +54,30 @@ impl WhitelistService {
                 };
 
                 let get_position = |member: &serenity::Member| -> i16 {
-                    member.roles.iter()
+                    member
+                        .roles
+                        .iter()
                         .filter_map(|r| roles.get(r).map(|role| role.position))
                         .max()
                         .unwrap_or(0)
-                        // If cached member has no roles but is owner? Owner check requires Guild object.
+                    // If cached member has no roles but is owner? Owner check requires Guild object.
                 };
-                
+
                 let user_position = get_position(&member);
                 let bot_position = get_position(&bot_member);
 
                 if user_position > bot_position {
                     // User is above bot
-                    let has_admin = member.permissions.map_or(false, |p| p.contains(serenity::Permissions::ADMINISTRATOR));
-                    
+                    let has_admin = member
+                        .permissions
+                        .map_or(false, |p| p.contains(serenity::Permissions::ADMINISTRATOR));
+
                     let implicit_level = if has_admin {
                         WhitelistLevel::Admin
                     } else {
                         WhitelistLevel::Invulnerable
                     };
-                    
+
                     level = self.merge_levels(level, Some(implicit_level));
                 }
             }
@@ -119,21 +121,22 @@ impl WhitelistService {
 
     /// Helper to merge levels, keeping the highest privilege.
     /// Head > Admin > Invulnerable
-    fn merge_levels(&self, current: Option<WhitelistLevel>, new: Option<WhitelistLevel>) -> Option<WhitelistLevel> {
+    fn merge_levels(
+        &self,
+        current: Option<WhitelistLevel>,
+        new: Option<WhitelistLevel>,
+    ) -> Option<WhitelistLevel> {
         match (current, new) {
-            (Some(c), Some(n)) => {
-                Some(if c == WhitelistLevel::Head || n == WhitelistLevel::Head {
-                    WhitelistLevel::Head
-                } else if c == WhitelistLevel::Admin || n == WhitelistLevel::Admin {
-                    WhitelistLevel::Admin
-                } else {
-                    WhitelistLevel::Invulnerable
-                })
-            }
+            (Some(c), Some(n)) => Some(if c == WhitelistLevel::Head || n == WhitelistLevel::Head {
+                WhitelistLevel::Head
+            } else if c == WhitelistLevel::Admin || n == WhitelistLevel::Admin {
+                WhitelistLevel::Admin
+            } else {
+                WhitelistLevel::Invulnerable
+            }),
             (Some(c), None) => Some(c),
             (None, Some(n)) => Some(n),
             (None, None) => None,
         }
     }
 }
-
