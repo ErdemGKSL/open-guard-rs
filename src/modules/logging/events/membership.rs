@@ -34,60 +34,12 @@ pub async fn get_membership_logging_config(
     }
 }
 
+use crate::services::event_manager::shared_events;
+
 /// Upsert the logging guild entry to track last access time.
 /// This is used for cleanup of stale guilds.
 pub async fn touch_logging_guild(guild_id: serenity::GuildId, data: &Data) -> Result<(), Error> {
-    let now = Utc::now();
-    let model = logging_guilds::ActiveModel {
-        guild_id: Set(guild_id.get() as i64),
-        last_accessed_at: Set(now.into()),
-    };
-
-    logging_guilds::Entity::insert(model)
-        .on_conflict(
-            sea_orm::sea_query::OnConflict::column(logging_guilds::Column::GuildId)
-                .update_column(logging_guilds::Column::LastAccessedAt)
-                .to_owned(),
-        )
-        .exec(&data.db)
-        .await?;
-
-    Ok(())
-}
-
-/// Internal function to store member roles without config check.
-async fn store_member_roles_internal(
-    guild_id: serenity::GuildId,
-    user_id: serenity::UserId,
-    roles: &[serenity::RoleId],
-    data: &Data,
-) -> Result<(), Error> {
-    let role_ids: Vec<u64> = roles.iter().map(|r| r.get()).collect();
-    let now = Utc::now();
-
-    let model = member_old_roles::ActiveModel {
-        guild_id: Set(guild_id.get() as i64),
-        user_id: Set(user_id.get() as i64),
-        role_ids: Set(json!(role_ids)),
-        updated_at: Set(now.into()),
-    };
-
-    member_old_roles::Entity::insert(model)
-        .on_conflict(
-            sea_orm::sea_query::OnConflict::columns([
-                member_old_roles::Column::GuildId,
-                member_old_roles::Column::UserId,
-            ])
-            .update_columns([
-                member_old_roles::Column::RoleIds,
-                member_old_roles::Column::UpdatedAt,
-            ])
-            .to_owned(),
-        )
-        .exec(&data.db)
-        .await?;
-
-    Ok(())
+    shared_events::touch_guild_stats(guild_id, data).await
 }
 
 /// Store or update the member's roles in the database.
@@ -98,19 +50,8 @@ pub async fn store_member_roles(
     roles: &[serenity::RoleId],
     data: &Data,
 ) -> Result<(), Error> {
-    // Check if logging module is enabled for membership
-    if get_membership_logging_config(guild_id, data)
-        .await?
-        .is_none()
-    {
-        return Ok(());
-    }
-
-    // Touch the logging guild to update last access time
-    touch_logging_guild(guild_id, data).await?;
-
-    // Store the roles
-    store_member_roles_internal(guild_id, user_id, roles, data).await
+    // We delegate this to shared_events which handles the check for both modules
+    shared_events::store_member_roles(guild_id, user_id, roles, data).await
 }
 
 /// Get the member's stored roles from the database.
@@ -119,19 +60,7 @@ pub async fn get_member_roles(
     user_id: serenity::UserId,
     data: &Data,
 ) -> Result<Option<Vec<serenity::RoleId>>, Error> {
-    let result =
-        member_old_roles::Entity::find_by_id((guild_id.get() as i64, user_id.get() as i64))
-            .one(&data.db)
-            .await?;
-
-    if let Some(model) = result {
-        let role_ids: Vec<u64> = serde_json::from_value(model.role_ids)?;
-        let roles: Vec<serenity::RoleId> =
-            role_ids.into_iter().map(serenity::RoleId::new).collect();
-        Ok(Some(roles))
-    } else {
-        Ok(None)
-    }
+    shared_events::get_stored_member_roles(guild_id, user_id, data).await
 }
 
 /// Delete the member's stored roles from the database.
@@ -316,11 +245,7 @@ pub async fn handle_guild_member_add(
         None => return Ok(()),
     };
 
-    // Touch the logging guild to update last access time
-    touch_logging_guild(guild_id, data).await?;
-
-    // Store the member's initial roles (usually empty on join, but could have auto-roles)
-    store_member_roles_internal(guild_id, member.user.id, &member.roles, data).await?;
+    // We do NOT store roles here anymore, as it is handled by shared_events::membership.
 
     let l10n = data.l10n.get_l10n_for_guild(guild_id, &data.db).await;
 

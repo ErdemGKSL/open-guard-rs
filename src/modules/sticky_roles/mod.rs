@@ -1,6 +1,6 @@
 use crate::modules::{Module, ModuleDefinition};
 
-pub mod events;
+pub mod tracking;
 
 pub fn module() -> Module {
     Module {
@@ -10,5 +10,6 @@ pub fn module() -> Module {
             desc_key: "module-sticky-roles-desc",
         },
         commands: vec![],
+        event_handlers: vec![],
     }
 }

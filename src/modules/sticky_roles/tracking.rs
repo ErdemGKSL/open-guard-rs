@@ -1,5 +1,5 @@
 use crate::db::entities::module_configs::{self, ModuleType, StickyRolesModuleConfig};
-use crate::modules::logging::events::membership::{get_member_roles, touch_logging_guild};
+use crate::services::event_manager::shared_events;
 use crate::{Data, Error};
 use poise::serenity_prelude as serenity;
 use sea_orm::EntityTrait;
@@ -41,17 +41,15 @@ pub async fn handle_guild_member_add(
     }
 
     // Get stored roles
-    let stored_roles = match get_member_roles(guild_id, member.user.id, data).await? {
-        Some(roles) => roles,
-        None => return Ok(()),
-    };
+    let stored_roles: Vec<serenity::RoleId> =
+        match shared_events::get_stored_member_roles(guild_id, member.user.id, data).await? {
+            Some(roles) => roles,
+            None => return Ok(()),
+        };
 
     if stored_roles.is_empty() {
         return Ok(());
     }
-
-    // Touch the logging guild (since it shares the tracking)
-    touch_logging_guild(guild_id, data).await?;
 
     info!(
         "Restoring sticky roles for member {} in guild {}",

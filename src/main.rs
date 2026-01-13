@@ -233,7 +233,7 @@ async fn main() -> anyhow::Result<()> {
     // Build the client with both poise framework and custom event handler
     let mut client = serenity::ClientBuilder::new(token, intents)
         .framework(Box::new(framework))
-        .event_handler(Arc::new(services::event_manager::Handler))
+        .event_handler(Arc::new(services::event_manager::Handler::new()))
         .cache_settings(cache_settings)
         .data(Arc::new(Data {
             db: db.clone(),

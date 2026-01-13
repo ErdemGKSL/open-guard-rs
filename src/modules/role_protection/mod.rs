@@ -10,5 +10,6 @@ pub fn module() -> Module {
             desc_key: "module-role-protection-desc",
         },
         commands: vec![],
+        event_handlers: vec![events::handler],
     }
 }

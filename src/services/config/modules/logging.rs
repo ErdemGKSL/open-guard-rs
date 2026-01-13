@@ -165,11 +165,9 @@ pub async fn handle_interaction(
         } else if !config.log_membership && was_enabled {
             // Disabling: delete all member roles for this guild ONLY IF sticky roles is also disabled
             let is_sticky_enabled =
-                crate::modules::sticky_roles::events::tracking::get_sticky_roles_config(
-                    guild_id, data,
-                )
-                .await?
-                .is_some();
+                crate::modules::sticky_roles::tracking::get_sticky_roles_config(guild_id, data)
+                    .await?
+                    .is_some();
             if !is_sticky_enabled {
                 if let Err(e) =
                     crate::modules::logging::events::membership::delete_all_guild_member_roles(

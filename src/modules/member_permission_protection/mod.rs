@@ -12,5 +12,6 @@ pub fn module() -> Module {
     Module {
         definition: DEFINITION,
         commands: vec![],
+        event_handlers: vec![events::handler],
     }
 }

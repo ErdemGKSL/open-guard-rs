@@ -8,7 +8,13 @@ pub mod role_permission_protection;
 pub mod role_protection;
 pub mod sticky_roles;
 
-use crate::{Data, Error};
+use poise::serenity_prelude as serenity;
+
+pub type EventHandler = for<'a> fn(
+    &'a serenity::Context,
+    &'a serenity::FullEvent,
+    &'a crate::Data,
+) -> poise::BoxFuture<'a, Result<(), crate::Error>>;
 
 #[derive(Debug, Clone)]
 pub struct ModuleDefinition {
@@ -19,7 +25,8 @@ pub struct ModuleDefinition {
 
 pub struct Module {
     pub definition: ModuleDefinition,
-    pub commands: Vec<poise::Command<Data, Error>>,
+    pub commands: Vec<poise::Command<crate::Data, crate::Error>>,
+    pub event_handlers: Vec<EventHandler>,
 }
 
 pub fn get_modules() -> Vec<Module> {
@@ -36,7 +43,7 @@ pub fn get_modules() -> Vec<Module> {
     ]
 }
 
-pub fn commands() -> Vec<poise::Command<Data, Error>> {
+pub fn commands() -> Vec<poise::Command<crate::Data, crate::Error>> {
     let mut all_commands = vec![];
 
     for mut module in get_modules() {

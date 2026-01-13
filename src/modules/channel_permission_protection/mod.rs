@@ -10,5 +10,6 @@ pub fn module() -> Module {
             desc_key: "module-channel-permission-protection-desc",
         },
         commands: vec![],
+        event_handlers: vec![events::handler],
     }
 }

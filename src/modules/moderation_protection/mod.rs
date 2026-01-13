@@ -16,7 +16,8 @@ pub fn module() -> Module {
             commands::jail(),
             commands::kick(),
             commands::timeout(),
-            commands::unjail(),
+            commands::unjail::unjail(),
         ],
+        event_handlers: vec![events::handler],
     }
 }
