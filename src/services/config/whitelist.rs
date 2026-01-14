@@ -288,6 +288,164 @@ pub async fn build_whitelist_menu(
     )])
 }
 
+/// Creates a modal for adding/editing a whitelist user entry
+pub fn build_whitelist_user_modal<'a>(
+    entry_id: Option<i32>,
+    module: Option<ModuleType>,
+    current_user_id: Option<serenity::UserId>,
+    current_level: Option<WhitelistLevel>,
+    l10n: &L10nProxy,
+) -> serenity::CreateModal<'a> {
+    let suffix = module
+        .map(|m| m.to_string())
+        .unwrap_or_else(|| "global".to_string());
+
+    let custom_id = if let Some(id) = entry_id {
+        format!("whitelist_modal_user_edit_{}_{}", id, suffix)
+    } else {
+        format!("whitelist_modal_user_new_{}", suffix)
+    };
+
+    let title = if entry_id.is_some() {
+        l10n.t("config-whitelist-edit-user-modal-title", None)
+    } else {
+        l10n.t("config-whitelist-add-user-modal-title", None)
+    };
+
+    // User select with Label wrapper
+    let user_select = serenity::CreateSelectMenu::new(
+        "whitelist_modal_user_select",
+        serenity::CreateSelectMenuKind::User {
+            default_users: current_user_id.map(|id| vec![id].into()),
+        },
+    )
+    .min_values(1)
+    .max_values(1)
+    .required(true);
+
+    let user_label = serenity::CreateLabel::select_menu(
+        l10n.t("config-whitelist-modal-user-label", None),
+        user_select,
+    )
+    .description(l10n.t("config-whitelist-modal-user-description", None));
+
+    // Level select with Label wrapper
+    let mut level_options = vec![];
+    for level in WhitelistLevel::iter() {
+        let label = match level {
+            WhitelistLevel::Head => l10n.t("config-level-head", None),
+            WhitelistLevel::Admin => l10n.t("config-level-admin", None),
+            WhitelistLevel::Invulnerable => l10n.t("config-level-invulnerable", None),
+        };
+        let mut opt =
+            serenity::CreateSelectMenuOption::new(label, level.to_string().to_lowercase());
+        if let Some(l) = current_level {
+            if l == level {
+                opt = opt.default_selection(true);
+            }
+        }
+        level_options.push(opt);
+    }
+
+    let level_select = serenity::CreateSelectMenu::new(
+        "whitelist_modal_level_select",
+        serenity::CreateSelectMenuKind::String {
+            options: level_options.into(),
+        },
+    )
+    .required(true);
+
+    let level_label = serenity::CreateLabel::select_menu(
+        l10n.t("config-whitelist-modal-level-label", None),
+        level_select,
+    )
+    .description(l10n.t("config-whitelist-modal-level-description", None));
+
+    serenity::CreateModal::new(custom_id, title).components(vec![
+        serenity::CreateModalComponent::Label(user_label),
+        serenity::CreateModalComponent::Label(level_label),
+    ])
+}
+
+/// Creates a modal for adding/editing a whitelist role entry
+pub fn build_whitelist_role_modal<'a>(
+    entry_id: Option<i32>,
+    module: Option<ModuleType>,
+    current_role_id: Option<serenity::RoleId>,
+    current_level: Option<WhitelistLevel>,
+    l10n: &L10nProxy,
+) -> serenity::CreateModal<'a> {
+    let suffix = module
+        .map(|m| m.to_string())
+        .unwrap_or_else(|| "global".to_string());
+
+    let custom_id = if let Some(id) = entry_id {
+        format!("whitelist_modal_role_edit_{}_{}", id, suffix)
+    } else {
+        format!("whitelist_modal_role_new_{}", suffix)
+    };
+
+    let title = if entry_id.is_some() {
+        l10n.t("config-whitelist-edit-role-modal-title", None)
+    } else {
+        l10n.t("config-whitelist-add-role-modal-title", None)
+    };
+
+    // Role select with Label wrapper
+    let role_select = serenity::CreateSelectMenu::new(
+        "whitelist_modal_role_select",
+        serenity::CreateSelectMenuKind::Role {
+            default_roles: current_role_id.map(|id| vec![id].into()),
+        },
+    )
+    .min_values(1)
+    .max_values(1)
+    .required(true);
+
+    let role_label = serenity::CreateLabel::select_menu(
+        l10n.t("config-whitelist-modal-role-label", None),
+        role_select,
+    )
+    .description(l10n.t("config-whitelist-modal-role-description", None));
+
+    // Level select with Label wrapper
+    let mut level_options = vec![];
+    for level in WhitelistLevel::iter() {
+        let label = match level {
+            WhitelistLevel::Head => l10n.t("config-level-head", None),
+            WhitelistLevel::Admin => l10n.t("config-level-admin", None),
+            WhitelistLevel::Invulnerable => l10n.t("config-level-invulnerable", None),
+        };
+        let mut opt =
+            serenity::CreateSelectMenuOption::new(label, level.to_string().to_lowercase());
+        if let Some(l) = current_level {
+            if l == level {
+                opt = opt.default_selection(true);
+            }
+        }
+        level_options.push(opt);
+    }
+
+    let level_select = serenity::CreateSelectMenu::new(
+        "whitelist_modal_level_select",
+        serenity::CreateSelectMenuKind::String {
+            options: level_options.into(),
+        },
+    )
+    .required(true);
+
+    let level_label = serenity::CreateLabel::select_menu(
+        l10n.t("config-whitelist-modal-level-label", None),
+        level_select,
+    )
+    .description(l10n.t("config-whitelist-modal-level-description", None));
+
+    serenity::CreateModal::new(custom_id, title).components(vec![
+        serenity::CreateModalComponent::Label(role_label),
+        serenity::CreateModalComponent::Label(level_label),
+    ])
+}
+
 /// Builds the individual whitelist entry management page
 pub async fn build_manage_entry(
     data: &Data,
@@ -459,14 +617,24 @@ pub async fn build_manage_entry(
     )])
 }
 
+/// Result type for whitelist interaction handling
+pub enum WhitelistInteractionResult {
+    /// Update the message with new components
+    Components(Vec<serenity::CreateComponent<'static>>),
+    /// Show a modal to the user (the caller should NOT acknowledge the interaction)
+    ShowModal(serenity::CreateModal<'static>),
+    /// No action needed
+    None,
+}
+
 pub async fn handle_interaction(
     ctx: &serenity::Context,
     interaction: &serenity::ComponentInteraction,
     data: &Data,
-) -> Result<Option<Vec<serenity::CreateComponent<'static>>>, Error> {
+) -> Result<WhitelistInteractionResult, Error> {
     let guild_id = match interaction.guild_id {
         Some(id) => id,
-        None => return Ok(None),
+        None => return Ok(WhitelistInteractionResult::None),
     };
 
     let member = interaction
@@ -508,21 +676,21 @@ pub async fn handle_interaction(
     // View Whitelist Menu
     if custom_id == "config_whitelist_view_global" {
         let is_head = check_perm(None).await?;
-        return Ok(Some(
+        return Ok(WhitelistInteractionResult::Components(
             build_whitelist_menu(data, guild_id, None, 0, is_head, &l10n).await?,
         ));
     }
     if let Some(module_str) = custom_id.strip_prefix("config_whitelist_view_module_") {
         let module = parse_module(module_str);
         let is_head = check_perm(module).await?;
-        return Ok(Some(
+        return Ok(WhitelistInteractionResult::Components(
             build_whitelist_menu(data, guild_id, module, 0, is_head, &l10n).await?,
         ));
     }
     if let Some(rest) = custom_id.strip_prefix("config_whitelist_view_") {
         let module = parse_module(rest);
         let is_head = check_perm(module).await?;
-        return Ok(Some(
+        return Ok(WhitelistInteractionResult::Components(
             build_whitelist_menu(data, guild_id, module, 0, is_head, &l10n).await?,
         ));
     }
@@ -534,13 +702,13 @@ pub async fn handle_interaction(
             let module = parse_module(parts[0]);
             let page: usize = parts[1].parse().unwrap_or(0);
             let is_head = check_perm(module).await?;
-            return Ok(Some(
+            return Ok(WhitelistInteractionResult::Components(
                 build_whitelist_menu(data, guild_id, module, page, is_head, &l10n).await?,
             ));
         }
     }
 
-    // Manage Page Navigation
+    // Manage Page Navigation -> Show edit modal
     if let Some(rest) = custom_id.strip_prefix("config_whitelist_manage_") {
         // format: user_{id}_{suffix} or role_{id}_{suffix}
         let parts: Vec<&str> = rest.splitn(3, '_').collect();
@@ -548,232 +716,64 @@ pub async fn handle_interaction(
             let is_user = parts[0] == "user";
             let id: i32 = parts[1].parse().unwrap_or(0);
             let module = parse_module(parts[2]);
-            let is_head = check_perm(module).await?;
-            return Ok(Some(
-                build_manage_entry(data, guild_id, Some(id), is_user, module, is_head, &l10n)
-                    .await?,
-            ));
+            if !check_perm(module).await? {
+                return Ok(WhitelistInteractionResult::None);
+            }
+
+            // Fetch existing entry data and show edit modal
+            if is_user {
+                let entry = whitelist_user::Entity::find_by_id(id)
+                    .filter(whitelist_user::Column::GuildId.eq(guild_id.get() as i64))
+                    .one(&data.db)
+                    .await?;
+                if let Some(entry) = entry {
+                    let modal = build_whitelist_user_modal(
+                        Some(id),
+                        module,
+                        Some(serenity::UserId::new(entry.user_id as u64)),
+                        Some(entry.level),
+                        &l10n,
+                    );
+                    return Ok(WhitelistInteractionResult::ShowModal(modal));
+                }
+            } else {
+                let entry = whitelist_role::Entity::find_by_id(id)
+                    .filter(whitelist_role::Column::GuildId.eq(guild_id.get() as i64))
+                    .one(&data.db)
+                    .await?;
+                if let Some(entry) = entry {
+                    let modal = build_whitelist_role_modal(
+                        Some(id),
+                        module,
+                        Some(serenity::RoleId::new(entry.role_id as u64)),
+                        Some(entry.level),
+                        &l10n,
+                    );
+                    return Ok(WhitelistInteractionResult::ShowModal(modal));
+                }
+            }
         }
     }
 
-    // Add New Entry
+    // Add New Entry -> Show create modal
     if let Some(rest) = custom_id.strip_prefix("config_whitelist_add_user_page_") {
         let module = parse_module(rest);
-        let is_head = check_perm(module).await?;
-        return Ok(Some(
-            build_manage_entry(data, guild_id, None, true, module, is_head, &l10n).await?,
-        ));
+        if !check_perm(module).await? {
+            return Ok(WhitelistInteractionResult::None);
+        }
+        let modal = build_whitelist_user_modal(None, module, None, None, &l10n);
+        return Ok(WhitelistInteractionResult::ShowModal(modal));
     }
     if let Some(rest) = custom_id.strip_prefix("config_whitelist_add_role_page_") {
         let module = parse_module(rest);
-        let is_head = check_perm(module).await?;
-        return Ok(Some(
-            build_manage_entry(data, guild_id, None, false, module, is_head, &l10n).await?,
-        ));
-    }
-
-    // Handle updates in Manage Page
-    if let Some(rest) = custom_id.strip_prefix("config_whitelist_entry_target_") {
-        if let serenity::ComponentInteractionDataKind::UserSelect { values } =
-            &interaction.data.kind
-        {
-            if let Some(user_id) = values.first() {
-                if let Some(next) = rest.strip_prefix("new_user_") {
-                    let module = parse_module(next);
-                    if !check_perm(module).await? {
-                        return Ok(None);
-                    }
-
-                    let model = whitelist_user::ActiveModel {
-                        guild_id: Set(guild_id.get() as i64),
-                        user_id: Set(user_id.get() as i64),
-                        level: Set(WhitelistLevel::Invulnerable),
-                        module_type: Set(module),
-                        ..Default::default()
-                    };
-                    let entry = model.insert(&data.db).await?;
-                    return Ok(Some(
-                        build_manage_entry(
-                            data,
-                            guild_id,
-                            Some(entry.id),
-                            true,
-                            module,
-                            true,
-                            &l10n,
-                        )
-                        .await?,
-                    ));
-                } else if let Some(id_str) = rest.strip_prefix("user_") {
-                    let id: i32 = id_str.parse().unwrap_or(0);
-                    let (module, mut active): (Option<ModuleType>, whitelist_user::ActiveModel) = {
-                        let m = whitelist_user::Entity::find_by_id(id)
-                            .filter(whitelist_user::Column::GuildId.eq(guild_id.get() as i64))
-                            .one(&data.db)
-                            .await?
-                            .ok_or_else(|| anyhow::anyhow!("Entry not found"))?;
-                        (m.module_type, m.into())
-                    };
-
-                    if !check_perm(module).await? {
-                        return Ok(None);
-                    }
-
-                    active.user_id = Set(user_id.get() as i64);
-                    let entry = active.update(&data.db).await?;
-                    return Ok(Some(
-                        build_manage_entry(
-                            data,
-                            guild_id,
-                            Some(entry.id),
-                            true,
-                            entry.module_type,
-                            true,
-                            &l10n,
-                        )
-                        .await?,
-                    ));
-                }
-            }
-        } else if let serenity::ComponentInteractionDataKind::RoleSelect { values } =
-            &interaction.data.kind
-        {
-            if let Some(role_id) = values.first() {
-                if let Some(next) = rest.strip_prefix("new_role_") {
-                    let module = parse_module(next);
-                    if !check_perm(module).await? {
-                        return Ok(None);
-                    }
-
-                    let model = whitelist_role::ActiveModel {
-                        guild_id: Set(guild_id.get() as i64),
-                        role_id: Set(role_id.get() as i64),
-                        level: Set(WhitelistLevel::Invulnerable),
-                        module_type: Set(module),
-                        ..Default::default()
-                    };
-                    let entry = model.insert(&data.db).await?;
-                    return Ok(Some(
-                        build_manage_entry(
-                            data,
-                            guild_id,
-                            Some(entry.id),
-                            false,
-                            module,
-                            true,
-                            &l10n,
-                        )
-                        .await?,
-                    ));
-                } else if let Some(id_str) = rest.strip_prefix("role_") {
-                    let id: i32 = id_str.parse().unwrap_or(0);
-                    let (module, mut active): (Option<ModuleType>, whitelist_role::ActiveModel) = {
-                        let m = whitelist_role::Entity::find_by_id(id)
-                            .filter(whitelist_role::Column::GuildId.eq(guild_id.get() as i64))
-                            .one(&data.db)
-                            .await?
-                            .ok_or_else(|| anyhow::anyhow!("Entry not found"))?;
-                        (m.module_type, m.into())
-                    };
-
-                    if !check_perm(module).await? {
-                        return Ok(None);
-                    }
-
-                    active.role_id = Set(role_id.get() as i64);
-                    let entry = active.update(&data.db).await?;
-                    return Ok(Some(
-                        build_manage_entry(
-                            data,
-                            guild_id,
-                            Some(entry.id),
-                            false,
-                            entry.module_type,
-                            true,
-                            &l10n,
-                        )
-                        .await?,
-                    ));
-                }
-            }
+        if !check_perm(module).await? {
+            return Ok(WhitelistInteractionResult::None);
         }
+        let modal = build_whitelist_role_modal(None, module, None, None, &l10n);
+        return Ok(WhitelistInteractionResult::ShowModal(modal));
     }
 
-    if let Some(rest) = custom_id.strip_prefix("config_whitelist_entry_level_") {
-        if let serenity::ComponentInteractionDataKind::StringSelect { values } =
-            &interaction.data.kind
-        {
-            if let Some(level_str) = values.first() {
-                let level = match level_str.as_str() {
-                    "head" => WhitelistLevel::Head,
-                    "admin" => WhitelistLevel::Admin,
-                    "invulnerable" => WhitelistLevel::Invulnerable,
-                    _ => return Ok(None),
-                };
-
-                if let Some(id_str) = rest.strip_prefix("user_") {
-                    let id: i32 = id_str.parse().unwrap_or(0);
-                    let (module, mut active): (Option<ModuleType>, whitelist_user::ActiveModel) = {
-                        let m = whitelist_user::Entity::find_by_id(id)
-                            .filter(whitelist_user::Column::GuildId.eq(guild_id.get() as i64))
-                            .one(&data.db)
-                            .await?
-                            .ok_or_else(|| anyhow::anyhow!("Entry not found"))?;
-                        (m.module_type, m.into())
-                    };
-
-                    if !check_perm(module).await? {
-                        return Ok(None);
-                    }
-
-                    active.level = Set(level);
-                    let entry = active.update(&data.db).await?;
-                    return Ok(Some(
-                        build_manage_entry(
-                            data,
-                            guild_id,
-                            Some(entry.id),
-                            true,
-                            entry.module_type,
-                            true,
-                            &l10n,
-                        )
-                        .await?,
-                    ));
-                } else if let Some(id_str) = rest.strip_prefix("role_") {
-                    let id: i32 = id_str.parse().unwrap_or(0);
-                    let (module, mut active): (Option<ModuleType>, whitelist_role::ActiveModel) = {
-                        let m = whitelist_role::Entity::find_by_id(id)
-                            .filter(whitelist_role::Column::GuildId.eq(guild_id.get() as i64))
-                            .one(&data.db)
-                            .await?
-                            .ok_or_else(|| anyhow::anyhow!("Entry not found"))?;
-                        (m.module_type, m.into())
-                    };
-
-                    if !check_perm(module).await? {
-                        return Ok(None);
-                    }
-
-                    active.level = Set(level);
-                    let entry = active.update(&data.db).await?;
-                    return Ok(Some(
-                        build_manage_entry(
-                            data,
-                            guild_id,
-                            Some(entry.id),
-                            false,
-                            entry.module_type,
-                            true,
-                            &l10n,
-                        )
-                        .await?,
-                    ));
-                }
-            }
-        }
-    }
-
+    // Delete Entry (keep this - no modal needed)
     if let Some(rest) = custom_id.strip_prefix("config_whitelist_entry_delete_") {
         let parts: Vec<&str> = rest.splitn(3, '_').collect();
         if parts.len() == 3 {
@@ -782,7 +782,7 @@ pub async fn handle_interaction(
             let module = parse_module(parts[2]);
 
             if !check_perm(module).await? {
-                return Ok(None);
+                return Ok(WhitelistInteractionResult::None);
             }
 
             if is_user {
@@ -795,9 +795,243 @@ pub async fn handle_interaction(
                     .await?;
             }
 
+            return Ok(WhitelistInteractionResult::Components(
+                build_whitelist_menu(data, guild_id, module, 0, true, &l10n).await?,
+            ));
+        }
+    }
+
+    Ok(WhitelistInteractionResult::None)
+}
+
+/// Handle modal submissions for whitelist entries
+pub async fn handle_modal_submit(
+    ctx: &serenity::Context,
+    interaction: &serenity::ModalInteraction,
+    data: &Data,
+) -> Result<Option<Vec<serenity::CreateComponent<'static>>>, Error> {
+    let guild_id = match interaction.guild_id {
+        Some(id) => id,
+        None => return Ok(None),
+    };
+
+    let member = interaction
+        .member
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("Interaction must be in a guild"))?;
+    let custom_id = &interaction.data.custom_id;
+
+    let l10n_manager = &data.l10n;
+    let l10n = L10nProxy {
+        manager: l10n_manager.clone(),
+        locale: interaction.locale.to_string(),
+    };
+
+    let parse_module = |suffix: &str| -> Option<ModuleType> {
+        if suffix == "global" {
+            None
+        } else {
+            match suffix {
+                "channel_protection" => Some(ModuleType::ChannelProtection),
+                "channel_permission_protection" => Some(ModuleType::ChannelPermissionProtection),
+                "role_protection" => Some(ModuleType::RoleProtection),
+                "role_permission_protection" => Some(ModuleType::RolePermissionProtection),
+                "member_permission_protection" => Some(ModuleType::MemberPermissionProtection),
+                "bot_adding_protection" => Some(ModuleType::BotAddingProtection),
+                "moderation_protection" => Some(ModuleType::ModerationProtection),
+                "logging" => Some(ModuleType::Logging),
+                "sticky_roles" => Some(ModuleType::StickyRoles),
+                _ => None,
+            }
+        }
+    };
+
+    // Helper to extract string select values from modal components
+    fn extract_string_select_value(
+        components: &[serenity::Component],
+        target_custom_id: &str,
+    ) -> Option<String> {
+        for component in components {
+            if let serenity::Component::Label(label) = component {
+                if let serenity::LabelComponent::SelectMenu(menu) = &label.component {
+                    // Compare custom_id with target
+                    if &*menu.custom_id == target_custom_id {
+                        return menu.values.first().map(|s| s.to_string());
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    // For user/role selects, use the resolved data directly (not Option)
+    let resolved = &interaction.data.resolved;
+
+    // Handle new user modal submission
+    if let Some(suffix) = custom_id.strip_prefix("whitelist_modal_user_new_") {
+        let module = parse_module(suffix);
+        if !check_permission(ctx, data, guild_id, member, module).await? {
+            return Ok(None);
+        }
+
+        // Get selected user from resolved data
+        let selected_user_id = resolved.users.iter().next().map(|user| user.id);
+
+        // Get level from string select
+        let level_str = extract_string_select_value(
+            &interaction.data.components,
+            "whitelist_modal_level_select",
+        );
+        let selected_level = match level_str.as_deref() {
+            Some("head") => WhitelistLevel::Head,
+            Some("admin") => WhitelistLevel::Admin,
+            _ => WhitelistLevel::Invulnerable,
+        };
+
+        if let Some(user_id) = selected_user_id {
+            let model = whitelist_user::ActiveModel {
+                guild_id: Set(guild_id.get() as i64),
+                user_id: Set(user_id.get() as i64),
+                level: Set(selected_level),
+                module_type: Set(module),
+                ..Default::default()
+            };
+            model.insert(&data.db).await?;
+
             return Ok(Some(
                 build_whitelist_menu(data, guild_id, module, 0, true, &l10n).await?,
             ));
+        }
+    }
+
+    // Handle edit user modal submission
+    if let Some(rest) = custom_id.strip_prefix("whitelist_modal_user_edit_") {
+        let parts: Vec<&str> = rest.splitn(2, '_').collect();
+        if parts.len() == 2 {
+            let id: i32 = parts[0].parse().unwrap_or(0);
+            let module = parse_module(parts[1]);
+
+            if !check_permission(ctx, data, guild_id, member, module).await? {
+                return Ok(None);
+            }
+
+            let existing = whitelist_user::Entity::find_by_id(id)
+                .filter(whitelist_user::Column::GuildId.eq(guild_id.get() as i64))
+                .one(&data.db)
+                .await?;
+
+            if let Some(existing) = existing {
+                let mut active: whitelist_user::ActiveModel = existing.into();
+
+                // Get selected user from resolved data
+                if let Some(user) = resolved.users.iter().next() {
+                    active.user_id = Set(user.id.get() as i64);
+                }
+
+                // Get level from string select
+                let level_str = extract_string_select_value(
+                    &interaction.data.components,
+                    "whitelist_modal_level_select",
+                );
+                if let Some(level) = match level_str.as_deref() {
+                    Some("head") => Some(WhitelistLevel::Head),
+                    Some("admin") => Some(WhitelistLevel::Admin),
+                    Some("invulnerable") => Some(WhitelistLevel::Invulnerable),
+                    _ => None,
+                } {
+                    active.level = Set(level);
+                }
+
+                active.update(&data.db).await?;
+
+                return Ok(Some(
+                    build_whitelist_menu(data, guild_id, module, 0, true, &l10n).await?,
+                ));
+            }
+        }
+    }
+
+    // Handle new role modal submission
+    if let Some(suffix) = custom_id.strip_prefix("whitelist_modal_role_new_") {
+        let module = parse_module(suffix);
+        if !check_permission(ctx, data, guild_id, member, module).await? {
+            return Ok(None);
+        }
+
+        // Get selected role from resolved data
+        let selected_role_id = resolved.roles.iter().next().map(|role| role.id);
+
+        // Get level from string select
+        let level_str = extract_string_select_value(
+            &interaction.data.components,
+            "whitelist_modal_level_select",
+        );
+        let selected_level = match level_str.as_deref() {
+            Some("head") => WhitelistLevel::Head,
+            Some("admin") => WhitelistLevel::Admin,
+            _ => WhitelistLevel::Invulnerable,
+        };
+
+        if let Some(role_id) = selected_role_id {
+            let model = whitelist_role::ActiveModel {
+                guild_id: Set(guild_id.get() as i64),
+                role_id: Set(role_id.get() as i64),
+                level: Set(selected_level),
+                module_type: Set(module),
+                ..Default::default()
+            };
+            model.insert(&data.db).await?;
+
+            return Ok(Some(
+                build_whitelist_menu(data, guild_id, module, 0, true, &l10n).await?,
+            ));
+        }
+    }
+
+    // Handle edit role modal submission
+    if let Some(rest) = custom_id.strip_prefix("whitelist_modal_role_edit_") {
+        let parts: Vec<&str> = rest.splitn(2, '_').collect();
+        if parts.len() == 2 {
+            let id: i32 = parts[0].parse().unwrap_or(0);
+            let module = parse_module(parts[1]);
+
+            if !check_permission(ctx, data, guild_id, member, module).await? {
+                return Ok(None);
+            }
+
+            let existing = whitelist_role::Entity::find_by_id(id)
+                .filter(whitelist_role::Column::GuildId.eq(guild_id.get() as i64))
+                .one(&data.db)
+                .await?;
+
+            if let Some(existing) = existing {
+                let mut active: whitelist_role::ActiveModel = existing.into();
+
+                // Get selected role from resolved data
+                if let Some(role) = resolved.roles.iter().next() {
+                    active.role_id = Set(role.id.get() as i64);
+                }
+
+                // Get level from string select
+                let level_str = extract_string_select_value(
+                    &interaction.data.components,
+                    "whitelist_modal_level_select",
+                );
+                if let Some(level) = match level_str.as_deref() {
+                    Some("head") => Some(WhitelistLevel::Head),
+                    Some("admin") => Some(WhitelistLevel::Admin),
+                    Some("invulnerable") => Some(WhitelistLevel::Invulnerable),
+                    _ => None,
+                } {
+                    active.level = Set(level);
+                }
+
+                active.update(&data.db).await?;
+
+                return Ok(Some(
+                    build_whitelist_menu(data, guild_id, module, 0, true, &l10n).await?,
+                ));
+            }
         }
     }
 

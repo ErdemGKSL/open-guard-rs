@@ -578,92 +578,224 @@ pub async fn handle_interaction(
     } else if modules::sticky_roles::handle_interaction(ctx, interaction, data, guild_id).await? {
         updated_reply =
             Some(build_module_menu(data, guild_id, ModuleType::StickyRoles, page, &l10n).await?);
-    } else if let Some(components) = whitelist::handle_interaction(ctx, interaction, data).await? {
-        updated_reply = Some(components);
-    } else if custom_id == "config_back_to_main" {
-        updated_reply = Some(build_main_menu(data, guild_id, &l10n).await?);
-    } else if let Some(module_str) = custom_id.strip_prefix("config_module_menu_") {
-        let module_type = match module_str {
-            "channel_protection" => ModuleType::ChannelProtection,
-            "channel_permission_protection" => ModuleType::ChannelPermissionProtection,
-            "role_protection" => ModuleType::RoleProtection,
-            "role_permission_protection" => ModuleType::RolePermissionProtection,
-            "member_permission_protection" => ModuleType::MemberPermissionProtection,
-            "bot_adding_protection" => ModuleType::BotAddingProtection,
-            "moderation_protection" => ModuleType::ModerationProtection,
-            "logging" => ModuleType::Logging,
-            "sticky_roles" => ModuleType::StickyRoles,
-            _ => return Ok(()),
-        };
-        updated_reply = Some(build_module_menu(data, guild_id, module_type, 0, &l10n).await?);
-    } else if custom_id == "config_general_log_channel" {
-        if let serenity::ComponentInteractionDataKind::ChannelSelect { values } =
-            &interaction.data.kind
-        {
-            if let Some(channel_id) = values.first() {
-                guild_configs::Entity::insert(guild_configs::ActiveModel {
-                    guild_id: Set(guild_id.get() as i64),
-                    log_channel_id: Set(Some(channel_id.get() as i64)),
-                    ..Default::default()
-                })
-                .on_conflict(
-                    sea_orm::sea_query::OnConflict::column(guild_configs::Column::GuildId)
-                        .update_column(guild_configs::Column::LogChannelId)
-                        .to_owned(),
-                )
-                .exec(&data.db)
-                .await?;
-
-                updated_reply = Some(build_main_menu(data, guild_id, &l10n).await?);
+    } else {
+        // Handle whitelist interactions - may return a modal
+        match whitelist::handle_interaction(ctx, interaction, data).await? {
+            whitelist::WhitelistInteractionResult::Components(components) => {
+                updated_reply = Some(components);
+            }
+            whitelist::WhitelistInteractionResult::ShowModal(modal) => {
+                // For modals, we need to respond with Modal response type
+                // This should be done BEFORE acknowledging, so we return early here
+                interaction
+                    .create_response(&ctx.http, serenity::CreateInteractionResponse::Modal(modal))
+                    .await?;
+                return Ok(()); // Don't edit the message, modal was shown
+            }
+            whitelist::WhitelistInteractionResult::None => {
+                // Whitelist didn't handle this, continue to other handlers
             }
         }
-    } else if custom_id == "config_jail_role" {
-        if let serenity::ComponentInteractionDataKind::RoleSelect { values } =
-            &interaction.data.kind
-        {
-            if let Some(role_id) = values.first() {
-                guild_configs::Entity::insert(guild_configs::ActiveModel {
-                    guild_id: Set(guild_id.get() as i64),
-                    jail_role_id: Set(Some(role_id.get() as i64)),
-                    ..Default::default()
-                })
-                .on_conflict(
-                    sea_orm::sea_query::OnConflict::column(guild_configs::Column::GuildId)
-                        .update_column(guild_configs::Column::JailRoleId)
-                        .to_owned(),
-                )
-                .exec(&data.db)
-                .await?;
+    }
 
-                updated_reply = Some(build_main_menu(data, guild_id, &l10n).await?);
+    // Other handlers (if whitelist didn't handle it)
+    if updated_reply.is_none() {
+        if custom_id == "config_back_to_main" {
+            updated_reply = Some(build_main_menu(data, guild_id, &l10n).await?);
+        } else if let Some(module_str) = custom_id.strip_prefix("config_module_menu_") {
+            let module_type = match module_str {
+                "channel_protection" => ModuleType::ChannelProtection,
+                "channel_permission_protection" => ModuleType::ChannelPermissionProtection,
+                "role_protection" => ModuleType::RoleProtection,
+                "role_permission_protection" => ModuleType::RolePermissionProtection,
+                "member_permission_protection" => ModuleType::MemberPermissionProtection,
+                "bot_adding_protection" => ModuleType::BotAddingProtection,
+                "moderation_protection" => ModuleType::ModerationProtection,
+                "logging" => ModuleType::Logging,
+                "sticky_roles" => ModuleType::StickyRoles,
+                _ => return Ok(()),
+            };
+            updated_reply = Some(build_module_menu(data, guild_id, module_type, 0, &l10n).await?);
+        } else if custom_id == "config_general_log_channel" {
+            if let serenity::ComponentInteractionDataKind::ChannelSelect { values } =
+                &interaction.data.kind
+            {
+                if let Some(channel_id) = values.first() {
+                    guild_configs::Entity::insert(guild_configs::ActiveModel {
+                        guild_id: Set(guild_id.get() as i64),
+                        log_channel_id: Set(Some(channel_id.get() as i64)),
+                        ..Default::default()
+                    })
+                    .on_conflict(
+                        sea_orm::sea_query::OnConflict::column(guild_configs::Column::GuildId)
+                            .update_column(guild_configs::Column::LogChannelId)
+                            .to_owned(),
+                    )
+                    .exec(&data.db)
+                    .await?;
+
+                    updated_reply = Some(build_main_menu(data, guild_id, &l10n).await?);
+                }
             }
-        }
-    } else if custom_id == "config_navigate_modules" {
-        if let serenity::ComponentInteractionDataKind::StringSelect { values } =
-            &interaction.data.kind
-        {
-            if let Some(module_str) = values.first() {
-                let module_type = match module_str.as_str() {
-                    "ChannelProtection" => ModuleType::ChannelProtection,
-                    "ChannelPermissionProtection" => ModuleType::ChannelPermissionProtection,
-                    "RoleProtection" => ModuleType::RoleProtection,
-                    "RolePermissionProtection" => ModuleType::RolePermissionProtection,
-                    "MemberPermissionProtection" => ModuleType::MemberPermissionProtection,
-                    "BotAddingProtection" => ModuleType::BotAddingProtection,
-                    "ModerationProtection" => ModuleType::ModerationProtection,
-                    "Logging" => ModuleType::Logging,
-                    "StickyRoles" => ModuleType::StickyRoles,
+        } else if custom_id == "config_jail_role" {
+            if let serenity::ComponentInteractionDataKind::RoleSelect { values } =
+                &interaction.data.kind
+            {
+                if let Some(role_id) = values.first() {
+                    guild_configs::Entity::insert(guild_configs::ActiveModel {
+                        guild_id: Set(guild_id.get() as i64),
+                        jail_role_id: Set(Some(role_id.get() as i64)),
+                        ..Default::default()
+                    })
+                    .on_conflict(
+                        sea_orm::sea_query::OnConflict::column(guild_configs::Column::GuildId)
+                            .update_column(guild_configs::Column::JailRoleId)
+                            .to_owned(),
+                    )
+                    .exec(&data.db)
+                    .await?;
+
+                    updated_reply = Some(build_main_menu(data, guild_id, &l10n).await?);
+                }
+            }
+        } else if custom_id == "config_navigate_modules" {
+            if let serenity::ComponentInteractionDataKind::StringSelect { values } =
+                &interaction.data.kind
+            {
+                if let Some(module_str) = values.first() {
+                    let module_type = match module_str.as_str() {
+                        "ChannelProtection" => ModuleType::ChannelProtection,
+                        "ChannelPermissionProtection" => ModuleType::ChannelPermissionProtection,
+                        "RoleProtection" => ModuleType::RoleProtection,
+                        "RolePermissionProtection" => ModuleType::RolePermissionProtection,
+                        "MemberPermissionProtection" => ModuleType::MemberPermissionProtection,
+                        "BotAddingProtection" => ModuleType::BotAddingProtection,
+                        "ModerationProtection" => ModuleType::ModerationProtection,
+                        "Logging" => ModuleType::Logging,
+                        "StickyRoles" => ModuleType::StickyRoles,
+                        _ => return Ok(()),
+                    };
+                    updated_reply =
+                        Some(build_module_menu(data, guild_id, module_type, 0, &l10n).await?);
+                }
+            }
+        } else if let Some(rest) = custom_id.strip_prefix("config_page_") {
+            let parts: Vec<&str> = rest.split('_').collect();
+            if parts.len() >= 2 {
+                let module_str = parts[0];
+                let page_num: u32 = parts[1].parse().unwrap_or(0);
+                let module_type = match module_str {
+                    "channel_protection" | "ChannelProtection" => ModuleType::ChannelProtection,
+                    "channel_permission_protection" | "ChannelPermissionProtection" => {
+                        ModuleType::ChannelPermissionProtection
+                    }
+                    "role_protection" | "RoleProtection" => ModuleType::RoleProtection,
+                    "role_permission_protection" | "RolePermissionProtection" => {
+                        ModuleType::RolePermissionProtection
+                    }
+                    "member_permission_protection" | "MemberPermissionProtection" => {
+                        ModuleType::MemberPermissionProtection
+                    }
+                    "bot_adding_protection" | "BotAddingProtection" => {
+                        ModuleType::BotAddingProtection
+                    }
+                    "moderation_protection" | "ModerationProtection" => {
+                        ModuleType::ModerationProtection
+                    }
+                    "logging" | "Logging" => ModuleType::Logging,
+                    "sticky_roles" | "StickyRoles" => ModuleType::StickyRoles,
                     _ => return Ok(()),
                 };
                 updated_reply =
-                    Some(build_module_menu(data, guild_id, module_type, 0, &l10n).await?);
+                    Some(build_module_menu(data, guild_id, module_type, page_num, &l10n).await?);
             }
-        }
-    } else if let Some(rest) = custom_id.strip_prefix("config_page_") {
-        let parts: Vec<&str> = rest.split('_').collect();
-        if parts.len() >= 2 {
-            let module_str = parts[0];
-            let page_num: u32 = parts[1].parse().unwrap_or(0);
+        } else if custom_id.starts_with("config_module_log_channel_") {
+            if let serenity::ComponentInteractionDataKind::ChannelSelect { values } =
+                &interaction.data.kind
+            {
+                if let Some(channel_id) = values.first() {
+                    let module_str = custom_id.trim_start_matches("config_module_log_channel_");
+                    let module_type = match module_str {
+                        "ChannelProtection" => ModuleType::ChannelProtection,
+                        "ChannelPermissionProtection" => ModuleType::ChannelPermissionProtection,
+                        "RoleProtection" => ModuleType::RoleProtection,
+                        "RolePermissionProtection" => ModuleType::RolePermissionProtection,
+                        "MemberPermissionProtection" => ModuleType::MemberPermissionProtection,
+                        "BotAddingProtection" => ModuleType::BotAddingProtection,
+                        "ModerationProtection" => ModuleType::ModerationProtection,
+                        _ => return Ok(()),
+                    };
+
+                    module_configs::Entity::insert(module_configs::ActiveModel {
+                        guild_id: Set(guild_id.get() as i64),
+                        module_type: Set(module_type),
+                        log_channel_id: Set(Some(channel_id.get() as i64)),
+                        ..Default::default()
+                    })
+                    .on_conflict(
+                        sea_orm::sea_query::OnConflict::columns([
+                            module_configs::Column::GuildId,
+                            module_configs::Column::ModuleType,
+                        ])
+                        .update_column(module_configs::Column::LogChannelId)
+                        .to_owned(),
+                    )
+                    .exec(&data.db)
+                    .await?;
+
+                    updated_reply =
+                        Some(build_module_menu(data, guild_id, module_type, page, &l10n).await?);
+                }
+            }
+        } else if custom_id.starts_with("config_module_punishment_") {
+            if let serenity::ComponentInteractionDataKind::StringSelect { values } =
+                &interaction.data.kind
+            {
+                if let Some(p_str) = values.first() {
+                    let module_str = custom_id.trim_start_matches("config_module_punishment_");
+                    let module_type = match module_str {
+                        "ChannelProtection" => ModuleType::ChannelProtection,
+                        "ChannelPermissionProtection" => ModuleType::ChannelPermissionProtection,
+                        "RoleProtection" => ModuleType::RoleProtection,
+                        "RolePermissionProtection" => ModuleType::RolePermissionProtection,
+                        "MemberPermissionProtection" => ModuleType::MemberPermissionProtection,
+                        "BotAddingProtection" => ModuleType::BotAddingProtection,
+                        "ModerationProtection" => ModuleType::ModerationProtection,
+                        _ => return Ok(()),
+                    };
+
+                    use crate::db::entities::module_configs::PunishmentType;
+                    let punishment = match p_str.as_str() {
+                        "none" => PunishmentType::None,
+                        "unperm" => PunishmentType::Unperm,
+                        "ban" => PunishmentType::Ban,
+                        "kick" => PunishmentType::Kick,
+                        "jail" => PunishmentType::Jail,
+                        _ => return Ok(()),
+                    };
+
+                    module_configs::Entity::insert(module_configs::ActiveModel {
+                        guild_id: Set(guild_id.get() as i64),
+                        module_type: Set(module_type),
+                        punishment: Set(punishment),
+                        ..Default::default()
+                    })
+                    .on_conflict(
+                        sea_orm::sea_query::OnConflict::columns([
+                            module_configs::Column::GuildId,
+                            module_configs::Column::ModuleType,
+                        ])
+                        .update_column(module_configs::Column::Punishment)
+                        .to_owned(),
+                    )
+                    .exec(&data.db)
+                    .await?;
+
+                    updated_reply =
+                        Some(build_module_menu(data, guild_id, module_type, page, &l10n).await?);
+                }
+            }
+        } else if let Some(module_str) = custom_id.strip_prefix("config_module_revert_") {
             let module_type = match module_str {
                 "channel_protection" | "ChannelProtection" => ModuleType::ChannelProtection,
                 "channel_permission_protection" | "ChannelPermissionProtection" => {
@@ -681,247 +813,143 @@ pub async fn handle_interaction(
                     ModuleType::ModerationProtection
                 }
                 "logging" | "Logging" => ModuleType::Logging,
-                "sticky_roles" | "StickyRoles" => ModuleType::StickyRoles,
                 _ => return Ok(()),
             };
+
+            let module_configs::Model { revert, .. } =
+                match module_configs::Entity::find_by_id((guild_id.get() as i64, module_type))
+                    .one(&data.db)
+                    .await?
+                {
+                    Some(m) => m,
+                    None => {
+                        // If no config exists, create it with default values
+                        module_configs::ActiveModel {
+                            guild_id: Set(guild_id.get() as i64),
+                            module_type: Set(module_type),
+                            ..Default::default()
+                        }
+                        .insert(&data.db)
+                        .await?
+                    }
+                };
+
+            module_configs::Entity::update(module_configs::ActiveModel {
+                guild_id: Set(guild_id.get() as i64),
+                module_type: Set(module_type),
+                revert: Set(!revert),
+                ..Default::default()
+            })
+            .exec(&data.db)
+            .await?;
+
             updated_reply =
-                Some(build_module_menu(data, guild_id, module_type, page_num, &l10n).await?);
-        }
-    } else if custom_id.starts_with("config_module_log_channel_") {
-        if let serenity::ComponentInteractionDataKind::ChannelSelect { values } =
-            &interaction.data.kind
-        {
-            if let Some(channel_id) = values.first() {
-                let module_str = custom_id.trim_start_matches("config_module_log_channel_");
-                let module_type = match module_str {
-                    "ChannelProtection" => ModuleType::ChannelProtection,
-                    "ChannelPermissionProtection" => ModuleType::ChannelPermissionProtection,
-                    "RoleProtection" => ModuleType::RoleProtection,
-                    "RolePermissionProtection" => ModuleType::RolePermissionProtection,
-                    "MemberPermissionProtection" => ModuleType::MemberPermissionProtection,
-                    "BotAddingProtection" => ModuleType::BotAddingProtection,
-                    "ModerationProtection" => ModuleType::ModerationProtection,
-                    _ => return Ok(()),
-                };
-
-                module_configs::Entity::insert(module_configs::ActiveModel {
-                    guild_id: Set(guild_id.get() as i64),
-                    module_type: Set(module_type),
-                    log_channel_id: Set(Some(channel_id.get() as i64)),
-                    ..Default::default()
-                })
-                .on_conflict(
-                    sea_orm::sea_query::OnConflict::columns([
-                        module_configs::Column::GuildId,
-                        module_configs::Column::ModuleType,
-                    ])
-                    .update_column(module_configs::Column::LogChannelId)
-                    .to_owned(),
-                )
-                .exec(&data.db)
-                .await?;
-
-                updated_reply =
-                    Some(build_module_menu(data, guild_id, module_type, page, &l10n).await?);
-            }
-        }
-    } else if custom_id.starts_with("config_module_punishment_") {
-        if let serenity::ComponentInteractionDataKind::StringSelect { values } =
-            &interaction.data.kind
-        {
-            if let Some(p_str) = values.first() {
-                let module_str = custom_id.trim_start_matches("config_module_punishment_");
-                let module_type = match module_str {
-                    "ChannelProtection" => ModuleType::ChannelProtection,
-                    "ChannelPermissionProtection" => ModuleType::ChannelPermissionProtection,
-                    "RoleProtection" => ModuleType::RoleProtection,
-                    "RolePermissionProtection" => ModuleType::RolePermissionProtection,
-                    "MemberPermissionProtection" => ModuleType::MemberPermissionProtection,
-                    "BotAddingProtection" => ModuleType::BotAddingProtection,
-                    "ModerationProtection" => ModuleType::ModerationProtection,
-                    _ => return Ok(()),
-                };
-
-                use crate::db::entities::module_configs::PunishmentType;
-                let punishment = match p_str.as_str() {
-                    "none" => PunishmentType::None,
-                    "unperm" => PunishmentType::Unperm,
-                    "ban" => PunishmentType::Ban,
-                    "kick" => PunishmentType::Kick,
-                    "jail" => PunishmentType::Jail,
-                    _ => return Ok(()),
-                };
-
-                module_configs::Entity::insert(module_configs::ActiveModel {
-                    guild_id: Set(guild_id.get() as i64),
-                    module_type: Set(module_type),
-                    punishment: Set(punishment),
-                    ..Default::default()
-                })
-                .on_conflict(
-                    sea_orm::sea_query::OnConflict::columns([
-                        module_configs::Column::GuildId,
-                        module_configs::Column::ModuleType,
-                    ])
-                    .update_column(module_configs::Column::Punishment)
-                    .to_owned(),
-                )
-                .exec(&data.db)
-                .await?;
-
-                updated_reply =
-                    Some(build_module_menu(data, guild_id, module_type, page, &l10n).await?);
-            }
-        }
-    } else if let Some(module_str) = custom_id.strip_prefix("config_module_revert_") {
-        let module_type = match module_str {
-            "channel_protection" | "ChannelProtection" => ModuleType::ChannelProtection,
-            "channel_permission_protection" | "ChannelPermissionProtection" => {
+                Some(build_module_menu(data, guild_id, module_type, page, &l10n).await?);
+        } else if custom_id.contains("_punish_at_") || custom_id.contains("_punish_interval_") {
+            let module_type = if custom_id.contains("ChannelProtection") {
+                ModuleType::ChannelProtection
+            } else if custom_id.contains("ChannelPermissionProtection") {
                 ModuleType::ChannelPermissionProtection
-            }
-            "role_protection" | "RoleProtection" => ModuleType::RoleProtection,
-            "role_permission_protection" | "RolePermissionProtection" => {
+            } else if custom_id.contains("RoleProtection") {
+                ModuleType::RoleProtection
+            } else if custom_id.contains("RolePermissionProtection") {
                 ModuleType::RolePermissionProtection
-            }
-            "member_permission_protection" | "MemberPermissionProtection" => {
+            } else if custom_id.contains("MemberPermissionProtection") {
                 ModuleType::MemberPermissionProtection
-            }
-            "bot_adding_protection" | "BotAddingProtection" => ModuleType::BotAddingProtection,
-            "moderation_protection" | "ModerationProtection" => ModuleType::ModerationProtection,
-            "logging" | "Logging" => ModuleType::Logging,
-            _ => return Ok(()),
-        };
+            } else if custom_id.contains("BotAddingProtection") {
+                ModuleType::BotAddingProtection
+            } else if custom_id.contains("ModerationProtection") {
+                ModuleType::ModerationProtection
+            } else if custom_id.contains("Logging") {
+                ModuleType::Logging
+            } else {
+                return Ok(());
+            };
 
-        let module_configs::Model { revert, .. } =
-            match module_configs::Entity::find_by_id((guild_id.get() as i64, module_type))
+            let config = module_configs::Entity::find_by_id((guild_id.get() as i64, module_type))
                 .one(&data.db)
-                .await?
-            {
-                Some(m) => m,
+                .await?;
+
+            let (mut am, current_at, current_interval) = match config.as_ref() {
+                Some(m) => (m.clone().into(), m.punishment_at, m.punishment_at_interval),
                 None => {
-                    // If no config exists, create it with default values
-                    module_configs::ActiveModel {
+                    let am = module_configs::ActiveModel {
                         guild_id: Set(guild_id.get() as i64),
                         module_type: Set(module_type),
+                        punishment_at: Set(1),
+                        punishment_at_interval: Set(10),
                         ..Default::default()
-                    }
-                    .insert(&data.db)
-                    .await?
+                    };
+                    (am, 1, 10)
                 }
             };
 
-        module_configs::Entity::update(module_configs::ActiveModel {
-            guild_id: Set(guild_id.get() as i64),
-            module_type: Set(module_type),
-            revert: Set(!revert),
-            ..Default::default()
-        })
-        .exec(&data.db)
-        .await?;
-
-        updated_reply = Some(build_module_menu(data, guild_id, module_type, page, &l10n).await?);
-    } else if custom_id.contains("_punish_at_") || custom_id.contains("_punish_interval_") {
-        let module_type = if custom_id.contains("ChannelProtection") {
-            ModuleType::ChannelProtection
-        } else if custom_id.contains("ChannelPermissionProtection") {
-            ModuleType::ChannelPermissionProtection
-        } else if custom_id.contains("RoleProtection") {
-            ModuleType::RoleProtection
-        } else if custom_id.contains("RolePermissionProtection") {
-            ModuleType::RolePermissionProtection
-        } else if custom_id.contains("MemberPermissionProtection") {
-            ModuleType::MemberPermissionProtection
-        } else if custom_id.contains("BotAddingProtection") {
-            ModuleType::BotAddingProtection
-        } else if custom_id.contains("ModerationProtection") {
-            ModuleType::ModerationProtection
-        } else if custom_id.contains("Logging") {
-            ModuleType::Logging
-        } else {
-            return Ok(());
-        };
-
-        let config = module_configs::Entity::find_by_id((guild_id.get() as i64, module_type))
-            .one(&data.db)
-            .await?;
-
-        let (mut am, current_at, current_interval) = match config.as_ref() {
-            Some(m) => (m.clone().into(), m.punishment_at, m.punishment_at_interval),
-            None => {
-                let am = module_configs::ActiveModel {
-                    guild_id: Set(guild_id.get() as i64),
-                    module_type: Set(module_type),
-                    punishment_at: Set(1),
-                    punishment_at_interval: Set(10),
-                    ..Default::default()
-                };
-                (am, 1, 10)
+            if custom_id.contains("punish_at_inc") {
+                am.punishment_at = Set(current_at + 1);
+            } else if custom_id.contains("punish_at_dec") {
+                am.punishment_at = Set((current_at - 1).max(1));
+            } else if custom_id.contains("punish_interval_inc") {
+                am.punishment_at_interval = Set(current_interval + 5);
+            } else if custom_id.contains("punish_interval_dec") {
+                am.punishment_at_interval = Set((current_interval - 5).max(1));
             }
-        };
 
-        if custom_id.contains("punish_at_inc") {
-            am.punishment_at = Set(current_at + 1);
-        } else if custom_id.contains("punish_at_dec") {
-            am.punishment_at = Set((current_at - 1).max(1));
-        } else if custom_id.contains("punish_interval_inc") {
-            am.punishment_at_interval = Set(current_interval + 5);
-        } else if custom_id.contains("punish_interval_dec") {
-            am.punishment_at_interval = Set((current_interval - 5).max(1));
-        }
+            if config.is_some() {
+                am.update(&data.db).await?;
+            } else {
+                am.insert(&data.db).await?;
+            }
+            updated_reply =
+                Some(build_module_menu(data, guild_id, module_type, page, &l10n).await?);
+        } else if custom_id.starts_with("config_module_toggle_") {
+            let module_str = custom_id.trim_start_matches("config_module_toggle_");
+            let module_type = match module_str {
+                "channel_protection" | "ChannelProtection" => ModuleType::ChannelProtection,
+                "channel_permission_protection" | "ChannelPermissionProtection" => {
+                    ModuleType::ChannelPermissionProtection
+                }
+                "role_protection" | "RoleProtection" => ModuleType::RoleProtection,
+                "role_permission_protection" | "RolePermissionProtection" => {
+                    ModuleType::RolePermissionProtection
+                }
+                "member_permission_protection" | "MemberPermissionProtection" => {
+                    ModuleType::MemberPermissionProtection
+                }
+                "bot_adding_protection" | "BotAddingProtection" => ModuleType::BotAddingProtection,
+                "moderation_protection" | "ModerationProtection" => {
+                    ModuleType::ModerationProtection
+                }
+                "logging" | "Logging" => ModuleType::Logging,
+                _ => return Ok(()),
+            };
 
-        if config.is_some() {
+            let config = module_configs::Entity::find_by_id((guild_id.get() as i64, module_type))
+                .one(&data.db)
+                .await?;
+
+            let (mut am, current_enabled): (module_configs::ActiveModel, bool) = match config {
+                Some(m) => {
+                    let enabled = m.enabled;
+                    (m.into(), enabled)
+                }
+                None => {
+                    let am = module_configs::ActiveModel {
+                        guild_id: Set(guild_id.get() as i64),
+                        module_type: Set(module_type),
+                        enabled: Set(true),
+                        ..Default::default()
+                    };
+                    let entry = am.insert(&data.db).await?;
+                    (entry.into(), false)
+                }
+            };
+
+            am.enabled = Set(!current_enabled);
             am.update(&data.db).await?;
-        } else {
-            am.insert(&data.db).await?;
+
+            updated_reply =
+                Some(build_module_menu(data, guild_id, module_type, page, &l10n).await?);
         }
-        updated_reply = Some(build_module_menu(data, guild_id, module_type, page, &l10n).await?);
-    } else if custom_id.starts_with("config_module_toggle_") {
-        let module_str = custom_id.trim_start_matches("config_module_toggle_");
-        let module_type = match module_str {
-            "channel_protection" | "ChannelProtection" => ModuleType::ChannelProtection,
-            "channel_permission_protection" | "ChannelPermissionProtection" => {
-                ModuleType::ChannelPermissionProtection
-            }
-            "role_protection" | "RoleProtection" => ModuleType::RoleProtection,
-            "role_permission_protection" | "RolePermissionProtection" => {
-                ModuleType::RolePermissionProtection
-            }
-            "member_permission_protection" | "MemberPermissionProtection" => {
-                ModuleType::MemberPermissionProtection
-            }
-            "bot_adding_protection" | "BotAddingProtection" => ModuleType::BotAddingProtection,
-            "moderation_protection" | "ModerationProtection" => ModuleType::ModerationProtection,
-            "logging" | "Logging" => ModuleType::Logging,
-            _ => return Ok(()),
-        };
-
-        let config = module_configs::Entity::find_by_id((guild_id.get() as i64, module_type))
-            .one(&data.db)
-            .await?;
-
-        let (mut am, current_enabled): (module_configs::ActiveModel, bool) = match config {
-            Some(m) => {
-                let enabled = m.enabled;
-                (m.into(), enabled)
-            }
-            None => {
-                let am = module_configs::ActiveModel {
-                    guild_id: Set(guild_id.get() as i64),
-                    module_type: Set(module_type),
-                    enabled: Set(true),
-                    ..Default::default()
-                };
-                let entry = am.insert(&data.db).await?;
-                (entry.into(), false)
-            }
-        };
-
-        am.enabled = Set(!current_enabled);
-        am.update(&data.db).await?;
-
-        updated_reply = Some(build_module_menu(data, guild_id, module_type, page, &l10n).await?);
-    } else if custom_id == "config_back_to_main" {
-        updated_reply = Some(build_main_menu(data, guild_id, &l10n).await?);
     }
 
     if let Some(components) = updated_reply {

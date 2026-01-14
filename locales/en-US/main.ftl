@@ -335,3 +335,18 @@ log-member-join-desc = <@{$userId}> joined the server
 log-member-leave-title = Member Left
 log-member-leave-desc = <@{$userId}> left the server
 log-member-leave-roles = Roles
+
+# Whitelist Modals
+config-whitelist-modal-user-title-new = Add Whitelisted User
+config-whitelist-modal-user-title-edit = Edit Whitelisted User
+config-whitelist-modal-role-title-new = Add Whitelisted Role
+config-whitelist-modal-role-title-edit = Edit Whitelisted Role
+config-whitelist-modal-user-label = User
+config-whitelist-modal-user-description = Select the user to whitelist
+config-whitelist-modal-role-label = Role
+config-whitelist-modal-role-description = Select the role to whitelist
+config-whitelist-modal-level-label = Permission Level
+config-whitelist-modal-level-description = Select the whitelist permission level
+config-whitelist-modal-level-head = Head (Full Immunity)
+config-whitelist-modal-level-admin = Admin (Bypass Punishment)
+config-whitelist-modal-level-invulnerable = Invulnerable (Cannot be Punished)

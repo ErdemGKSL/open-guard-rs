@@ -172,5 +172,47 @@ async fn handle_interactions(ctx: &serenity::Context, interaction: &serenity::In
                 }
             }
         });
+    } else if let serenity::Interaction::Modal(modal_interaction) = interaction {
+        let data = ctx.data::<Data>().clone();
+        let ctx = ctx.clone();
+        let modal_interaction = modal_interaction.clone();
+
+        tokio::spawn(async move {
+            let custom_id = &modal_interaction.data.custom_id;
+
+            // Handle whitelist modal submissions
+            if custom_id.starts_with("whitelist_modal_") {
+                match crate::services::config::whitelist::handle_modal_submit(
+                    &ctx,
+                    &modal_interaction,
+                    &data,
+                )
+                .await
+                {
+                    Ok(Some(components)) => {
+                        // Update the original message with the new components
+                        let edit = serenity::EditInteractionResponse::new().components(components);
+                        if let Err(e) = modal_interaction.edit_response(&ctx.http, edit).await {
+                            error!("Error updating response after modal submit: {:?}", e);
+                        }
+                    }
+                    Ok(None) => {
+                        // Just acknowledge the modal without editing
+                        if let Err(e) = modal_interaction
+                            .create_response(
+                                &ctx.http,
+                                serenity::CreateInteractionResponse::Acknowledge,
+                            )
+                            .await
+                        {
+                            error!("Error acknowledging modal: {:?}", e);
+                        }
+                    }
+                    Err(e) => {
+                        error!("Error handling whitelist modal submit: {:?}", e);
+                    }
+                }
+            }
+        });
     }
 }

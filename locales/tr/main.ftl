@@ -333,3 +333,18 @@ log-member-join-desc = <@{$userId}> sunucuya katıldı
 log-member-leave-title = Üye Ayrıldı
 log-member-leave-desc = <@{$userId}> sunucudan ayrıldı
 log-member-leave-roles = Roller
+
+# Beyaz Liste Modalleri
+config-whitelist-modal-user-title-new = Beyaz Listeye Kullanıcı Ekle
+config-whitelist-modal-user-title-edit = Beyaz Liste Kullanıcısını Düzenle
+config-whitelist-modal-role-title-new = Beyaz Listeye Rol Ekle
+config-whitelist-modal-role-title-edit = Beyaz Liste Rolünü Düzenle
+config-whitelist-modal-user-label = Kullanıcı
+config-whitelist-modal-user-description = Beyaz listeye eklenecek kullanıcıyı seçin
+config-whitelist-modal-role-label = Rol
+config-whitelist-modal-role-description = Beyaz listeye eklenecek rolü seçin
+config-whitelist-modal-level-label = Yetki Seviyesi
+config-whitelist-modal-level-description = Beyaz liste yetki seviyesini seçin
+config-whitelist-modal-level-head = Yetkili (Tam Bağışıklık)
+config-whitelist-modal-level-admin = Yönetici (Cezayı Baypas Eder)
+config-whitelist-modal-level-invulnerable = Dokunulmaz (Cezalandırılamaz)
