@@ -307,9 +307,9 @@ pub fn build_whitelist_user_modal<'a>(
     };
 
     let title = if entry_id.is_some() {
-        l10n.t("config-whitelist-edit-user-modal-title", None)
+        l10n.t("config-whitelist-modal-user-title-edit", None)
     } else {
-        l10n.t("config-whitelist-add-user-modal-title", None)
+        l10n.t("config-whitelist-modal-user-title-new", None)
     };
 
     // User select with Label wrapper
@@ -386,9 +386,9 @@ pub fn build_whitelist_role_modal<'a>(
     };
 
     let title = if entry_id.is_some() {
-        l10n.t("config-whitelist-edit-role-modal-title", None)
+        l10n.t("config-whitelist-modal-role-title-edit", None)
     } else {
-        l10n.t("config-whitelist-add-role-modal-title", None)
+        l10n.t("config-whitelist-modal-role-title-new", None)
     };
 
     // Role select with Label wrapper

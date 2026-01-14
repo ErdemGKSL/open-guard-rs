@@ -474,7 +474,7 @@ pub async fn handle_interaction(
     // Check for whitelist modal actions FIRST - modals must be the direct response
     // We cannot acknowledge before showing a modal
     if custom_id.starts_with("config_whitelist_add_")
-        || custom_id.starts_with("config_whitelist_manage_entry_")
+        || custom_id.starts_with("config_whitelist_manage_")
     {
         match whitelist::handle_interaction(ctx, interaction, data).await? {
             whitelist::WhitelistInteractionResult::ShowModal(modal) => {

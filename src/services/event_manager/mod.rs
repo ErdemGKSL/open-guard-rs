@@ -190,6 +190,17 @@ async fn handle_interactions(ctx: &serenity::Context, interaction: &serenity::In
                 .await
                 {
                     Ok(Some(components)) => {
+                        // First acknowledge the modal, then update the message
+                        if let Err(e) = modal_interaction
+                            .create_response(
+                                &ctx.http,
+                                serenity::CreateInteractionResponse::Acknowledge,
+                            )
+                            .await
+                        {
+                            error!("Error acknowledging modal: {:?}", e);
+                            return;
+                        }
                         // Update the original message with the new components
                         let edit = serenity::EditInteractionResponse::new().components(components);
                         if let Err(e) = modal_interaction.edit_response(&ctx.http, edit).await {
