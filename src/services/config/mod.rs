@@ -471,7 +471,34 @@ pub async fn handle_interaction(
 
     let custom_id = &interaction.data.custom_id;
 
-    // Acknowledge the interaction immediately to prevent "Interaction Failed"
+    // Check for whitelist modal actions FIRST - modals must be the direct response
+    // We cannot acknowledge before showing a modal
+    if custom_id.starts_with("config_whitelist_add_")
+        || custom_id.starts_with("config_whitelist_manage_entry_")
+    {
+        match whitelist::handle_interaction(ctx, interaction, data).await? {
+            whitelist::WhitelistInteractionResult::ShowModal(modal) => {
+                interaction
+                    .create_response(&ctx.http, serenity::CreateInteractionResponse::Modal(modal))
+                    .await?;
+                return Ok(());
+            }
+            whitelist::WhitelistInteractionResult::Components(components) => {
+                // This shouldn't happen for add/manage buttons, but handle it
+                interaction
+                    .create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge)
+                    .await?;
+                let edit = serenity::EditInteractionResponse::new().components(components);
+                interaction.edit_response(&ctx.http, edit).await?;
+                return Ok(());
+            }
+            whitelist::WhitelistInteractionResult::None => {
+                // Continue with normal flow
+            }
+        }
+    }
+
+    // Acknowledge the interaction for non-modal responses
     interaction
         .create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge)
         .await?;
@@ -579,18 +606,14 @@ pub async fn handle_interaction(
         updated_reply =
             Some(build_module_menu(data, guild_id, ModuleType::StickyRoles, page, &l10n).await?);
     } else {
-        // Handle whitelist interactions - may return a modal
+        // Handle remaining whitelist interactions (non-modal ones like delete, navigation)
         match whitelist::handle_interaction(ctx, interaction, data).await? {
             whitelist::WhitelistInteractionResult::Components(components) => {
                 updated_reply = Some(components);
             }
-            whitelist::WhitelistInteractionResult::ShowModal(modal) => {
-                // For modals, we need to respond with Modal response type
-                // This should be done BEFORE acknowledging, so we return early here
-                interaction
-                    .create_response(&ctx.http, serenity::CreateInteractionResponse::Modal(modal))
-                    .await?;
-                return Ok(()); // Don't edit the message, modal was shown
+            whitelist::WhitelistInteractionResult::ShowModal(_) => {
+                // Modal actions should have been handled before acknowledgment
+                // This should not happen, but ignore if it does
             }
             whitelist::WhitelistInteractionResult::None => {
                 // Whitelist didn't handle this, continue to other handlers
