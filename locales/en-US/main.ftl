@@ -24,6 +24,9 @@ module-logging-name = Logging
 module-logging-label = Logging
 module-logging-desc = Comprehensive server event logging (Messages, Voice, Members)
 
+module-sticky-roles-name = Sticky Roles
+module-sticky-roles-desc = Restores member roles when they rejoin the server.
+
 help-title = Bot Help Menu
 
 config-general-header = ⚙️ **General Configuration**
@@ -61,6 +64,8 @@ config-moderation-protection-label = Moderation Protection
 config-moderation-protection-desc = Logs and limits moderation actions by authorized users
 config-logging-label = Logging
 config-logging-desc = Comprehensive server event logging (Messages, Voice, Members)
+config-sticky-roles-label = Sticky Roles
+config-sticky-roles-desc = Restores member roles when they rejoin the server
 config-punishment-label = Punishment
 config-select-punishment-placeholder = Select punishment...
 config-punishment-type-none = None
@@ -113,6 +118,7 @@ config-whitelist-member-permission-protection-header = **Member Permission Prote
 config-whitelist-bot-adding-protection-header = **Bot Adding Protection Whitelists**
 config-whitelist-moderation-protection-header = **Moderation Protection Whitelists**
 config-whitelist-logging-header = **Logging Whitelists**
+config-whitelist-sticky-roles-header = **Sticky Roles Whitelists**
 config-whitelist-users-label = **Whitelisted Users**
 config-whitelist-delete-user-placeholder = Select user to remove...
 config-whitelist-roles-label = **Whitelisted Roles**

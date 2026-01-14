@@ -10,15 +10,24 @@ pub async fn handle_message_delete(
     deleted_message_id: serenity::MessageId,
     data: &Data,
 ) -> Result<(), Error> {
-    // 1. Get module config
+    // 1. Get module config and check if enabled
     let m_config = module_configs::Entity::find_by_id((guild_id.get() as i64, ModuleType::Logging))
         .one(&data.db)
         .await?;
 
-    let config: LoggingModuleConfig = m_config
-        .and_then(|m| serde_json::from_value(m.config).ok())
-        .unwrap_or_default();
+    let Some(m_config) = m_config else {
+        return Ok(());
+    };
 
+    // Check if the logging module is enabled globally
+    if !m_config.enabled {
+        return Ok(());
+    }
+
+    let config: LoggingModuleConfig =
+        serde_json::from_value(m_config.config).unwrap_or_default();
+
+    // Check if message logging is enabled specifically
     if !config.log_messages {
         return Ok(());
     }
@@ -66,15 +75,24 @@ pub async fn handle_message_edit(
     new: serenity::MessageUpdateEvent,
     data: &Data,
 ) -> Result<(), Error> {
-    // 1. Get module config
+    // 1. Get module config and check if enabled
     let m_config = module_configs::Entity::find_by_id((guild_id.get() as i64, ModuleType::Logging))
         .one(&data.db)
         .await?;
 
-    let config: LoggingModuleConfig = m_config
-        .and_then(|m| serde_json::from_value(m.config).ok())
-        .unwrap_or_default();
+    let Some(m_config) = m_config else {
+        return Ok(());
+    };
 
+    // Check if the logging module is enabled globally
+    if !m_config.enabled {
+        return Ok(());
+    }
+
+    let config: LoggingModuleConfig =
+        serde_json::from_value(m_config.config).unwrap_or_default();
+
+    // Check if message logging is enabled specifically
     if !config.log_messages {
         return Ok(());
     }
