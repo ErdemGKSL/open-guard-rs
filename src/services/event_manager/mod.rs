@@ -28,11 +28,11 @@ impl serenity::EventHandler for Handler {
             }
             serenity::FullEvent::GuildCreate { guild, is_new, .. } => {
                 if is_new.unwrap_or(false) {
-                    info!("Joined new guild: {} ({})", guild.name, guild.id);
+                    info!("Joined new guild: {} ({})", guild.name, guild.id.get());
                 }
             }
             serenity::FullEvent::GuildDelete { incomplete, .. } => {
-                info!("Left guild: {}", incomplete.id);
+                info!("Left guild: {}", incomplete.id.get());
             }
             serenity::FullEvent::ChannelDelete { channel, .. } => {
                 let data = ctx.data::<Data>();

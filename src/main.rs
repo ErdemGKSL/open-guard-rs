@@ -139,7 +139,7 @@ async fn main() -> anyhow::Result<()> {
             .context("Failed to fetch bot user info")?;
         let application_id = bot_user.id;
 
-        info!("Fetched Application ID: {}", application_id);
+        info!("Fetched Application ID: {}", application_id.get());
 
         let http = serenity::HttpBuilder::new(token.clone())
             .application_id(serenity::ApplicationId::new(application_id.get()))

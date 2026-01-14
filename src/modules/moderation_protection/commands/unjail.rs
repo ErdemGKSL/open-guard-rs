@@ -27,8 +27,8 @@ pub async fn unjail(
 
     let l10n_guild = ctx.l10n_guild();
     let mut log_args = FluentArgs::new();
-    log_args.set("modId", ctx.author().id.get());
-    log_args.set("userId", user.id.get());
+    log_args.set("modId", ctx.author().id.get().to_string());
+    log_args.set("userId", user.id.get().to_string());
 
     ctx.data()
         .logger
@@ -40,13 +40,13 @@ pub async fn unjail(
             &l10n_guild.t("log-mod-unjail-cmd-desc", Some(&log_args)),
             vec![(
                 &l10n_guild.t("log-field-user", None),
-                format!("<@{}>", user.id),
+                format!("<@{}>", user.id.get()),
             )],
         )
         .await?;
 
     let mut args = FluentArgs::new();
-    args.set("userId", user.id.get());
+    args.set("userId", user.id.get().to_string());
     ctx.send(poise::CreateReply::default().content(l10n.t("mod-unjail-success", Some(&args))))
         .await?;
 

@@ -297,9 +297,9 @@ log-mod-audit-title-logged = Moderation Action (Logged: {$action})
 log-mod-audit-desc = User <@{$userId}> performed a `{$action}` on <@{$targetId}>.
 
 # Logging Module Config
-config-log-msg-label = **Message Logging**
-config-log-voice-label = **Voice Logging**
-config-log-member-label = **Member Logging**
+config-log-msg-label = Message Logging
+config-log-voice-label = Voice Logging
+config-log-member-label = Member Logging
 config-log-channels-header = Per-type Log Channels (Optional)
 config-log-msg-channel-placeholder = Select message log channel...
 config-log-voice-channel-placeholder = Select voice log channel...

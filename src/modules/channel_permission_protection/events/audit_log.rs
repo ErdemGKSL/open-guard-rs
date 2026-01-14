@@ -196,8 +196,8 @@ async fn handle_overwrite_create(
                 threshold,
             } => {
                 let mut args = fluent::FluentArgs::new();
-                args.set("current", current);
-                args.set("threshold", threshold);
+                args.set("current", current.to_string());
+                args.set("threshold", threshold.to_string());
                 l10n.t("log-status-violation", Some(&args))
             }
             crate::services::punishment::ViolationResult::None => {
@@ -247,8 +247,8 @@ async fn handle_overwrite_create(
     };
 
     let mut desc_args = fluent::FluentArgs::new();
-    desc_args.set("channelId", channel_id);
-    desc_args.set("userId", user_id.get());
+    desc_args.set("channelId", channel_id.to_string());
+    desc_args.set("userId", user_id.get().to_string());
     let desc = l10n.t("log-chan-perm-desc-create", Some(&desc_args));
 
     data.logger
@@ -261,7 +261,7 @@ async fn handle_overwrite_create(
             &title,
             &desc,
             vec![
-                (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
+                (&l10n.t("log-field-user", None), format!("<@{}>", user_id.get())),
                 (
                     &l10n.t("log-field-channel", None),
                     format!("<#{}>", channel_id),
@@ -335,8 +335,8 @@ async fn handle_overwrite_delete(
                 threshold,
             } => {
                 let mut args = fluent::FluentArgs::new();
-                args.set("current", current);
-                args.set("threshold", threshold);
+                args.set("current", current.to_string());
+                args.set("threshold", threshold.to_string());
                 l10n.t("log-status-violation", Some(&args))
             }
             crate::services::punishment::ViolationResult::None => {
@@ -422,8 +422,8 @@ async fn handle_overwrite_delete(
     };
 
     let mut desc_args = fluent::FluentArgs::new();
-    desc_args.set("channelId", channel_id);
-    desc_args.set("userId", user_id.get());
+    desc_args.set("channelId", channel_id.to_string());
+    desc_args.set("userId", user_id.get().to_string());
     let desc = l10n.t("log-chan-perm-desc-delete", Some(&desc_args));
 
     data.logger
@@ -436,7 +436,7 @@ async fn handle_overwrite_delete(
             &title,
             &desc,
             vec![
-                (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
+                (&l10n.t("log-field-user", None), format!("<@{}>", user_id.get())),
                 (
                     &l10n.t("log-field-channel", None),
                     format!("<#{}>", channel_id),
@@ -510,8 +510,8 @@ async fn handle_overwrite_update(
                 threshold,
             } => {
                 let mut args = fluent::FluentArgs::new();
-                args.set("current", current);
-                args.set("threshold", threshold);
+                args.set("current", current.to_string());
+                args.set("threshold", threshold.to_string());
                 l10n.t("log-status-violation", Some(&args))
             }
             crate::services::punishment::ViolationResult::None => {
@@ -621,8 +621,8 @@ async fn handle_overwrite_update(
     };
 
     let mut desc_args = fluent::FluentArgs::new();
-    desc_args.set("channelId", channel_id);
-    desc_args.set("userId", user_id.get());
+    desc_args.set("channelId", channel_id.to_string());
+    desc_args.set("userId", user_id.get().to_string());
     let desc = l10n.t("log-chan-perm-desc-update", Some(&desc_args));
 
     data.logger
@@ -635,7 +635,7 @@ async fn handle_overwrite_update(
             &title,
             &desc,
             vec![
-                (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
+                (&l10n.t("log-field-user", None), format!("<@{}>", user_id.get())),
                 (
                     &l10n.t("log-field-channel", None),
                     format!("<#{}>", channel_id),

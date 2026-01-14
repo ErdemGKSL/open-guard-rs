@@ -32,12 +32,12 @@ impl JailService {
 
                             info!(
                                 "Unjailing user {} in guild {} (jail expired)",
-                                user_id, guild_id
+                                user_id.get(), guild_id.get()
                             );
 
                             if let Err(e) = jail_service.unjail_user(&http, guild_id, user_id).await
                             {
-                                error!("Failed to unjail user {}: {:?}", user_id, e);
+                                error!("Failed to unjail user {}: {:?}", user_id.get(), e);
                             }
                         }
                     }

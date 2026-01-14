@@ -295,9 +295,9 @@ log-mod-audit-title-logged = Moderasyon İşlemi (Kaydedildi: {$action})
 log-mod-audit-desc = <@{$userId}> kullanıcısı, <@{$targetId}> üzerinde `{$action}` işlemi gerçekleştirdi.
 
 # Logging Modül Ayarları
-config-log-msg-label = **Mesaj Kayıtları**
-config-log-voice-label = **Ses Kayıtları**
-config-log-member-label = **Üye Kayıtları**
+config-log-msg-label = Mesaj Kayıtları
+config-log-voice-label = Ses Kayıtları
+config-log-member-label = Üye Kayıtları
 config-log-channels-header = Tür Bazlı Kayıt Kanalları (İsteğe Bağlı)
 config-log-msg-channel-placeholder = Mesaj kayıt kanalı seçin...
 config-log-voice-channel-placeholder = Ses kayıt kanalı seçin...

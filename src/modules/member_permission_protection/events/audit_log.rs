@@ -212,8 +212,8 @@ async fn handle_member_role_update(
                 threshold,
             } => {
                 let mut args = fluent::FluentArgs::new();
-                args.set("current", current);
-                args.set("threshold", threshold);
+                args.set("current", current.to_string());
+                args.set("threshold", threshold.to_string());
                 l10n.t("log-status-violation", Some(&args))
             }
             crate::services::punishment::ViolationResult::None => {
@@ -262,8 +262,8 @@ async fn handle_member_role_update(
     };
 
     let mut desc_args = fluent::FluentArgs::new();
-    desc_args.set("userId", user_id.get());
-    desc_args.set("targetId", target_user_id);
+    desc_args.set("userId", user_id.get().to_string());
+    desc_args.set("targetId", target_user_id.to_string());
     let desc = l10n.t("log-member-perm-desc", Some(&desc_args));
 
     data.logger
@@ -278,7 +278,7 @@ async fn handle_member_role_update(
             vec![
                 (
                     &l10n.t("log-field-acting-user", None),
-                    format!("<@{}>", user_id),
+                    format!("<@{}>", user_id.get()),
                 ),
                 (
                     &l10n.t("log-field-target-member", None),

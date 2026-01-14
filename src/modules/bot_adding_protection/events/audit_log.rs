@@ -123,8 +123,8 @@ async fn handle_bot_add(
                 threshold,
             } => {
                 let mut args = fluent::FluentArgs::new();
-                args.set("current", current);
-                args.set("threshold", threshold);
+                args.set("current", current.to_string());
+                args.set("threshold", threshold.to_string());
                 l10n.t("log-status-violation", Some(&args))
             }
             crate::services::punishment::ViolationResult::None => {
@@ -185,7 +185,7 @@ async fn handle_bot_add(
             vec![
                 (
                     &l10n.t("log-field-acting-user", None),
-                    format!("<@{}>", user_id),
+                    format!("<@{}>", user_id.get()),
                 ),
                 (&l10n.t("log-field-action-status", None), status),
             ],

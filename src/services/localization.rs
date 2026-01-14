@@ -49,6 +49,7 @@ impl LocalizationManager {
 
             if let Ok(lang_id) = locale_name.parse::<LanguageIdentifier>() {
                 let mut bundle = ConcurrentBundle::new_concurrent(vec![lang_id.clone()]);
+                bundle.set_use_isolating(false);
                 let mut commands = HashMap::new();
 
                 // Load files in the locale directory

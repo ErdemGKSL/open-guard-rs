@@ -115,16 +115,15 @@ impl LoggerService {
             }
         }
 
-        http.send_message(
-            channel_id.into(),
-            Vec::new(),
-            &serenity::CreateMessage::new()
-                .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
-                .components(vec![serenity::CreateComponent::Container(
-                    serenity::CreateContainer::new(inner_components).accent_color(level.color()),
-                )]),
-        )
-        .await?;
+        let message = serenity::CreateMessage::new()
+            .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+            .components(vec![serenity::CreateComponent::Container(
+                serenity::CreateContainer::new(inner_components).accent_color(level.color()),
+            )])
+            .allowed_mentions(serenity::CreateAllowedMentions::new());
+
+        http.send_message(channel_id.into(), Vec::new(), &message)
+            .await?;
 
         Ok(())
     }
@@ -147,11 +146,11 @@ impl LoggerService {
         let mut fields = vec![
             (
                 l10n.t("config-log-field-user", None).leak() as &str,
-                format!("<@{}>", ctx.author().id),
+                format!("<@{}>", ctx.author().id.get()),
             ),
             (
                 l10n.t("config-log-field-channel", None).leak() as &str,
-                format!("<#{}>", ctx.channel_id()),
+                format!("<#{}>", ctx.channel_id().get()),
             ),
         ];
 

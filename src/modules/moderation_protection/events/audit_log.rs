@@ -185,8 +185,8 @@ async fn handle_moderation_action(
                 threshold,
             } => {
                 let mut args = fluent::FluentArgs::new();
-                args.set("current", current);
-                args.set("threshold", threshold);
+                args.set("current", current.to_string());
+                args.set("threshold", threshold.to_string());
                 l10n.t("log-status-violation", Some(&args))
             }
             crate::services::punishment::ViolationResult::None => {
@@ -293,9 +293,9 @@ async fn handle_moderation_action(
     };
 
     let mut desc_args = fluent::FluentArgs::new();
-    desc_args.set("userId", user_id.get());
+    desc_args.set("userId", user_id.get().to_string());
     desc_args.set("action", action_type);
-    desc_args.set("targetId", target_id);
+    desc_args.set("targetId", target_id.to_string());
 
     let desc = l10n.t("log-mod-audit-desc", Some(&desc_args));
 
@@ -309,7 +309,7 @@ async fn handle_moderation_action(
             &title,
             &desc,
             vec![
-                (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
+                (&l10n.t("log-field-user", None), format!("<@{}>", user_id.get())),
                 (
                     &l10n.t("log-field-target-member", None),
                     format!("<@{}>", target_id),

@@ -46,14 +46,14 @@ impl TempBanService {
 
                             info!(
                                 "Unbanning user {} in guild {} (ban expired)",
-                                user_id, guild_id
+                                user_id.get(), guild_id.get()
                             );
 
                             if let Err(e) = guild_id
                                 .unban(&http, user_id, Some("Temporary ban expired"))
                                 .await
                             {
-                                error!("Failed to unban user {}: {:?}", user_id, e);
+                                error!("Failed to unban user {}: {:?}", user_id.get(), e);
                             } else {
                                 // Log successful unban
                                 let guild = guild_id.to_partial_guild(&http).await;
@@ -63,7 +63,7 @@ impl TempBanService {
                                 let l10n = l10n_service.get_proxy(&locale);
 
                                 let mut user_args = FluentArgs::new();
-                                user_args.set("userId", user_id.get());
+                                user_args.set("userId", user_id.get().to_string());
 
                                 let _ = logger
                                     .log_action(
@@ -77,7 +77,7 @@ impl TempBanService {
                                         vec![
                                             (
                                                 &l10n.t("log-field-user", None),
-                                                format!("<@{}>", user_id),
+                                                format!("<@{}>", user_id.get()),
                                             ),
                                             (
                                                 &l10n.t("log-field-reason", None),

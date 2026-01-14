@@ -31,8 +31,8 @@ pub async fn kick(
     // Log action
     let l10n_guild = ctx.l10n_guild();
     let mut log_args = FluentArgs::new();
-    log_args.set("modId", ctx.author().id.get());
-    log_args.set("userId", user.id.get());
+    log_args.set("modId", ctx.author().id.get().to_string());
+    log_args.set("userId", user.id.get().to_string());
 
     ctx.data()
         .logger
@@ -45,7 +45,7 @@ pub async fn kick(
             vec![
                 (
                     &l10n_guild.t("log-field-user", None),
-                    format!("<@{}>", user.id),
+                    format!("<@{}>", user.id.get()),
                 ),
                 (&l10n_guild.t("log-field-reason", None), kick_reason.clone()),
             ],
@@ -53,7 +53,7 @@ pub async fn kick(
         .await?;
 
     let mut args = FluentArgs::new();
-    args.set("userId", user.id.get());
+    args.set("userId", user.id.get().to_string());
     args.set("reason", kick_reason);
     ctx.send(poise::CreateReply::default().content(l10n.t("mod-kick-success", Some(&args))))
         .await?;

@@ -14,11 +14,7 @@ pub fn build_ui(
     if page == 0 {
         // Sub-log toggles in one row
         let msg_btn = serenity::CreateButton::new("config_log_msg_toggle")
-            .label(if config.log_messages {
-                l10n.t("config-log-msg-label", None)
-            } else {
-                format!("~~{}~~", l10n.t("config-log-msg-label", None))
-            })
+            .label(l10n.t("config-log-msg-label", None))
             .style(if config.log_messages {
                 serenity::ButtonStyle::Success
             } else {
@@ -26,11 +22,7 @@ pub fn build_ui(
             });
 
         let voice_btn = serenity::CreateButton::new("config_log_voice_toggle")
-            .label(if config.log_voice {
-                l10n.t("config-log-voice-label", None)
-            } else {
-                format!("~~{}~~", l10n.t("config-log-voice-label", None))
-            })
+            .label(l10n.t("config-log-voice-label", None))
             .style(if config.log_voice {
                 serenity::ButtonStyle::Success
             } else {
@@ -38,11 +30,7 @@ pub fn build_ui(
             });
 
         let member_btn = serenity::CreateButton::new("config_log_member_toggle")
-            .label(if config.log_membership {
-                l10n.t("config-log-member-label", None)
-            } else {
-                format!("~~{}~~", l10n.t("config-log-member-label", None))
-            })
+            .label(l10n.t("config-log-member-label", None))
             .style(if config.log_membership {
                 serenity::ButtonStyle::Success
             } else {

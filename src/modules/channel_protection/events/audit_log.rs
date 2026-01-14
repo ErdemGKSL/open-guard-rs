@@ -233,8 +233,8 @@ async fn handle_channel_create(
     };
 
     let mut desc_args = fluent::FluentArgs::new();
-    desc_args.set("channelId", channel_id);
-    desc_args.set("userId", user_id.get());
+    desc_args.set("channelId", channel_id.to_string());
+    desc_args.set("userId", user_id.get().to_string());
     let desc = l10n.t("log-channel-desc-create", Some(&desc_args));
 
     data.logger
@@ -247,7 +247,7 @@ async fn handle_channel_create(
             &title,
             &desc,
             vec![
-                (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
+                (&l10n.t("log-field-user", None), format!("<@{}>", user_id.get())),
                 (
                     &l10n.t("log-field-channel", None),
                     format!("<#{}>", channel_id),
@@ -405,8 +405,8 @@ async fn handle_channel_delete(
     };
 
     let mut desc_args = fluent::FluentArgs::new();
-    desc_args.set("channelId", channel_id);
-    desc_args.set("userId", user_id.get());
+    desc_args.set("channelId", channel_id.to_string());
+    desc_args.set("userId", user_id.get().to_string());
     let desc = l10n.t("log-channel-desc-delete", Some(&desc_args));
 
     data.logger
@@ -419,7 +419,7 @@ async fn handle_channel_delete(
             &title,
             &desc,
             vec![
-                (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
+                (&l10n.t("log-field-user", None), format!("<@{}>", user_id.get())),
                 (
                     &l10n.t("log-field-channel-id", None),
                     channel_id.to_string(),
@@ -569,8 +569,8 @@ async fn handle_channel_update(
     };
 
     let mut desc_args = fluent::FluentArgs::new();
-    desc_args.set("channelId", channel_id);
-    desc_args.set("userId", user_id.get());
+    desc_args.set("channelId", channel_id.to_string());
+    desc_args.set("userId", user_id.get().to_string());
     let desc = l10n.t("log-channel-desc-update", Some(&desc_args));
 
     data.logger
@@ -583,7 +583,7 @@ async fn handle_channel_update(
             &title,
             &desc,
             vec![
-                (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
+                (&l10n.t("log-field-user", None), format!("<@{}>", user_id.get())),
                 (
                     &l10n.t("log-field-channel", None),
                     format!("<#{}>", channel_id),

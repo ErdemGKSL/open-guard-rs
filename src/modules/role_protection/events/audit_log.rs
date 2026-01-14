@@ -167,8 +167,8 @@ async fn handle_role_create(
                 threshold,
             } => {
                 let mut args = fluent::FluentArgs::new();
-                args.set("current", current);
-                args.set("threshold", threshold);
+                args.set("current", current.to_string());
+                args.set("threshold", threshold.to_string());
                 l10n.t("log-status-violation", Some(&args))
             }
             crate::services::punishment::ViolationResult::None => {
@@ -218,8 +218,8 @@ async fn handle_role_create(
     };
 
     let mut desc_args = fluent::FluentArgs::new();
-    desc_args.set("roleId", role_id);
-    desc_args.set("userId", user_id.get());
+    desc_args.set("roleId", role_id.to_string());
+    desc_args.set("userId", user_id.get().to_string());
     let desc = l10n.t("log-role-desc-create", Some(&desc_args));
 
     data.logger
@@ -232,7 +232,7 @@ async fn handle_role_create(
             &title,
             &desc,
             vec![
-                (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
+                (&l10n.t("log-field-user", None), format!("<@{}>", user_id.get())),
                 (&l10n.t("log-field-role-id", None), role_id.to_string()),
                 (&l10n.t("log-field-action-status", None), status),
             ],
@@ -297,8 +297,8 @@ async fn handle_role_delete(
                 threshold,
             } => {
                 let mut args = fluent::FluentArgs::new();
-                args.set("current", current);
-                args.set("threshold", threshold);
+                args.set("current", current.to_string());
+                args.set("threshold", threshold.to_string());
                 l10n.t("log-status-violation", Some(&args))
             }
             crate::services::punishment::ViolationResult::None => {
@@ -362,8 +362,8 @@ async fn handle_role_delete(
     };
 
     let mut desc_args = fluent::FluentArgs::new();
-    desc_args.set("roleId", role_id);
-    desc_args.set("userId", user_id.get());
+    desc_args.set("roleId", role_id.to_string());
+    desc_args.set("userId", user_id.get().to_string());
     let desc = l10n.t("log-role-desc-delete", Some(&desc_args));
 
     data.logger
@@ -376,7 +376,7 @@ async fn handle_role_delete(
             &title,
             &desc,
             vec![
-                (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
+                (&l10n.t("log-field-user", None), format!("<@{}>", user_id.get())),
                 (&l10n.t("log-field-role-id", None), role_id.to_string()),
                 (&l10n.t("log-field-action-status", None), status),
             ],
@@ -441,8 +441,8 @@ async fn handle_role_update(
                 threshold,
             } => {
                 let mut args = fluent::FluentArgs::new();
-                args.set("current", current);
-                args.set("threshold", threshold);
+                args.set("current", current.to_string());
+                args.set("threshold", threshold.to_string());
                 l10n.t("log-status-violation", Some(&args))
             }
             crate::services::punishment::ViolationResult::None => {
@@ -527,8 +527,8 @@ async fn handle_role_update(
     };
 
     let mut desc_args = fluent::FluentArgs::new();
-    desc_args.set("roleId", role_id);
-    desc_args.set("userId", user_id.get());
+    desc_args.set("roleId", role_id.to_string());
+    desc_args.set("userId", user_id.get().to_string());
     let desc = l10n.t("log-role-desc-update", Some(&desc_args));
 
     data.logger
@@ -541,7 +541,7 @@ async fn handle_role_update(
             &title,
             &desc,
             vec![
-                (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
+                (&l10n.t("log-field-user", None), format!("<@{}>", user_id.get())),
                 (&l10n.t("log-field-role", None), format!("<@&{}>", role_id)),
                 (&l10n.t("log-field-action-status", None), status),
             ],

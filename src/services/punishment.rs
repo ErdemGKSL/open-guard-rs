@@ -109,8 +109,8 @@ impl PunishmentService {
             {
                 tracing::error!(
                     "Failed to punish user {} in guild {}: {:?}",
-                    user_id,
-                    guild_id,
+                    user_id.get(),
+                    guild_id.get(),
                     e
                 );
             }
@@ -216,7 +216,7 @@ impl PunishmentService {
                 let l10n = self.l10n.get_proxy(&locale);
 
                 let mut user_args = FluentArgs::new();
-                user_args.set("userId", user_id.get());
+                user_args.set("userId", user_id.get().to_string());
 
                 let _ = self
                     .logger
@@ -229,7 +229,7 @@ impl PunishmentService {
                         &l10n.t("log-mod-punish-title", None),
                         &l10n.t("log-mod-punish-desc", Some(&user_args)),
                         vec![
-                            (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
+                            (&l10n.t("log-field-user", None), format!("<@{}>", user_id.get())),
                             (&l10n.t("log-field-type", None), format!("{:?}", punishment)),
                             (&l10n.t("log-field-reason", None), reason.to_string()),
                         ],

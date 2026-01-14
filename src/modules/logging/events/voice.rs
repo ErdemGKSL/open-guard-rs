@@ -33,8 +33,8 @@ pub async fn handle_voice_state_update(
             (None, Some(channel_id)) => {
                 // Join
                 let mut args = fluent::FluentArgs::new();
-                args.set("userId", user_id.get());
-                args.set("channelId", channel_id.get());
+                args.set("userId", user_id.get().to_string());
+                args.set("channelId", channel_id.get().to_string());
 
                 data.logger
                     .log_action(
@@ -52,8 +52,8 @@ pub async fn handle_voice_state_update(
             (Some(channel_id), None) => {
                 // Leave
                 let mut args = fluent::FluentArgs::new();
-                args.set("userId", user_id.get());
-                args.set("channelId", channel_id.get());
+                args.set("userId", user_id.get().to_string());
+                args.set("channelId", channel_id.get().to_string());
 
                 data.logger
                     .log_action(
@@ -71,9 +71,9 @@ pub async fn handle_voice_state_update(
             (Some(old_cid), Some(new_cid)) => {
                 // Move
                 let mut args = fluent::FluentArgs::new();
-                args.set("userId", user_id.get());
-                args.set("oldChannelId", old_cid.get());
-                args.set("newChannelId", new_cid.get());
+                args.set("userId", user_id.get().to_string());
+                args.set("oldChannelId", old_cid.get().to_string());
+                args.set("newChannelId", new_cid.get().to_string());
 
                 data.logger
                     .log_action(
@@ -110,7 +110,7 @@ pub async fn handle_voice_state_update(
 
         if !changes.is_empty() {
             let mut args = fluent::FluentArgs::new();
-            args.set("userId", user_id.get());
+            args.set("userId", user_id.get().to_string());
             args.set("state", changes.join(", "));
 
             data.logger

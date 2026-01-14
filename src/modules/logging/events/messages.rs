@@ -32,14 +32,14 @@ pub async fn handle_message_delete(
         .map(|msg| (msg.author.id, msg.content.to_string()));
 
     let mut args = fluent::FluentArgs::new();
-    args.set("channelId", channel_id.get());
+    args.set("channelId", channel_id.get().to_string());
     args.set("userId", 0);
 
     let mut fields: Vec<(&str, String)> = vec![];
     let content_label = l10n.t("log-msg-delete-content", None);
 
     if let Some((author_id, content)) = cached_data {
-        args.set("userId", author_id.get());
+        args.set("userId", author_id.get().to_string());
         fields.push((content_label.as_str(), content));
     }
 
@@ -97,8 +97,8 @@ pub async fn handle_message_edit(
         .unwrap_or_else(|| new.message.author.id.get());
 
     let mut args = fluent::FluentArgs::new();
-    args.set("userId", author_id);
-    args.set("channelId", new.message.channel_id.get());
+    args.set("userId", author_id.to_string());
+    args.set("channelId", new.message.channel_id.get().to_string());
 
     data.logger
         .log_action(

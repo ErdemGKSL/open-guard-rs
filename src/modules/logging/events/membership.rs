@@ -185,14 +185,14 @@ pub async fn fetch_and_store_all_members(
                     {
                         error!(
                             "Failed to store roles for member {} in guild {}: {:?}",
-                            member.user.id, guild_id, e
+                            member.user.id.get(), guild_id.get(), e
                         );
                     }
                 }
 
                 info!(
                     "Stored roles for {} members (total: {}) in guild {}",
-                    count, total_members, guild_id
+                    count, total_members, guild_id.get()
                 );
 
                 if count < 1000 {
@@ -215,7 +215,7 @@ pub async fn fetch_and_store_all_members(
 
     info!(
         "Finished storing roles for {} members in guild {}",
-        total_members, guild_id
+        total_members, guild_id.get()
     );
 
     Ok(total_members)
@@ -238,7 +238,7 @@ pub async fn handle_guild_member_add(
     let l10n = data.l10n.get_l10n_for_guild(guild_id, &data.db).await;
 
     let mut args = fluent::FluentArgs::new();
-    args.set("userId", member.user.id.get());
+    args.set("userId", member.user.id.get().to_string());
 
     data.logger
         .log_action(
@@ -275,7 +275,7 @@ pub async fn handle_guild_member_remove(
     let l10n = data.l10n.get_l10n_for_guild(guild_id, &data.db).await;
 
     let mut args = fluent::FluentArgs::new();
-    args.set("userId", user.id.get());
+    args.set("userId", user.id.get().to_string());
 
     let mut fields = vec![];
 

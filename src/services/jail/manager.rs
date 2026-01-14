@@ -104,7 +104,7 @@ impl JailService {
         let l10n = self.l10n.get_proxy(&guild_locale);
 
         let mut user_args = FluentArgs::new();
-        user_args.set("userId", user_id.get());
+        user_args.set("userId", user_id.get().to_string());
 
         let duration_str = duration
             .map(|d| format!("{:?}", d))
@@ -120,7 +120,7 @@ impl JailService {
                 &l10n.t("log-mod-jail-title", None),
                 &l10n.t("log-mod-jail-desc", Some(&user_args)),
                 vec![
-                    (&l10n.t("log-field-user", None), format!("<@{}>", user_id)),
+                    (&l10n.t("log-field-user", None), format!("<@{}>", user_id.get())),
                     (&l10n.t("log-field-duration", None), duration_str),
                     (&l10n.t("log-field-reason", None), reason.to_string()),
                 ],
@@ -270,7 +270,7 @@ impl JailService {
         let l10n = self.l10n.get_proxy(&guild_locale);
 
         let mut user_args = FluentArgs::new();
-        user_args.set("userId", user_id.get());
+        user_args.set("userId", user_id.get().to_string());
 
         self.logger
             .log_action(
@@ -281,7 +281,7 @@ impl JailService {
                 LogLevel::Audit,
                 &l10n.t("log-mod-unjail-title", None),
                 &l10n.t("log-mod-unjail-desc", Some(&user_args)),
-                vec![(&l10n.t("log-field-user", None), format!("<@{}>", user_id))],
+                vec![(&l10n.t("log-field-user", None), format!("<@{}>", user_id.get()))],
             )
             .await?;
 

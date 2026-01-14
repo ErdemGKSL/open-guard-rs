@@ -62,7 +62,7 @@ pub async fn ban(
         model.insert(&ctx.data().db).await?;
 
         let mut args = FluentArgs::new();
-        args.set("userId", user.id.get());
+        args.set("userId", user.id.get().to_string());
         args.set("duration", format!("{:?}", dur));
         args.set("reason", ban_reason.clone());
         ctx.send(
@@ -72,7 +72,7 @@ pub async fn ban(
         format!("{:?}", dur)
     } else {
         let mut args = FluentArgs::new();
-        args.set("userId", user.id.get());
+        args.set("userId", user.id.get().to_string());
         args.set("reason", ban_reason.clone());
         ctx.send(
             poise::CreateReply::default().content(l10n.t("mod-ban-success-perm", Some(&args))),
@@ -84,8 +84,8 @@ pub async fn ban(
     // Log action
     let l10n_guild = ctx.l10n_guild();
     let mut log_args = FluentArgs::new();
-    log_args.set("modId", ctx.author().id.get());
-    log_args.set("userId", user.id.get());
+    log_args.set("modId", ctx.author().id.get().to_string());
+    log_args.set("userId", user.id.get().to_string());
 
     ctx.data()
         .logger
@@ -98,7 +98,7 @@ pub async fn ban(
             vec![
                 (
                     &l10n_guild.t("log-field-user", None),
-                    format!("<@{}>", user.id),
+                    format!("<@{}>", user.id.get()),
                 ),
                 (&l10n_guild.t("log-field-duration", None), expires_at_str),
                 (&l10n_guild.t("log-field-reason", None), ban_reason),
