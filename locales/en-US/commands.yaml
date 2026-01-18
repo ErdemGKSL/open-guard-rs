@@ -43,3 +43,26 @@ timeout:
     reason:
       name: "reason"
       desc: "Reason for the timeout"
+jail:
+  name: "jail"
+  desc: "Jail a user, swapping their roles with the jail role"
+  options:
+    user:
+      name: "user"
+      desc: "User to jail"
+    duration:
+      name: "duration"
+      desc: "Duration of the jail (e.g. 1d, 1h, 10m30s)"
+    reason:
+      name: "reason"
+      desc: "Reason for the jail"
+unjail:
+  name: "unjail"
+  desc: "Unjail a user, restoring their original roles"
+  options:
+    user:
+      name: "user"
+      desc: "User to unjail"
+setup:
+  name: "setup"
+  desc: "Start the fast setup process for the bot"

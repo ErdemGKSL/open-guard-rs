@@ -398,3 +398,9 @@ setup-summary-roles = { $count ->
 }
 setup-apply = Apply Changes
 setup-cancel = Cancel
+setup-create-channel = Create Channel
+setup-create-channel-fallback-name = bot-logs
+setup-module-log-channel-title = **Log Channel for {$label}**
+setup-module-log-channel-desc = Select or create a dedicated log channel for this module.
+setup-module-log-channel-placeholder = Select log channel (Optional)...
+setup-or-create = Or create a new channel:

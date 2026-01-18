@@ -43,3 +43,26 @@ timeout:
     reason:
       name: "sebep"
       desc: "Susturulma sebebi"
+jail:
+  name: "karantina"
+  desc: "Bir kullanıcıyı karantinaya alır, rollerini karantina rolüyle değiştirir"
+  options:
+    user:
+      name: "kullanıcı"
+      desc: "Karantinaya alınacak kullanıcı"
+    duration:
+      name: "süre"
+      desc: "Karantina süresi (örn. 1d, 1h, 10m30s)"
+    reason:
+      name: "sebep"
+      desc: "Karantina sebebi"
+unjail:
+  name: "karantina-kaldır"
+  desc: "Bir kullanıcının karantinasını kaldırır, orijinal rollerini geri yükler"
+  options:
+    user:
+      name: "kullanıcı"
+      desc: "Karantinası kaldırılacak kullanıcı"
+setup:
+  name: "kurulum"
+  desc: "Bot için hızlı kurulum sürecini başlatır"

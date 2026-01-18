@@ -5,8 +5,9 @@ use crate::{Context, Data, Error};
 use crate::db::entities::{module_configs, whitelist_role, whitelist_user, whitelists::WhitelistLevel};
 use crate::db::entities::module_configs::ModuleType;
 use crate::services::localization::{ContextL10nExt, L10nProxy};
+use fluent::FluentArgs;
 use poise::serenity_prelude as serenity;
-use sea_orm::{ColumnTrait, EntityTrait, Iterable, QueryFilter, Set};
+use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, Iterable, QueryFilter, Set};
 use state::SetupStep;
 
 /// Start the fast setup process for the bot.
@@ -77,7 +78,7 @@ pub async fn handle_interaction(
             }
         });
 
-        let (content, components) = steps::logging::build_logging_step(setup_id, &l10n);
+        let (content, components) = steps::logging::build_logging_step(setup_id, &l10n, false);
         interaction
             .create_response(
                 &ctx.http,
@@ -278,6 +279,7 @@ pub async fn handle_interaction(
             _ => {}
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_apply_") {
+        interaction.defer(&ctx.http).await?;
         handle_apply(ctx, interaction, data, setup_id).await?;
     } else if let Some(_setup_id) = custom_id.strip_prefix("setup_cancel_") {
         data.setup.cancel_setup(guild_id.get());
@@ -355,49 +357,57 @@ async fn handle_apply(
             .await?;
     }
 
-    // 2. Update whitelist
-    for user_id in state.whitelist_users {
-        let am = whitelist_user::ActiveModel {
-            guild_id: Set(guild_id.get() as i64),
-            user_id: Set(user_id as i64),
-            module_type: Set(None),
-            level: Set(WhitelistLevel::Admin),
-            ..Default::default()
-        };
-        whitelist_user::Entity::insert(am)
-            .on_conflict(
-                sea_orm::sea_query::OnConflict::columns([
-                    whitelist_user::Column::GuildId,
-                    whitelist_user::Column::UserId,
-                    whitelist_user::Column::ModuleType,
-                ])
-                .update_column(whitelist_user::Column::Level)
-                .to_owned()
-            )
-            .exec(&data.db)
+    // 2. Update whitelist - check if exists first, then insert or update
+    for user_id in &state.whitelist_users {
+        let existing = whitelist_user::Entity::find()
+            .filter(whitelist_user::Column::GuildId.eq(guild_id.get() as i64))
+            .filter(whitelist_user::Column::UserId.eq(*user_id as i64))
+            .filter(whitelist_user::Column::ModuleType.is_null())
+            .one(&data.db)
             .await?;
+
+        if let Some(existing) = existing {
+            // Update existing entry
+            let mut active: whitelist_user::ActiveModel = existing.into();
+            active.level = Set(WhitelistLevel::Invulnerable);
+            active.update(&data.db).await?;
+        } else {
+            // Insert new entry
+            let am = whitelist_user::ActiveModel {
+                guild_id: Set(guild_id.get() as i64),
+                user_id: Set(*user_id as i64),
+                module_type: Set(None),
+                level: Set(WhitelistLevel::Invulnerable),
+                ..Default::default()
+            };
+            am.insert(&data.db).await?;
+        }
     }
 
-    for role_id in state.whitelist_roles {
-        let am = whitelist_role::ActiveModel {
-            guild_id: Set(guild_id.get() as i64),
-            role_id: Set(role_id as i64),
-            module_type: Set(None),
-            level: Set(WhitelistLevel::Admin),
-            ..Default::default()
-        };
-        whitelist_role::Entity::insert(am)
-            .on_conflict(
-                sea_orm::sea_query::OnConflict::columns([
-                    whitelist_role::Column::GuildId,
-                    whitelist_role::Column::RoleId,
-                    whitelist_role::Column::ModuleType,
-                ])
-                .update_column(whitelist_role::Column::Level)
-                .to_owned()
-            )
-            .exec(&data.db)
+    for role_id in &state.whitelist_roles {
+        let existing = whitelist_role::Entity::find()
+            .filter(whitelist_role::Column::GuildId.eq(guild_id.get() as i64))
+            .filter(whitelist_role::Column::RoleId.eq(*role_id as i64))
+            .filter(whitelist_role::Column::ModuleType.is_null())
+            .one(&data.db)
             .await?;
+
+        if let Some(existing) = existing {
+            // Update existing entry
+            let mut active: whitelist_role::ActiveModel = existing.into();
+            active.level = Set(WhitelistLevel::Invulnerable);
+            active.update(&data.db).await?;
+        } else {
+            // Insert new entry
+            let am = whitelist_role::ActiveModel {
+                guild_id: Set(guild_id.get() as i64),
+                role_id: Set(*role_id as i64),
+                module_type: Set(None),
+                level: Set(WhitelistLevel::Invulnerable),
+                ..Default::default()
+            };
+            am.insert(&data.db).await?;
+        }
     }
 
     data.setup.cancel_setup(guild_id.get());
@@ -407,14 +417,57 @@ async fn handle_apply(
         locale: interaction.locale.to_string(),
     };
 
+    let mut details = format!("## {}\n\n", l10n.t("setup-apply-success", None));
+
+    details.push_str(&format!("**{}**\n", l10n.t("setup-summary-enabled-modules", None)));
+    if state.enabled_modules.is_empty() {
+        details.push_str(&format!("- {}\n", l10n.t("setup-summary-none", None)));
+    } else {
+        for module in &state.enabled_modules {
+            let name_key = match module {
+                ModuleType::ChannelProtection => "module-channel-protection-name",
+                ModuleType::ChannelPermissionProtection => "module-channel-permission-protection-name",
+                ModuleType::RoleProtection => "module-role-protection-name",
+                ModuleType::RolePermissionProtection => "module-role-permission-protection-name",
+                ModuleType::MemberPermissionProtection => "module-member-permission-protection-name",
+                ModuleType::BotAddingProtection => "module-bot-adding-protection-name",
+                ModuleType::ModerationProtection => "module-moderation-protection-name",
+                ModuleType::Logging => "module-logging-name",
+                ModuleType::StickyRoles => "module-sticky-roles-name",
+            };
+            details.push_str(&format!("- ✅ {}\n", l10n.t(name_key, None)));
+        }
+    }
+
+    details.push_str(&format!("\n**{}**\n", l10n.t("setup-summary-fallback-log", None)));
+    if let Some(channel_id) = state.fallback_log_channel {
+        details.push_str(&format!("- <#{}>\n", channel_id));
+    } else {
+        details.push_str(&format!("- {}\n", l10n.t("config-punishment-type-none", None)));
+    }
+
+    details.push_str(&format!("\n**{}**\n", l10n.t("setup-summary-whitelist", None)));
+
+    let mut users_args = FluentArgs::new();
+    users_args.set("count", state.whitelist_users.len());
+    details.push_str(&format!(
+        "- {}\n",
+        l10n.t("setup-summary-users", Some(&users_args))
+    ));
+
+    let mut roles_args = FluentArgs::new();
+    roles_args.set("count", state.whitelist_roles.len());
+    details.push_str(&format!(
+        "- {}\n",
+        l10n.t("setup-summary-roles", Some(&roles_args))
+    ));
+
     interaction
-        .create_response(
+        .edit_response(
             &ctx.http,
-            serenity::CreateInteractionResponse::UpdateMessage(
-                serenity::CreateInteractionResponseMessage::new()
-                    .content(l10n.t("setup-apply-success", None))
-                    .components(vec![]),
-            ),
+            serenity::EditInteractionResponse::new()
+                .content(details)
+                .components(vec![]),
         )
         .await?;
 
