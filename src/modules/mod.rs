@@ -36,10 +36,10 @@ pub fn get_modules() -> Vec<Module> {
         role_protection::module(),
         role_permission_protection::module(),
         member_permission_protection::module(),
-        crate::modules::bot_adding_protection::module(),
-        crate::modules::moderation_protection::module(),
-        crate::modules::logging::module(),
-        crate::modules::sticky_roles::module(),
+        bot_adding_protection::module(),
+        moderation_protection::module(),
+        logging::module(),
+        sticky_roles::module(),
     ]
 }
 
