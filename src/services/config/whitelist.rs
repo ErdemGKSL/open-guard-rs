@@ -74,7 +74,7 @@ pub async fn check_permission(
     Ok(false)
 }
 
-const ENTRIES_PER_PAGE: usize = 10;
+const ENTRIES_PER_PAGE: usize = 5;
 
 #[derive(Debug, Clone)]
 pub enum WhitelistItem {
@@ -98,6 +98,13 @@ impl WhitelistItem {
         match self {
             WhitelistItem::User(u) => format!("<@{}>", u.user_id),
             WhitelistItem::Role(r) => format!("<@&{}>", r.role_id),
+        }
+    }
+
+    fn level(&self) -> WhitelistLevel {
+        match self {
+            WhitelistItem::User(u) => u.level,
+            WhitelistItem::Role(r) => r.level,
         }
     }
 }
@@ -203,10 +210,11 @@ pub async fn build_whitelist_menu(
             let suffix = module
                 .map(|m| m.to_string())
                 .unwrap_or_else(|| "global".to_string());
+            // Manage button section - mention with ## prefix for visibility
             components.push(serenity::CreateContainerComponent::Section(
                 serenity::CreateSection::new(
                     vec![serenity::CreateSectionComponent::TextDisplay(
-                        serenity::CreateTextDisplay::new(item.mention()),
+                        serenity::CreateTextDisplay::new(format!("## {}", item.mention())),
                     )],
                     serenity::CreateSectionAccessory::Button(
                         serenity::CreateButton::new(format!(
@@ -217,6 +225,30 @@ pub async fn build_whitelist_menu(
                         ))
                         .label(l10n.t("config-whitelist-manage-btn", None))
                         .style(serenity::ButtonStyle::Secondary)
+                        .disabled(!is_head),
+                    ),
+                ),
+            ));
+            // Delete button section - show level with ### prefix
+            let level_label = match item.level() {
+                WhitelistLevel::Head => l10n.t("config-level-head", None),
+                WhitelistLevel::Admin => l10n.t("config-level-admin", None),
+                WhitelistLevel::Invulnerable => l10n.t("config-level-invulnerable", None),
+            };
+            components.push(serenity::CreateContainerComponent::Section(
+                serenity::CreateSection::new(
+                    vec![serenity::CreateSectionComponent::TextDisplay(
+                        serenity::CreateTextDisplay::new(format!("### {}", level_label)),
+                    )],
+                    serenity::CreateSectionAccessory::Button(
+                        serenity::CreateButton::new(format!(
+                            "config_whitelist_entry_delete_{}_{}_{}",
+                            item_type,
+                            item.id(),
+                            suffix
+                        ))
+                        .label(l10n.t("config-whitelist-delete-btn", None))
+                        .style(serenity::ButtonStyle::Danger)
                         .disabled(!is_head),
                     ),
                 ),
@@ -313,15 +345,17 @@ pub fn build_whitelist_user_modal<'a>(
     };
 
     // User select with Label wrapper
+    // When editing (entry_id is Some), allow clearing the selection to delete the entry
+    let is_editing = entry_id.is_some();
     let user_select = serenity::CreateSelectMenu::new(
         "whitelist_modal_user_select",
         serenity::CreateSelectMenuKind::User {
             default_users: current_user_id.map(|id| vec![id].into()),
         },
     )
-    .min_values(1)
+    .min_values(if is_editing { 0 } else { 1 })
     .max_values(1)
-    .required(true);
+    .required(!is_editing);
 
     let user_label = serenity::CreateLabel::select_menu(
         l10n.t("config-whitelist-modal-user-label", None),
@@ -392,15 +426,17 @@ pub fn build_whitelist_role_modal<'a>(
     };
 
     // Role select with Label wrapper
+    // When editing (entry_id is Some), allow clearing the selection to delete the entry
+    let is_editing = entry_id.is_some();
     let role_select = serenity::CreateSelectMenu::new(
         "whitelist_modal_role_select",
         serenity::CreateSelectMenuKind::Role {
             default_roles: current_role_id.map(|id| vec![id].into()),
         },
     )
-    .min_values(1)
+    .min_values(if is_editing { 0 } else { 1 })
     .max_values(1)
-    .required(true);
+    .required(!is_editing);
 
     let role_label = serenity::CreateLabel::select_menu(
         l10n.t("config-whitelist-modal-role-label", None),
@@ -444,177 +480,6 @@ pub fn build_whitelist_role_modal<'a>(
         serenity::CreateModalComponent::Label(role_label),
         serenity::CreateModalComponent::Label(level_label),
     ])
-}
-
-/// Builds the individual whitelist entry management page
-pub async fn build_manage_entry(
-    data: &Data,
-    guild_id: serenity::GuildId,
-    entry_id: Option<i32>,
-    is_user: bool,
-    module: Option<ModuleType>,
-    is_head: bool,
-    l10n: &L10nProxy,
-) -> Result<Vec<serenity::CreateComponent<'static>>, Error> {
-    let mut components = vec![];
-    let suffix = module
-        .map(|m| m.to_string())
-        .unwrap_or_else(|| "global".to_string());
-
-    // Header
-    components.push(serenity::CreateContainerComponent::Section(
-        serenity::CreateSection::new(
-            vec![serenity::CreateSectionComponent::TextDisplay(
-                serenity::CreateTextDisplay::new(l10n.t("config-whitelist-manage-title", None)),
-            )],
-            serenity::CreateSectionAccessory::Button(
-                serenity::CreateButton::new(format!("config_whitelist_view_{}", suffix))
-                    .label(l10n.t("config-back-label", None))
-                    .style(serenity::ButtonStyle::Secondary),
-            ),
-        ),
-    ));
-
-    // Fetch existing data if any
-    let (current_target_id, current_level) = if let Some(id) = entry_id {
-        if is_user {
-            whitelist_user::Entity::find_by_id(id)
-                .filter(whitelist_user::Column::GuildId.eq(guild_id.get() as i64))
-                .one(&data.db)
-                .await?
-                .map(|u| (Some(u.user_id as u64), Some(u.level)))
-                .unwrap_or((None, None))
-        } else {
-            whitelist_role::Entity::find_by_id(id)
-                .filter(whitelist_role::Column::GuildId.eq(guild_id.get() as i64))
-                .one(&data.db)
-                .await?
-                .map(|r| (Some(r.role_id as u64), Some(r.level)))
-                .unwrap_or((None, None))
-        }
-    } else {
-        (None, None)
-    };
-
-    // User or Role Select
-    let select_id = if let Some(id) = entry_id {
-        format!(
-            "config_whitelist_entry_target_{}_{}",
-            if is_user { "user" } else { "role" },
-            id
-        )
-    } else {
-        format!(
-            "config_whitelist_entry_target_new_{}_{}",
-            if is_user { "user" } else { "role" },
-            suffix
-        )
-    };
-
-    if is_user {
-        components.push(serenity::CreateContainerComponent::ActionRow(
-            serenity::CreateActionRow::select_menu(
-                serenity::CreateSelectMenu::new(
-                    select_id,
-                    serenity::CreateSelectMenuKind::User {
-                        default_users: current_target_id
-                            .map(|id| vec![serenity::UserId::new(id)].into()),
-                    },
-                )
-                .min_values(1)
-                .max_values(1)
-                .placeholder(l10n.t("config-select-user-placeholder", None))
-                .disabled(!is_head),
-            ),
-        ));
-    } else {
-        components.push(serenity::CreateContainerComponent::ActionRow(
-            serenity::CreateActionRow::select_menu(
-                serenity::CreateSelectMenu::new(
-                    select_id,
-                    serenity::CreateSelectMenuKind::Role {
-                        default_roles: current_target_id
-                            .map(|id| vec![serenity::RoleId::new(id)].into()),
-                    },
-                )
-                .min_values(1)
-                .max_values(1)
-                .placeholder(l10n.t("config-select-role-placeholder", None))
-                .disabled(!is_head),
-            ),
-        ));
-    }
-
-    // Level Select
-    let level_id = if let Some(id) = entry_id {
-        format!(
-            "config_whitelist_entry_level_{}_{}",
-            if is_user { "user" } else { "role" },
-            id
-        )
-    } else {
-        format!(
-            "config_whitelist_entry_level_new_{}_{}",
-            if is_user { "user" } else { "role" },
-            suffix
-        )
-    };
-
-    let mut level_options = vec![];
-    for level in WhitelistLevel::iter() {
-        let label = match level {
-            WhitelistLevel::Head => l10n.t("config-level-head", None),
-            WhitelistLevel::Admin => l10n.t("config-level-admin", None),
-            WhitelistLevel::Invulnerable => l10n.t("config-level-invulnerable", None),
-        };
-        let mut opt =
-            serenity::CreateSelectMenuOption::new(label, level.to_string().to_lowercase());
-        if let Some(l) = current_level {
-            if l == level {
-                opt = opt.default_selection(true);
-            }
-        }
-        level_options.push(opt);
-    }
-
-    components.push(serenity::CreateContainerComponent::ActionRow(
-        serenity::CreateActionRow::select_menu(
-            serenity::CreateSelectMenu::new(
-                level_id,
-                serenity::CreateSelectMenuKind::String {
-                    options: level_options.into(),
-                },
-            )
-            .placeholder(l10n.t("config-select-level-placeholder", None))
-            .disabled(!is_head),
-        ),
-    ));
-
-    // Delete Button (only if editing)
-    if let Some(id) = entry_id {
-        components.push(serenity::CreateContainerComponent::Section(
-            serenity::CreateSection::new(
-                vec![serenity::CreateSectionComponent::TextDisplay(
-                    serenity::CreateTextDisplay::new("** **"),
-                )],
-                serenity::CreateSectionAccessory::Button(
-                    serenity::CreateButton::new(format!(
-                        "config_whitelist_entry_delete_{}_{}_{}",
-                        if is_user { "user" } else { "role" },
-                        id,
-                        suffix
-                    ))
-                    .label(l10n.t("config-whitelist-delete-btn", None))
-                    .style(serenity::ButtonStyle::Danger)
-                    .disabled(!is_head),
-                ),
-            ),
-        ));
-    }
-
-    Ok(vec![serenity::CreateComponent::Container(
-        serenity::CreateContainer::new(components),
-    )])
 }
 
 /// Result type for whitelist interaction handling
@@ -920,11 +785,26 @@ pub async fn handle_modal_submit(
                 .one(&data.db)
                 .await?;
 
-            if let Some(existing) = existing {
+            if existing.is_some() {
+                // Get selected user from resolved data
+                let selected_user = resolved.users.iter().next();
+
+                // If no user is selected (cleared), delete the entry
+                if selected_user.is_none() {
+                    whitelist_user::Entity::delete_by_id(id)
+                        .exec(&data.db)
+                        .await?;
+
+                    return Ok(Some(
+                        build_whitelist_menu(data, guild_id, module, 0, true, &l10n).await?,
+                    ));
+                }
+
+                // Otherwise, update the entry
+                let existing = existing.unwrap();
                 let mut active: whitelist_user::ActiveModel = existing.into();
 
-                // Get selected user from resolved data
-                if let Some(user) = resolved.users.iter().next() {
+                if let Some(user) = selected_user {
                     active.user_id = Set(user.id.get() as i64);
                 }
 
@@ -1004,11 +884,26 @@ pub async fn handle_modal_submit(
                 .one(&data.db)
                 .await?;
 
-            if let Some(existing) = existing {
+            if existing.is_some() {
+                // Get selected role from resolved data
+                let selected_role = resolved.roles.iter().next();
+
+                // If no role is selected (cleared), delete the entry
+                if selected_role.is_none() {
+                    whitelist_role::Entity::delete_by_id(id)
+                        .exec(&data.db)
+                        .await?;
+
+                    return Ok(Some(
+                        build_whitelist_menu(data, guild_id, module, 0, true, &l10n).await?,
+                    ));
+                }
+
+                // Otherwise, update the entry
+                let existing = existing.unwrap();
                 let mut active: whitelist_role::ActiveModel = existing.into();
 
-                // Get selected role from resolved data
-                if let Some(role) = resolved.roles.iter().next() {
+                if let Some(role) = selected_role {
                     active.role_id = Set(role.id.get() as i64);
                 }
 
