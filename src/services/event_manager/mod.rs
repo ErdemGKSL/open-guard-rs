@@ -160,7 +160,6 @@ async fn handle_interactions(ctx: &serenity::Context, interaction: &serenity::In
                 {
                     error!("Error handling status interaction: {:?}", e);
                 }
-            } else if custom_id.starts_with("whitelist_") {
                 if let Err(e) = crate::services::config::whitelist::handle_interaction(
                     &ctx,
                     &component_interaction,
@@ -169,6 +168,13 @@ async fn handle_interactions(ctx: &serenity::Context, interaction: &serenity::In
                 .await
                 {
                     error!("Error handling whitelist interaction: {:?}", e);
+                }
+            } else if custom_id.starts_with("setup_") {
+                if let Err(e) =
+                    crate::services::setup::handle_interaction(&ctx, &component_interaction, &data)
+                        .await
+                {
+                    error!("Error handling setup interaction: {:?}", e);
                 }
             }
         });

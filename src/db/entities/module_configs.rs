@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
     Copy,
     PartialEq,
     Eq,
+    Hash,
     EnumIter,
     DeriveActiveEnum,
     Serialize,

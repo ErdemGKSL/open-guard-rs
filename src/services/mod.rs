@@ -10,3 +10,4 @@ pub mod punishment;
 pub mod status;
 pub mod temp_ban;
 pub mod whitelist;
+pub mod setup;

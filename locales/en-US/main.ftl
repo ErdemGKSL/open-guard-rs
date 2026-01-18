@@ -356,3 +356,45 @@ config-whitelist-modal-level-description = Select the whitelist permission level
 config-whitelist-modal-level-head = Head (Full Immunity)
 config-whitelist-modal-level-admin = Admin (Bypass Punishment)
 config-whitelist-modal-level-invulnerable = Invulnerable (Cannot be Punished)
+
+# Setup
+setup-cancelled = ❌ Setup cancelled.
+setup-apply-success = ✅ **Setup applied successfully!** Your bot is now configured and ready to protect your server.
+setup-step1-title = ## 🛠️ Step 1: System Selection
+setup-step1-desc = Which systems do you want to enable? Unselected systems will be disabled.
+setup-systems-placeholder = Select systems to enable...
+setup-step2-title = ## 📜 Step 2: Fallback Logging
+setup-step2-desc = Select a channel where system logs will be sent if a specific channel is not configured for a module. This is optional.
+setup-logging-placeholder = Select fallback log channel (Optional)...
+setup-logging-skip = Skip / No Fallback
+setup-step3-title = ## 🛡️ Step 3: Global Whitelist
+setup-step3-desc = Select users and roles that should be globally whitelisted from all protection systems. You can skip this by just clicking Next.
+setup-whitelist-users-placeholder = Whitelist Users (Optional)...
+setup-whitelist-roles-placeholder = Whitelist Roles (Optional)...
+setup-next = Next
+setup-step4-title = ## 🔧 Step 4: Configuring {$label}
+setup-step4-generic-desc = This module doesn't require extra configuration in the fast setup. Click Next to continue.
+setup-step4-logging-desc = Which types of activity do you want to log?
+setup-logging-types-placeholder = Select log types to enable...
+setup-log-type-messages = Messages
+setup-log-type-messages-desc = Log message edits and deletions
+setup-log-type-voice = Voice
+setup-log-type-voice-desc = Log voice channel joins and leaves
+setup-log-type-membership = Membership
+setup-log-type-membership-desc = Log member joins and leaves
+setup-summary-title = ## ✅ Final Step: Summary
+setup-summary-desc = Review your changes and click Apply to save them to the database.
+setup-summary-enabled-modules = **Enabled Modules:**
+setup-summary-none = None (All modules will be disabled)
+setup-summary-fallback-log = **Fallback Log Channel:**
+setup-summary-whitelist = **Whitelist:**
+setup-summary-users = { $count ->
+    [one] 1 User
+    *[other] {$count} Users
+}
+setup-summary-roles = { $count ->
+    [one] 1 Role
+    *[other] {$count} Roles
+}
+setup-apply = Apply Changes
+setup-cancel = Cancel

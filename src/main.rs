@@ -38,6 +38,7 @@ pub struct Data {
     pub module_definitions: Vec<modules::ModuleDefinition>,
     pub temp_ban: Arc<services::temp_ban::TempBanService>,
     pub jail: Arc<services::jail::JailService>,
+    pub setup: Arc<services::setup::state::SetupStateService>,
     pub shard_count: AtomicU32,
 }
 
@@ -120,6 +121,9 @@ async fn main() -> anyhow::Result<()> {
         services::punishment::PunishmentService::new(db.clone(), logger.clone(), l10n.clone());
     punishment_svc.set_jail_service(jail.clone());
     let punishment = Arc::new(punishment_svc);
+
+    // Initialize setup service
+    let setup = Arc::new(services::setup::state::SetupStateService::new());
 
     // Load and translate commands
     let mut commands = modules::commands();
@@ -245,6 +249,7 @@ async fn main() -> anyhow::Result<()> {
             module_definitions: modules::definitions(),
             temp_ban: temp_ban.clone(),
             jail: jail.clone(),
+            setup,
             shard_count: AtomicU32::new(shard_count.load(Ordering::Relaxed)),
         }) as _)
         .await
