@@ -754,14 +754,33 @@ pub async fn handle_modal_submit(
         };
 
         if let Some(user_id) = selected_user_id {
-            let model = whitelist_user::ActiveModel {
-                guild_id: Set(guild_id.get() as i64),
-                user_id: Set(user_id.get() as i64),
-                level: Set(selected_level),
-                module_type: Set(module),
-                ..Default::default()
-            };
-            model.insert(&data.db).await?;
+            // Check if user already exists for this guild/module
+            let existing = whitelist_user::Entity::find()
+                .filter(whitelist_user::Column::GuildId.eq(guild_id.get() as i64))
+                .filter(whitelist_user::Column::UserId.eq(user_id.get() as i64))
+                .filter(match module {
+                    Some(m) => whitelist_user::Column::ModuleType.eq(Some(m)),
+                    None => whitelist_user::Column::ModuleType.is_null(),
+                })
+                .one(&data.db)
+                .await?;
+
+            if let Some(existing) = existing {
+                // Update existing entry's level
+                let mut active: whitelist_user::ActiveModel = existing.into();
+                active.level = Set(selected_level);
+                active.update(&data.db).await?;
+            } else {
+                // Insert new entry
+                let model = whitelist_user::ActiveModel {
+                    guild_id: Set(guild_id.get() as i64),
+                    user_id: Set(user_id.get() as i64),
+                    level: Set(selected_level),
+                    module_type: Set(module),
+                    ..Default::default()
+                };
+                model.insert(&data.db).await?;
+            }
 
             return Ok(Some(
                 build_whitelist_menu(data, guild_id, module, 0, true, &l10n).await?,
@@ -853,14 +872,33 @@ pub async fn handle_modal_submit(
         };
 
         if let Some(role_id) = selected_role_id {
-            let model = whitelist_role::ActiveModel {
-                guild_id: Set(guild_id.get() as i64),
-                role_id: Set(role_id.get() as i64),
-                level: Set(selected_level),
-                module_type: Set(module),
-                ..Default::default()
-            };
-            model.insert(&data.db).await?;
+            // Check if role already exists for this guild/module
+            let existing = whitelist_role::Entity::find()
+                .filter(whitelist_role::Column::GuildId.eq(guild_id.get() as i64))
+                .filter(whitelist_role::Column::RoleId.eq(role_id.get() as i64))
+                .filter(match module {
+                    Some(m) => whitelist_role::Column::ModuleType.eq(Some(m)),
+                    None => whitelist_role::Column::ModuleType.is_null(),
+                })
+                .one(&data.db)
+                .await?;
+
+            if let Some(existing) = existing {
+                // Update existing entry's level
+                let mut active: whitelist_role::ActiveModel = existing.into();
+                active.level = Set(selected_level);
+                active.update(&data.db).await?;
+            } else {
+                // Insert new entry
+                let model = whitelist_role::ActiveModel {
+                    guild_id: Set(guild_id.get() as i64),
+                    role_id: Set(role_id.get() as i64),
+                    level: Set(selected_level),
+                    module_type: Set(module),
+                    ..Default::default()
+                };
+                model.insert(&data.db).await?;
+            }
 
             return Ok(Some(
                 build_whitelist_menu(data, guild_id, module, 0, true, &l10n).await?,

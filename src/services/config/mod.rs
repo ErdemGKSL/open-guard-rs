@@ -488,7 +488,9 @@ pub async fn handle_interaction(
                 interaction
                     .create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge)
                     .await?;
-                let edit = serenity::EditInteractionResponse::new().components(components);
+                let edit = serenity::EditInteractionResponse::new()
+                    .components(components)
+                    .allowed_mentions(serenity::CreateAllowedMentions::new().empty_users().empty_roles());
                 interaction.edit_response(&ctx.http, edit).await?;
                 return Ok(());
             }
@@ -976,7 +978,9 @@ pub async fn handle_interaction(
     }
 
     if let Some(components) = updated_reply {
-        let edit = serenity::EditInteractionResponse::new().components(components);
+        let edit = serenity::EditInteractionResponse::new()
+            .components(components)
+            .allowed_mentions(serenity::CreateAllowedMentions::new().empty_users().empty_roles());
         interaction.edit_response(&ctx.http, edit).await?;
     }
 
