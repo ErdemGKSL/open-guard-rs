@@ -80,7 +80,7 @@ fn build_generic_ui(
                                 "setup_create_module_channel_{}_{:?}",
                                 setup_id, module
                             ))
-                            .emoji(serenity::ReactionType::Unicode("📝".to_string()))
+                            .emoji(serenity::ReactionType::Unicode('📝'.into()))
                             .style(serenity::ButtonStyle::Secondary),
                         ),
                     )),

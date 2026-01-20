@@ -3,6 +3,8 @@ target
 **/*.rs.bk
 **/*.md
 !docs/*.md
+!.opencode/**/*.md
 !README.md
+!AGENTS.md
 poise
 serenity
