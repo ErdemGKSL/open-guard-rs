@@ -176,7 +176,8 @@ pub async fn handle_interaction(
 
         match next_step {
             Some(SetupStep::ModuleConfig(m)) => {
-                let (content, components) = steps::module_config::build_module_config_step(setup_id, &l10n, m);
+                let has_log_channel = state_opt.as_ref().map(|s| s.fallback_log_channel.is_some()).unwrap_or(false);
+                let (content, components) = steps::module_config::build_module_config_step(setup_id, &l10n, m, has_log_channel);
                 interaction
                     .create_response(
                         &ctx.http,
@@ -251,7 +252,8 @@ pub async fn handle_interaction(
 
         match next_step {
             Some(SetupStep::ModuleConfig(m)) => {
-                let (content, components) = steps::module_config::build_module_config_step(setup_id, &l10n, m);
+                let has_log_channel = state_opt.as_ref().map(|s| s.fallback_log_channel.is_some()).unwrap_or(false);
+                let (content, components) = steps::module_config::build_module_config_step(setup_id, &l10n, m, has_log_channel);
                 interaction
                     .create_response(
                         &ctx.http,
