@@ -122,8 +122,7 @@ pub async fn leaderboard(
                             serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new("Invite tracking is not enabled on this server."))
                         ])
                     )])
-                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL)
-                    .ephemeral(true),
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
             )
             .await?;
             return Ok(());
@@ -208,8 +207,7 @@ pub async fn codes(ctx: Context<'_>) -> Result<(), Error> {
                             serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(format!("Failed to fetch invites: {:?}", e)))
                         ])
                     )])
-                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL)
-                    .ephemeral(true),
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
             )
             .await?;
             return Ok(());
