@@ -29,7 +29,12 @@ pub async fn jail(
             None => {
                 ctx.send(
                     poise::CreateReply::default()
-                        .content(l10n.t("mod-error-invalid-duration", None)),
+                        .components(vec![serenity::CreateComponent::Container(
+                            serenity::CreateContainer::new(vec![
+                                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(l10n.t("mod-error-invalid-duration", None)))
+                            ])
+                        )])
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
                 )
                 .await?;
                 return Ok(());
@@ -88,12 +93,24 @@ pub async fn jail(
     if let Some(dur) = duration_parsed {
         args.set("duration", format!("{:?}", dur));
         ctx.send(
-            poise::CreateReply::default().content(l10n.t("mod-jail-success-temp", Some(&args))),
+            poise::CreateReply::default()
+                .components(vec![serenity::CreateComponent::Container(
+                    serenity::CreateContainer::new(vec![
+                        serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(l10n.t("mod-jail-success-temp", Some(&args))))
+                    ])
+                )])
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
         )
         .await?;
     } else {
         ctx.send(
-            poise::CreateReply::default().content(l10n.t("mod-jail-success-perm", Some(&args))),
+            poise::CreateReply::default()
+                .components(vec![serenity::CreateComponent::Container(
+                    serenity::CreateContainer::new(vec![
+                        serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(l10n.t("mod-jail-success-perm", Some(&args))))
+                    ])
+                )])
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
         )
         .await?;
     }

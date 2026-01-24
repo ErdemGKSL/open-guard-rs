@@ -47,7 +47,15 @@ pub async fn unjail(
 
     let mut args = FluentArgs::new();
     args.set("userId", user.id.get().to_string());
-    ctx.send(poise::CreateReply::default().content(l10n.t("mod-unjail-success", Some(&args))))
+    ctx.send(
+        poise::CreateReply::default()
+            .components(vec![serenity::CreateComponent::Container(
+                serenity::CreateContainer::new(vec![
+                    serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(l10n.t("mod-unjail-success", Some(&args))))
+                ])
+            )])
+            .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
+    )
         .await?;
 
     Ok(())

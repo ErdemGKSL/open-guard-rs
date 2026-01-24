@@ -19,17 +19,20 @@ pub async fn setup(ctx: Context<'_>) -> Result<(), Error> {
 
     match setup_svc.start_setup(guild_id.get()) {
         Ok(setup_id) => {
-            let (content, components) = steps::systems::build_systems_step(&setup_id, &l10n);
+            let components = steps::systems::build_systems_step(&setup_id, &l10n);
             ctx.send(poise::CreateReply::default()
-                .content(content)
                 .components(components)
-                .ephemeral(true))
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL))
                 .await?;
         }
         Err(e) => {
             ctx.send(poise::CreateReply::default()
-                .content(format!("❌ {}", e))
-                .ephemeral(true))
+                .components(vec![serenity::CreateComponent::Container(
+                    serenity::CreateContainer::new(vec![
+                        serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(format!("❌ {}", e)))
+                    ])
+                )])
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL))
                 .await?;
         }
     }
@@ -79,14 +82,14 @@ pub async fn handle_interaction(
             }
         });
 
-        let (content, components) = steps::logging::build_logging_step(setup_id, &l10n, false);
+        let components = steps::logging::build_logging_step(setup_id, &l10n, false);
         interaction
             .create_response(
                 &ctx.http,
                 serenity::CreateInteractionResponse::UpdateMessage(
                     serenity::CreateInteractionResponseMessage::new()
-                        .content(content)
-                        .components(components),
+                        .components(components)
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
                 ),
             )
             .await?;
@@ -105,14 +108,14 @@ pub async fn handle_interaction(
             }
         });
 
-        let (content, components) = steps::whitelist::build_whitelist_step(setup_id, &l10n);
+        let components = steps::whitelist::build_whitelist_step(setup_id, &l10n);
         interaction
             .create_response(
                 &ctx.http,
                 serenity::CreateInteractionResponse::UpdateMessage(
                     serenity::CreateInteractionResponseMessage::new()
-                        .content(content)
-                        .components(components),
+                        .components(components)
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
                 ),
             )
             .await?;
@@ -123,14 +126,14 @@ pub async fn handle_interaction(
             }
         });
 
-        let (content, components) = steps::whitelist::build_whitelist_step(setup_id, &l10n);
+        let components = steps::whitelist::build_whitelist_step(setup_id, &l10n);
         interaction
             .create_response(
                 &ctx.http,
                 serenity::CreateInteractionResponse::UpdateMessage(
                     serenity::CreateInteractionResponseMessage::new()
-                        .content(content)
-                        .components(components),
+                        .components(components)
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
                 ),
             )
             .await?;
@@ -178,27 +181,27 @@ pub async fn handle_interaction(
         match next_step {
             Some(SetupStep::ModuleConfig(m)) => {
                 let has_log_channel = state_opt.as_ref().map(|s| s.fallback_log_channel.is_some()).unwrap_or(false);
-                let (content, components) = steps::module_config::build_module_config_step(setup_id, &l10n, m, has_log_channel);
+                let components = steps::module_config::build_module_config_step(setup_id, &l10n, m, has_log_channel);
                 interaction
                     .create_response(
                         &ctx.http,
                         serenity::CreateInteractionResponse::UpdateMessage(
                             serenity::CreateInteractionResponseMessage::new()
-                                .content(content)
-                                .components(components),
+                                .components(components)
+                                .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
                         ),
                     )
                     .await?;
             }
             Some(SetupStep::Summary) => {
-                let (content, components) = steps::summary::build_summary_step(setup_id, &l10n, &state_opt.unwrap());
+                let components = steps::summary::build_summary_step(setup_id, &l10n, &state_opt.unwrap());
                  interaction
                     .create_response(
                         &ctx.http,
                         serenity::CreateInteractionResponse::UpdateMessage(
                             serenity::CreateInteractionResponseMessage::new()
-                                .content(content)
-                                .components(components),
+                                .components(components)
+                                .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
                         ),
                     )
                     .await?;
@@ -254,7 +257,7 @@ pub async fn handle_interaction(
                 .get(&ModuleType::ChannelProtection)
                 .and_then(|v| serde_json::from_value(v.clone()).ok())
                 .unwrap_or_default();
-            let (content, components) = steps::module_config::channel_protection::build_ui_with_config(
+            let components = steps::module_config::channel_protection::build_ui_with_config(
                 setup_id, 
                 &l10n,
                 &config
@@ -263,8 +266,8 @@ pub async fn handle_interaction(
             interaction.edit_response(
                 &ctx.http,
                 serenity::EditInteractionResponse::new()
-                    .content(content)
-                    .components(components),
+                    .components(components)
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
             ).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_cp_punish_when_") {
@@ -296,7 +299,7 @@ pub async fn handle_interaction(
                 .get(&ModuleType::ChannelProtection)
                 .and_then(|v| serde_json::from_value(v.clone()).ok())
                 .unwrap_or_default();
-            let (content, components) = steps::module_config::channel_protection::build_ui_with_config(
+            let components = steps::module_config::channel_protection::build_ui_with_config(
                 setup_id, 
                 &l10n,
                 &config
@@ -305,8 +308,8 @@ pub async fn handle_interaction(
             interaction.edit_response(
                 &ctx.http,
                 serenity::EditInteractionResponse::new()
-                    .content(content)
-                    .components(components),
+                    .components(components)
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
             ).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_cpp_ignore_private_toggle_") {
@@ -333,7 +336,7 @@ pub async fn handle_interaction(
                 .get(&ModuleType::ChannelPermissionProtection)
                 .and_then(|v| serde_json::from_value(v.clone()).ok())
                 .unwrap_or_default();
-            let (content, components) = steps::module_config::channel_permission_protection::build_ui_with_config(
+            let components = steps::module_config::channel_permission_protection::build_ui_with_config(
                 setup_id, 
                 &l10n,
                 &config
@@ -342,8 +345,8 @@ pub async fn handle_interaction(
             interaction.edit_response(
                 &ctx.http,
                 serenity::EditInteractionResponse::new()
-                    .content(content)
-                    .components(components),
+                    .components(components)
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
             ).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_cpp_punish_when_") {
@@ -375,7 +378,7 @@ pub async fn handle_interaction(
                 .get(&ModuleType::ChannelPermissionProtection)
                 .and_then(|v| serde_json::from_value(v.clone()).ok())
                 .unwrap_or_default();
-            let (content, components) = steps::module_config::channel_permission_protection::build_ui_with_config(
+            let components = steps::module_config::channel_permission_protection::build_ui_with_config(
                 setup_id, 
                 &l10n,
                 &config
@@ -384,8 +387,8 @@ pub async fn handle_interaction(
             interaction.edit_response(
                 &ctx.http,
                 serenity::EditInteractionResponse::new()
-                    .content(content)
-                    .components(components),
+                    .components(components)
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
             ).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_rp_punish_when_") {
@@ -417,7 +420,7 @@ pub async fn handle_interaction(
                 .get(&ModuleType::RoleProtection)
                 .and_then(|v| serde_json::from_value(v.clone()).ok())
                 .unwrap_or_default();
-            let (content, components) = steps::module_config::role_protection::build_ui_with_config(
+            let components = steps::module_config::role_protection::build_ui_with_config(
                 setup_id, 
                 &l10n,
                 &config
@@ -426,8 +429,8 @@ pub async fn handle_interaction(
             interaction.edit_response(
                 &ctx.http,
                 serenity::EditInteractionResponse::new()
-                    .content(content)
-                    .components(components),
+                    .components(components)
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
             ).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_mp_punish_when_") {
@@ -459,7 +462,7 @@ pub async fn handle_interaction(
                 .get(&ModuleType::ModerationProtection)
                 .and_then(|v| serde_json::from_value(v.clone()).ok())
                 .unwrap_or_default();
-            let (content, components) = steps::module_config::moderation_protection::build_ui_with_config(
+            let components = steps::module_config::moderation_protection::build_ui_with_config(
                 setup_id, 
                 &l10n,
                 &config
@@ -468,8 +471,8 @@ pub async fn handle_interaction(
             interaction.edit_response(
                 &ctx.http,
                 serenity::EditInteractionResponse::new()
-                    .content(content)
-                    .components(components),
+                    .components(components)
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
             ).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_vanity_toggle_") {
@@ -496,7 +499,7 @@ pub async fn handle_interaction(
                 .get(&ModuleType::InviteTracking)
                 .and_then(|v| serde_json::from_value(v.clone()).ok())
                 .unwrap_or_default();
-            let (content, components) = steps::module_config::invite_tracking::build_ui_with_config(
+            let components = steps::module_config::invite_tracking::build_ui_with_config(
                 setup_id, 
                 &l10n,
                 &config
@@ -505,8 +508,8 @@ pub async fn handle_interaction(
             interaction.edit_response(
                 &ctx.http,
                 serenity::EditInteractionResponse::new()
-                    .content(content)
-                    .components(components),
+                    .components(components)
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
             ).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_ignore_bots_toggle_") {
@@ -533,7 +536,7 @@ pub async fn handle_interaction(
                 .get(&ModuleType::InviteTracking)
                 .and_then(|v| serde_json::from_value(v.clone()).ok())
                 .unwrap_or_default();
-            let (content, components) = steps::module_config::invite_tracking::build_ui_with_config(
+            let components = steps::module_config::invite_tracking::build_ui_with_config(
                 setup_id, 
                 &l10n,
                 &config
@@ -542,8 +545,8 @@ pub async fn handle_interaction(
             interaction.edit_response(
                 &ctx.http,
                 serenity::EditInteractionResponse::new()
-                    .content(content)
-                    .components(components),
+                    .components(components)
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
             ).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_min_age_inc_") {
@@ -560,8 +563,8 @@ pub async fn handle_interaction(
         });
         if let Some(state) = data.setup.get_state(guild_id.get()) {
             let config: crate::db::entities::module_configs::InviteTrackingModuleConfig = state.module_configs.get(&ModuleType::InviteTracking).and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
-            let (content, components) = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
-            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().content(content).components(components)).await?;
+            let components = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
+            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().components(components).flags(serenity::MessageFlags::IS_COMPONENTS_V2)).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_min_age_dec_") {
         interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
@@ -577,8 +580,8 @@ pub async fn handle_interaction(
         });
         if let Some(state) = data.setup.get_state(guild_id.get()) {
             let config: crate::db::entities::module_configs::InviteTrackingModuleConfig = state.module_configs.get(&ModuleType::InviteTracking).and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
-            let (content, components) = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
-            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().content(content).components(components)).await?;
+            let components = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
+            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().components(components).flags(serenity::MessageFlags::IS_COMPONENTS_V2)).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_fake_inc_") {
         interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
@@ -594,8 +597,8 @@ pub async fn handle_interaction(
         });
         if let Some(state) = data.setup.get_state(guild_id.get()) {
             let config: crate::db::entities::module_configs::InviteTrackingModuleConfig = state.module_configs.get(&ModuleType::InviteTracking).and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
-            let (content, components) = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
-            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().content(content).components(components)).await?;
+            let components = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
+            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().components(components).flags(serenity::MessageFlags::IS_COMPONENTS_V2)).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_fake_dec_") {
         interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
@@ -611,8 +614,8 @@ pub async fn handle_interaction(
         });
         if let Some(state) = data.setup.get_state(guild_id.get()) {
             let config: crate::db::entities::module_configs::InviteTrackingModuleConfig = state.module_configs.get(&ModuleType::InviteTracking).and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
-            let (content, components) = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
-            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().content(content).components(components)).await?;
+            let components = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
+            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().components(components).flags(serenity::MessageFlags::IS_COMPONENTS_V2)).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_limit_inc_") {
         interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
@@ -628,8 +631,8 @@ pub async fn handle_interaction(
         });
         if let Some(state) = data.setup.get_state(guild_id.get()) {
             let config: crate::db::entities::module_configs::InviteTrackingModuleConfig = state.module_configs.get(&ModuleType::InviteTracking).and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
-            let (content, components) = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
-            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().content(content).components(components)).await?;
+            let components = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
+            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().components(components).flags(serenity::MessageFlags::IS_COMPONENTS_V2)).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_limit_dec_") {
         interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
@@ -645,8 +648,8 @@ pub async fn handle_interaction(
         });
         if let Some(state) = data.setup.get_state(guild_id.get()) {
             let config: crate::db::entities::module_configs::InviteTrackingModuleConfig = state.module_configs.get(&ModuleType::InviteTracking).and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
-            let (content, components) = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
-            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().content(content).components(components)).await?;
+            let components = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
+            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().components(components).flags(serenity::MessageFlags::IS_COMPONENTS_V2)).await?;
         }
     } else if let Some(rest) = custom_id.strip_prefix("setup_module_next_") {
         let parts: Vec<&str> = rest.split('_').collect();
@@ -672,27 +675,27 @@ pub async fn handle_interaction(
         match next_step {
             Some(SetupStep::ModuleConfig(m)) => {
                 let has_log_channel = state_opt.as_ref().map(|s| s.fallback_log_channel.is_some()).unwrap_or(false);
-                let (content, components) = steps::module_config::build_module_config_step(setup_id, &l10n, m, has_log_channel);
+                let components = steps::module_config::build_module_config_step(setup_id, &l10n, m, has_log_channel);
                 interaction
                     .create_response(
                         &ctx.http,
                         serenity::CreateInteractionResponse::UpdateMessage(
                             serenity::CreateInteractionResponseMessage::new()
-                                .content(content)
-                                .components(components),
+                                .components(components)
+                                .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
                         ),
                     )
                     .await?;
             }
             Some(SetupStep::Summary) => {
-                let (content, components) = steps::summary::build_summary_step(setup_id, &l10n, &state_opt.unwrap());
+                let components = steps::summary::build_summary_step(setup_id, &l10n, &state_opt.unwrap());
                  interaction
                     .create_response(
                         &ctx.http,
                         serenity::CreateInteractionResponse::UpdateMessage(
                             serenity::CreateInteractionResponseMessage::new()
-                                .content(content)
-                                .components(components),
+                                .components(components)
+                                .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
                         ),
                     )
                     .await?;
@@ -709,8 +712,12 @@ pub async fn handle_interaction(
                 &ctx.http,
                 serenity::CreateInteractionResponse::UpdateMessage(
                     serenity::CreateInteractionResponseMessage::new()
-                        .content(l10n.t("setup-cancelled", None))
-                        .components(vec![]),
+                        .components(vec![serenity::CreateComponent::Container(
+                            serenity::CreateContainer::new(vec![
+                                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(l10n.t("setup-cancelled", None)))
+                            ])
+                        )])
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
                 ),
             )
             .await?;
@@ -888,8 +895,12 @@ async fn handle_apply(
         .edit_response(
             &ctx.http,
             serenity::EditInteractionResponse::new()
-                .content(details)
-                .components(vec![]),
+                .components(vec![serenity::CreateComponent::Container(
+                    serenity::CreateContainer::new(vec![
+                        serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(details))
+                    ])
+                )])
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
         )
         .await?;
 

@@ -6,7 +6,7 @@ use sea_orm::Iterable;
 pub fn build_systems_step(
     setup_id: &str,
     l10n: &L10nProxy,
-) -> (String, Vec<serenity::CreateComponent<'static>>) {
+) -> Vec<serenity::CreateComponent<'static>> {
     let mut options = Vec::new();
     for module in ModuleType::iter() {
         let label = match module {
@@ -62,14 +62,27 @@ pub fn build_systems_step(
     .max_values(10)
     .placeholder(l10n.t("setup-systems-placeholder", None));
 
-    (
-        format!(
-            "{}\n{}",
+    let mut inner_components = vec![];
+
+    // Add title and description as TextDisplay
+    inner_components.push(serenity::CreateContainerComponent::TextDisplay(
+        serenity::CreateTextDisplay::new(format!(
+            "## {}\n{}",
             l10n.t("setup-step1-title", None),
             l10n.t("setup-step1-desc", None)
-        ),
-        vec![serenity::CreateComponent::ActionRow(
-            serenity::CreateActionRow::select_menu(select),
-        )],
-    )
+        )),
+    ));
+
+    inner_components.push(serenity::CreateContainerComponent::Separator(
+        serenity::CreateSeparator::new(true),
+    ));
+
+    // Add select menu
+    inner_components.push(serenity::CreateContainerComponent::ActionRow(
+        serenity::CreateActionRow::SelectMenu(select),
+    ));
+
+    vec![serenity::CreateComponent::Container(
+        serenity::CreateContainer::new(inner_components),
+    )]
 }

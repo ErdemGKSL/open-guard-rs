@@ -3,10 +3,7 @@ use crate::services::localization::L10nProxy;
 use poise::serenity_prelude as serenity;
 
 /// Initial UI builder (uses defaults)
-pub fn build_ui(
-    setup_id: &str,
-    l10n: &L10nProxy,
-) -> (String, Vec<serenity::CreateComponent<'static>>) {
+pub fn build_ui(setup_id: &str, l10n: &L10nProxy) -> Vec<serenity::CreateComponent<'static>> {
     build_ui_with_config(setup_id, l10n, &Default::default())
 }
 
@@ -15,8 +12,27 @@ pub fn build_ui_with_config(
     setup_id: &str,
     l10n: &L10nProxy,
     config: &ChannelPermissionProtectionModuleConfig,
-) -> (String, Vec<serenity::CreateComponent<'static>>) {
-    let mut components = vec![];
+) -> Vec<serenity::CreateComponent<'static>> {
+    let mut inner_components = vec![];
+
+    // Build title and description
+    let mut args = fluent::FluentArgs::new();
+    args.set(
+        "label",
+        l10n.t("config-channel-permission-protection-label", None),
+    );
+
+    inner_components.push(serenity::CreateContainerComponent::TextDisplay(
+        serenity::CreateTextDisplay::new(format!(
+            "## {}\n{}",
+            l10n.t("setup-step4-title", Some(&args)),
+            l10n.t("setup-cpp-desc", None)
+        )),
+    ));
+
+    inner_components.push(serenity::CreateContainerComponent::Separator(
+        serenity::CreateSeparator::new(true),
+    ));
 
     // Ignore Private Channels Toggle Button
     let toggle_label = if config.ignore_private_channels {
@@ -29,15 +45,19 @@ pub fn build_ui_with_config(
         "setup_module_cpp_ignore_private_toggle_{}",
         setup_id
     ))
-    .label(toggle_label)
+    .label(format!(
+        "{} : {}",
+        l10n.t("setup-cp-ignore-private", None),
+        toggle_label
+    ))
     .style(if config.ignore_private_channels {
         serenity::ButtonStyle::Success
     } else {
         serenity::ButtonStyle::Secondary
     });
 
-    components.push(serenity::CreateComponent::ActionRow(
-        serenity::CreateActionRow::buttons(vec![toggle_button]),
+    inner_components.push(serenity::CreateContainerComponent::ActionRow(
+        serenity::CreateActionRow::Buttons(vec![toggle_button].into()),
     ));
 
     // Punish When Multi-Select
@@ -60,8 +80,8 @@ pub fn build_ui_with_config(
     .min_values(0)
     .max_values(3);
 
-    components.push(serenity::CreateComponent::ActionRow(
-        serenity::CreateActionRow::select_menu(select_menu),
+    inner_components.push(serenity::CreateContainerComponent::ActionRow(
+        serenity::CreateActionRow::SelectMenu(select_menu),
     ));
 
     // Next Button
@@ -72,22 +92,11 @@ pub fn build_ui_with_config(
     .label(l10n.t("setup-next", None))
     .style(serenity::ButtonStyle::Primary);
 
-    components.push(serenity::CreateComponent::ActionRow(
-        serenity::CreateActionRow::buttons(vec![next_button]),
+    inner_components.push(serenity::CreateContainerComponent::ActionRow(
+        serenity::CreateActionRow::Buttons(vec![next_button].into()),
     ));
 
-    // Build content
-    let mut args = fluent::FluentArgs::new();
-    args.set(
-        "label",
-        l10n.t("config-channel-permission-protection-label", None),
-    );
-
-    let content = format!(
-        "{}\n{}",
-        l10n.t("setup-step4-title", Some(&args)),
-        l10n.t("setup-cpp-desc", None)
-    );
-
-    (content, components)
+    vec![serenity::CreateComponent::Container(
+        serenity::CreateContainer::new(inner_components),
+    )]
 }

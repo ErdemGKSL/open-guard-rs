@@ -55,7 +55,15 @@ pub async fn kick(
     let mut args = FluentArgs::new();
     args.set("userId", user.id.get().to_string());
     args.set("reason", kick_reason);
-    ctx.send(poise::CreateReply::default().content(l10n.t("mod-kick-success", Some(&args))))
+    ctx.send(
+        poise::CreateReply::default()
+            .components(vec![serenity::CreateComponent::Container(
+                serenity::CreateContainer::new(vec![
+                    serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(l10n.t("mod-kick-success", Some(&args))))
+                ])
+            )])
+            .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
+    )
         .await?;
 
     Ok(())

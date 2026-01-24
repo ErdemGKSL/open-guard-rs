@@ -15,8 +15,12 @@ pub async fn invites(ctx: Context<'_>) -> Result<(), Error> {
     // This is the parent command, subcommands will handle actual functionality
     ctx.send(
         poise::CreateReply::default()
-            .content("Please use a subcommand: `/invites stats`, `/invites leaderboard`, or `/invites codes`")
-            .ephemeral(true),
+            .components(vec![serenity::CreateComponent::Container(
+                serenity::CreateContainer::new(vec![
+                    serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new("Please use a subcommand: `/invites stats`, `/invites leaderboard`, or `/invites codes`"))
+                ])
+            )])
+            .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
     )
     .await?;
 
@@ -37,8 +41,12 @@ pub async fn stats(
     if tracking::get_config(guild_id, &ctx.data()).await?.is_none() {
         ctx.send(
             poise::CreateReply::default()
-                .content("Invite tracking is not enabled on this server.")
-                .ephemeral(true),
+                .components(vec![serenity::CreateComponent::Container(
+                    serenity::CreateContainer::new(vec![
+                        serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new("Invite tracking is not enabled on this server."))
+                    ])
+                )])
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
         )
         .await?;
         return Ok(());
@@ -78,7 +86,15 @@ pub async fn stats(
         }
     }
 
-    ctx.send(poise::CreateReply::default().content(response).ephemeral(false))
+    ctx.send(
+        poise::CreateReply::default()
+            .components(vec![serenity::CreateComponent::Container(
+                serenity::CreateContainer::new(vec![
+                    serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(response))
+                ])
+            )])
+            .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+    )
         .await?;
 
     Ok(())
@@ -101,7 +117,12 @@ pub async fn leaderboard(
         None => {
             ctx.send(
                 poise::CreateReply::default()
-                    .content("Invite tracking is not enabled on this server.")
+                    .components(vec![serenity::CreateComponent::Container(
+                        serenity::CreateContainer::new(vec![
+                            serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new("Invite tracking is not enabled on this server."))
+                        ])
+                    )])
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL)
                     .ephemeral(true),
             )
             .await?;
@@ -140,7 +161,15 @@ pub async fn leaderboard(
         }
     }
 
-    ctx.send(poise::CreateReply::default().content(response).ephemeral(false))
+    ctx.send(
+        poise::CreateReply::default()
+            .components(vec![serenity::CreateComponent::Container(
+                serenity::CreateContainer::new(vec![
+                    serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(response))
+                ])
+            )])
+            .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+    )
         .await?;
 
     Ok(())
@@ -155,8 +184,12 @@ pub async fn codes(ctx: Context<'_>) -> Result<(), Error> {
     if tracking::get_config(guild_id, &ctx.data()).await?.is_none() {
         ctx.send(
             poise::CreateReply::default()
-                .content("Invite tracking is not enabled on this server.")
-                .ephemeral(true),
+                .components(vec![serenity::CreateComponent::Container(
+                    serenity::CreateContainer::new(vec![
+                        serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new("Invite tracking is not enabled on this server."))
+                    ])
+                )])
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
         )
         .await?;
         return Ok(());
@@ -170,7 +203,12 @@ pub async fn codes(ctx: Context<'_>) -> Result<(), Error> {
         Err(e) => {
             ctx.send(
                 poise::CreateReply::default()
-                    .content(format!("Failed to fetch invites: {:?}", e))
+                    .components(vec![serenity::CreateComponent::Container(
+                        serenity::CreateContainer::new(vec![
+                            serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(format!("Failed to fetch invites: {:?}", e)))
+                        ])
+                    )])
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL)
                     .ephemeral(true),
             )
             .await?;
@@ -219,7 +257,15 @@ pub async fn codes(ctx: Context<'_>) -> Result<(), Error> {
         }
     }
 
-    ctx.send(poise::CreateReply::default().content(response).ephemeral(true))
+    ctx.send(
+        poise::CreateReply::default()
+            .components(vec![serenity::CreateComponent::Container(
+                serenity::CreateContainer::new(vec![
+                    serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(response))
+                ])
+            )])
+            .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL)
+    )
         .await?;
 
     Ok(())

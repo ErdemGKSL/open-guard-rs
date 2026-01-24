@@ -27,7 +27,13 @@ pub async fn timeout(
         Some(d) => d,
         None => {
             ctx.send(
-                poise::CreateReply::default().content(l10n.t("mod-error-invalid-duration", None)),
+                poise::CreateReply::default()
+                    .components(vec![serenity::CreateComponent::Container(
+                        serenity::CreateContainer::new(vec![
+                            serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(l10n.t("mod-error-invalid-duration", None)))
+                        ])
+                    )])
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
             )
             .await?;
             return Ok(());
@@ -75,7 +81,15 @@ pub async fn timeout(
     args.set("userId", user.id.get().to_string());
     args.set("duration", duration);
     args.set("reason", timeout_reason);
-    ctx.send(poise::CreateReply::default().content(l10n.t("mod-timeout-success", Some(&args))))
+    ctx.send(
+        poise::CreateReply::default()
+            .components(vec![serenity::CreateComponent::Container(
+                serenity::CreateContainer::new(vec![
+                    serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(l10n.t("mod-timeout-success", Some(&args))))
+                ])
+            )])
+            .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
+    )
         .await?;
 
     Ok(())

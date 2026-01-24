@@ -209,7 +209,12 @@ async fn handle_moderation_action(
                         .direct_message(
                             &ctx.http,
                             serenity::CreateMessage::new()
-                                .content(l10n.t("mod-warn-remaining-2", None)),
+                                .components(vec![serenity::CreateComponent::Container(
+                                    serenity::CreateContainer::new(vec![
+                                        serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(l10n.t("mod-warn-remaining-2", None)))
+                                    ])
+                                )])
+                                .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
                         )
                         .await;
                 } else if remaining_safe == 1 {
@@ -217,7 +222,12 @@ async fn handle_moderation_action(
                         .direct_message(
                             &ctx.http,
                             serenity::CreateMessage::new()
-                                .content(l10n.t("mod-warn-remaining-1", None)),
+                                .components(vec![serenity::CreateComponent::Container(
+                                    serenity::CreateContainer::new(vec![
+                                        serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(l10n.t("mod-warn-remaining-1", None)))
+                                    ])
+                                )])
+                                .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
                         )
                         .await;
                 } else if remaining_safe == 0 {
@@ -225,7 +235,16 @@ async fn handle_moderation_action(
                     warn_args.set("punishment", format!("{:?}", config_model.punishment));
                     let msg = l10n.t("mod-warn-limit-reached", Some(&warn_args));
                     let _ = user_id
-                        .direct_message(&ctx.http, serenity::CreateMessage::new().content(msg))
+                        .direct_message(
+                            &ctx.http,
+                            serenity::CreateMessage::new()
+                                .components(vec![serenity::CreateComponent::Container(
+                                    serenity::CreateContainer::new(vec![
+                                        serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(msg))
+                                    ])
+                                )])
+                                .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
+                        )
                         .await;
                 }
             }

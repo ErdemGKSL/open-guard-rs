@@ -14,7 +14,7 @@ pub fn build_module_config_step(
     l10n: &L10nProxy,
     module: ModuleType,
     has_log_channel: bool,
-) -> (String, Vec<serenity::CreateComponent<'static>>) {
+) -> Vec<serenity::CreateComponent<'static>> {
     match module {
         ModuleType::Logging => logging::build_ui(setup_id, l10n),
         ModuleType::ChannelProtection => channel_protection::build_ui(setup_id, l10n),
@@ -54,17 +54,35 @@ fn build_generic_ui(
     l10n: &L10nProxy,
     module: ModuleType,
     has_log_channel: bool,
-) -> (String, Vec<serenity::CreateComponent<'static>>) {
+) -> Vec<serenity::CreateComponent<'static>> {
     let label = get_module_label(module, l10n);
 
-    let mut components = vec![];
+    let mut inner_components = vec![];
+
+    // Add title and description
+    let mut title_args = fluent::FluentArgs::new();
+    title_args.set("label", label.clone());
+
+    let desc = if module == ModuleType::StickyRoles {
+        l10n.t("setup-step4-generic-desc", None)
+    } else {
+        l10n.t("setup-module-log-channel-desc", None)
+    };
+
+    inner_components.push(serenity::CreateContainerComponent::TextDisplay(
+        serenity::CreateTextDisplay::new(format!(
+            "## {}\n{}",
+            l10n.t("setup-step4-title", Some(&title_args)),
+            desc
+        )),
+    ));
+
+    inner_components.push(serenity::CreateContainerComponent::Separator(
+        serenity::CreateSeparator::new(true),
+    ));
 
     // Log channel selection (for non-Logging, non-StickyRoles modules)
     if module != ModuleType::StickyRoles {
-        let mut args = fluent::FluentArgs::new();
-        args.set("label", label.clone());
-
-        // Log channel select
         let log_select = serenity::CreateSelectMenu::new(
             format!("setup_module_log_channel_{}_{:?}", setup_id, module),
             serenity::CreateSelectMenuKind::Channel {
@@ -76,30 +94,9 @@ fn build_generic_ui(
         .min_values(0)
         .max_values(1);
 
-        components.push(serenity::CreateComponent::ActionRow(
-            serenity::CreateActionRow::select_menu(log_select),
+        inner_components.push(serenity::CreateContainerComponent::ActionRow(
+            serenity::CreateActionRow::SelectMenu(log_select),
         ));
-
-        // Create channel section (only if no channel set)
-        if !has_log_channel {
-            components.push(serenity::CreateComponent::Container(
-                serenity::CreateContainer::new(vec![serenity::CreateContainerComponent::Section(
-                    serenity::CreateSection::new(
-                        vec![serenity::CreateSectionComponent::TextDisplay(
-                            serenity::CreateTextDisplay::new(l10n.t("setup-or-create", None)),
-                        )],
-                        serenity::CreateSectionAccessory::Button(
-                            serenity::CreateButton::new(format!(
-                                "setup_create_module_channel_{}_{:?}",
-                                setup_id, module
-                            ))
-                            .emoji(serenity::ReactionType::Unicode('📝'.into()))
-                            .style(serenity::ButtonStyle::Secondary),
-                        ),
-                    ),
-                )]),
-            ));
-        }
     }
 
     let next_button =
@@ -107,21 +104,11 @@ fn build_generic_ui(
             .label(l10n.t("setup-next", None))
             .style(serenity::ButtonStyle::Primary);
 
-    components.push(serenity::CreateComponent::ActionRow(
-        serenity::CreateActionRow::buttons(vec![next_button]),
+    inner_components.push(serenity::CreateContainerComponent::ActionRow(
+        serenity::CreateActionRow::Buttons(vec![next_button].into()),
     ));
 
-    let mut args = fluent::FluentArgs::new();
-    args.set("label", label);
-
-    let desc = if module == ModuleType::StickyRoles {
-        l10n.t("setup-step4-generic-desc", None)
-    } else {
-        l10n.t("setup-module-log-channel-desc", None)
-    };
-
-    (
-        format!("{}\n{}", l10n.t("setup-step4-title", Some(&args)), desc),
-        components,
-    )
+    vec![serenity::CreateComponent::Container(
+        serenity::CreateContainer::new(inner_components),
+    )]
 }

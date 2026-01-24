@@ -29,7 +29,12 @@ pub async fn ban(
             None => {
                 ctx.send(
                     poise::CreateReply::default()
-                        .content(l10n.t("mod-error-invalid-duration", None)),
+                        .components(vec![serenity::CreateComponent::Container(
+                            serenity::CreateContainer::new(vec![
+                                serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(l10n.t("mod-error-invalid-duration", None)))
+                            ])
+                        )])
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
                 )
                 .await?;
                 return Ok(());
@@ -66,7 +71,13 @@ pub async fn ban(
         args.set("duration", format!("{:?}", dur));
         args.set("reason", ban_reason.clone());
         ctx.send(
-            poise::CreateReply::default().content(l10n.t("mod-ban-success-temp", Some(&args))),
+            poise::CreateReply::default()
+                .components(vec![serenity::CreateComponent::Container(
+                    serenity::CreateContainer::new(vec![
+                        serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(l10n.t("mod-ban-success-temp", Some(&args))))
+                    ])
+                )])
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
         )
         .await?;
         format!("{:?}", dur)
@@ -75,7 +86,13 @@ pub async fn ban(
         args.set("userId", user.id.get().to_string());
         args.set("reason", ban_reason.clone());
         ctx.send(
-            poise::CreateReply::default().content(l10n.t("mod-ban-success-perm", Some(&args))),
+            poise::CreateReply::default()
+                .components(vec![serenity::CreateComponent::Container(
+                    serenity::CreateContainer::new(vec![
+                        serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(l10n.t("mod-ban-success-perm", Some(&args))))
+                    ])
+                )])
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
         )
         .await?;
         l10n.t("log-val-permanent", None)
