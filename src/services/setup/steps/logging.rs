@@ -4,7 +4,7 @@ use poise::serenity_prelude as serenity;
 pub fn build_logging_step(
     setup_id: &str,
     l10n: &L10nProxy,
-    has_channel: bool,
+    _has_channel: bool,
 ) -> Vec<serenity::CreateComponent<'static>> {
     let select = serenity::CreateSelectMenu::new(
         format!("setup_logging_select_{}", setup_id),

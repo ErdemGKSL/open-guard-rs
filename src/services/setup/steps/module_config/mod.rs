@@ -13,7 +13,7 @@ pub fn build_module_config_step(
     setup_id: &str,
     l10n: &L10nProxy,
     module: ModuleType,
-    has_log_channel: bool,
+    _has_log_channel: bool,
 ) -> Vec<serenity::CreateComponent<'static>> {
     match module {
         ModuleType::Logging => logging::build_ui(setup_id, l10n),
@@ -24,7 +24,7 @@ pub fn build_module_config_step(
         ModuleType::RoleProtection => role_protection::build_ui(setup_id, l10n),
         ModuleType::ModerationProtection => moderation_protection::build_ui(setup_id, l10n),
         ModuleType::InviteTracking => invite_tracking::build_ui(setup_id, l10n),
-        _ => build_generic_ui(setup_id, l10n, module, has_log_channel),
+        _ => build_generic_ui(setup_id, l10n, module, _has_log_channel),
     }
 }
 
@@ -53,7 +53,7 @@ fn build_generic_ui(
     setup_id: &str,
     l10n: &L10nProxy,
     module: ModuleType,
-    has_log_channel: bool,
+    _has_log_channel: bool,
 ) -> Vec<serenity::CreateComponent<'static>> {
     let label = get_module_label(module, l10n);
 
