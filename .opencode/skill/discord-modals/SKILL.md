@@ -1,11 +1,24 @@
 ---
 name: discord-modals
-description: Guide for creating and working with Discord modals and labels using Serenity in the Open Guard bot
+description: DEPRECATED - Use components-v2-modals instead
 metadata:
   version: "1.0"
+  deprecated: true
 ---
 
 # Discord Modals in Open Guard
+
+## ⚠️ DEPRECATED SKILL
+
+**This skill has been replaced by the new Components v2 skills:**
+- **`components-v2-modals`** - Modals with Labels
+- **`components-v2-buttons`** - Button components
+- **`components-v2-selects`** - Select menus
+- **`components-v2-action-rows`** - Action row layouts
+
+Please use the new skills for updated, concise guidance on Discord Components v2.
+
+---
 
 ## What this skill does
 Provides guidance on creating Discord modals with labels, text inputs, select menus, and file uploads using the Serenity library in the Open Guard bot.
