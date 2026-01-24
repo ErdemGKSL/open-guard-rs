@@ -229,6 +229,322 @@ pub async fn handle_interaction(
             }
         });
         interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
+    } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_cp_ignore_private_toggle_") {
+        // Channel Protection: Toggle ignore_private_channels
+        interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
+        
+        data.setup.update_state(guild_id.get(), |state| {
+            if state.id == setup_id {
+                let mut config = crate::db::entities::module_configs::ChannelProtectionModuleConfig::default();
+                if let Some(existing) = state.module_configs.get(&ModuleType::ChannelProtection) {
+                    config = serde_json::from_value(existing.clone()).unwrap_or_default();
+                }
+                config.ignore_private_channels = !config.ignore_private_channels;
+                state.module_configs.insert(
+                    ModuleType::ChannelProtection,
+                    serde_json::to_value(config).unwrap_or_default(),
+                );
+            }
+        });
+        
+        // Rebuild UI with updated state
+        if let Some(state) = data.setup.get_state(guild_id.get()) {
+            let config: crate::db::entities::module_configs::ChannelProtectionModuleConfig = state.module_configs
+                .get(&ModuleType::ChannelProtection)
+                .and_then(|v| serde_json::from_value(v.clone()).ok())
+                .unwrap_or_default();
+            let (content, components) = steps::module_config::channel_protection::build_ui_with_config(
+                setup_id, 
+                &l10n,
+                &config
+            );
+            
+            interaction.edit_response(
+                &ctx.http,
+                serenity::EditInteractionResponse::new()
+                    .content(content)
+                    .components(components),
+            ).await?;
+        }
+    } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_cp_punish_when_") {
+        // Channel Protection: Update punish_when
+        interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
+        
+        let values = match &interaction.data.kind {
+            serenity::ComponentInteractionDataKind::StringSelect { values } => values,
+            _ => return Ok(()),
+        };
+        
+        data.setup.update_state(guild_id.get(), |state| {
+            if state.id == setup_id {
+                let mut config = crate::db::entities::module_configs::ChannelProtectionModuleConfig::default();
+                if let Some(existing) = state.module_configs.get(&ModuleType::ChannelProtection) {
+                    config = serde_json::from_value(existing.clone()).unwrap_or_default();
+                }
+                config.punish_when = values.to_vec();
+                state.module_configs.insert(
+                    ModuleType::ChannelProtection,
+                    serde_json::to_value(config).unwrap_or_default(),
+                );
+            }
+        });
+        
+        // Rebuild UI with updated state
+        if let Some(state) = data.setup.get_state(guild_id.get()) {
+            let config: crate::db::entities::module_configs::ChannelProtectionModuleConfig = state.module_configs
+                .get(&ModuleType::ChannelProtection)
+                .and_then(|v| serde_json::from_value(v.clone()).ok())
+                .unwrap_or_default();
+            let (content, components) = steps::module_config::channel_protection::build_ui_with_config(
+                setup_id, 
+                &l10n,
+                &config
+            );
+            
+            interaction.edit_response(
+                &ctx.http,
+                serenity::EditInteractionResponse::new()
+                    .content(content)
+                    .components(components),
+            ).await?;
+        }
+    } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_cpp_ignore_private_toggle_") {
+        // Channel Permission Protection: Toggle ignore_private_channels
+        interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
+        
+        data.setup.update_state(guild_id.get(), |state| {
+            if state.id == setup_id {
+                let mut config = crate::db::entities::module_configs::ChannelPermissionProtectionModuleConfig::default();
+                if let Some(existing) = state.module_configs.get(&ModuleType::ChannelPermissionProtection) {
+                    config = serde_json::from_value(existing.clone()).unwrap_or_default();
+                }
+                config.ignore_private_channels = !config.ignore_private_channels;
+                state.module_configs.insert(
+                    ModuleType::ChannelPermissionProtection,
+                    serde_json::to_value(config).unwrap_or_default(),
+                );
+            }
+        });
+        
+        // Rebuild UI with updated state
+        if let Some(state) = data.setup.get_state(guild_id.get()) {
+            let config: crate::db::entities::module_configs::ChannelPermissionProtectionModuleConfig = state.module_configs
+                .get(&ModuleType::ChannelPermissionProtection)
+                .and_then(|v| serde_json::from_value(v.clone()).ok())
+                .unwrap_or_default();
+            let (content, components) = steps::module_config::channel_permission_protection::build_ui_with_config(
+                setup_id, 
+                &l10n,
+                &config
+            );
+            
+            interaction.edit_response(
+                &ctx.http,
+                serenity::EditInteractionResponse::new()
+                    .content(content)
+                    .components(components),
+            ).await?;
+        }
+    } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_cpp_punish_when_") {
+        // Channel Permission Protection: Update punish_when
+        interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
+        
+        let values = match &interaction.data.kind {
+            serenity::ComponentInteractionDataKind::StringSelect { values } => values,
+            _ => return Ok(()),
+        };
+        
+        data.setup.update_state(guild_id.get(), |state| {
+            if state.id == setup_id {
+                let mut config = crate::db::entities::module_configs::ChannelPermissionProtectionModuleConfig::default();
+                if let Some(existing) = state.module_configs.get(&ModuleType::ChannelPermissionProtection) {
+                    config = serde_json::from_value(existing.clone()).unwrap_or_default();
+                }
+                config.punish_when = values.to_vec();
+                state.module_configs.insert(
+                    ModuleType::ChannelPermissionProtection,
+                    serde_json::to_value(config).unwrap_or_default(),
+                );
+            }
+        });
+        
+        // Rebuild UI with updated state
+        if let Some(state) = data.setup.get_state(guild_id.get()) {
+            let config: crate::db::entities::module_configs::ChannelPermissionProtectionModuleConfig = state.module_configs
+                .get(&ModuleType::ChannelPermissionProtection)
+                .and_then(|v| serde_json::from_value(v.clone()).ok())
+                .unwrap_or_default();
+            let (content, components) = steps::module_config::channel_permission_protection::build_ui_with_config(
+                setup_id, 
+                &l10n,
+                &config
+            );
+            
+            interaction.edit_response(
+                &ctx.http,
+                serenity::EditInteractionResponse::new()
+                    .content(content)
+                    .components(components),
+            ).await?;
+        }
+    } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_rp_punish_when_") {
+        // Role Protection: Update punish_when
+        interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
+        
+        let values = match &interaction.data.kind {
+            serenity::ComponentInteractionDataKind::StringSelect { values } => values,
+            _ => return Ok(()),
+        };
+        
+        data.setup.update_state(guild_id.get(), |state| {
+            if state.id == setup_id {
+                let mut config = crate::db::entities::module_configs::RoleProtectionModuleConfig::default();
+                if let Some(existing) = state.module_configs.get(&ModuleType::RoleProtection) {
+                    config = serde_json::from_value(existing.clone()).unwrap_or_default();
+                }
+                config.punish_when = values.to_vec();
+                state.module_configs.insert(
+                    ModuleType::RoleProtection,
+                    serde_json::to_value(config).unwrap_or_default(),
+                );
+            }
+        });
+        
+        // Rebuild UI with updated state
+        if let Some(state) = data.setup.get_state(guild_id.get()) {
+            let config: crate::db::entities::module_configs::RoleProtectionModuleConfig = state.module_configs
+                .get(&ModuleType::RoleProtection)
+                .and_then(|v| serde_json::from_value(v.clone()).ok())
+                .unwrap_or_default();
+            let (content, components) = steps::module_config::role_protection::build_ui_with_config(
+                setup_id, 
+                &l10n,
+                &config
+            );
+            
+            interaction.edit_response(
+                &ctx.http,
+                serenity::EditInteractionResponse::new()
+                    .content(content)
+                    .components(components),
+            ).await?;
+        }
+    } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_mp_punish_when_") {
+        // Moderation Protection: Update punish_when
+        interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
+        
+        let values = match &interaction.data.kind {
+            serenity::ComponentInteractionDataKind::StringSelect { values } => values,
+            _ => return Ok(()),
+        };
+        
+        data.setup.update_state(guild_id.get(), |state| {
+            if state.id == setup_id {
+                let mut config = crate::db::entities::module_configs::ModerationProtectionModuleConfig::default();
+                if let Some(existing) = state.module_configs.get(&ModuleType::ModerationProtection) {
+                    config = serde_json::from_value(existing.clone()).unwrap_or_default();
+                }
+                config.punish_when = values.to_vec();
+                state.module_configs.insert(
+                    ModuleType::ModerationProtection,
+                    serde_json::to_value(config).unwrap_or_default(),
+                );
+            }
+        });
+        
+        // Rebuild UI with updated state
+        if let Some(state) = data.setup.get_state(guild_id.get()) {
+            let config: crate::db::entities::module_configs::ModerationProtectionModuleConfig = state.module_configs
+                .get(&ModuleType::ModerationProtection)
+                .and_then(|v| serde_json::from_value(v.clone()).ok())
+                .unwrap_or_default();
+            let (content, components) = steps::module_config::moderation_protection::build_ui_with_config(
+                setup_id, 
+                &l10n,
+                &config
+            );
+            
+            interaction.edit_response(
+                &ctx.http,
+                serenity::EditInteractionResponse::new()
+                    .content(content)
+                    .components(components),
+            ).await?;
+        }
+    } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_vanity_toggle_") {
+        // Invite Tracking: Toggle track_vanity
+        interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
+        
+        data.setup.update_state(guild_id.get(), |state| {
+            if state.id == setup_id {
+                let mut config = crate::db::entities::module_configs::InviteTrackingModuleConfig::default();
+                if let Some(existing) = state.module_configs.get(&ModuleType::InviteTracking) {
+                    config = serde_json::from_value(existing.clone()).unwrap_or_default();
+                }
+                config.track_vanity = !config.track_vanity;
+                state.module_configs.insert(
+                    ModuleType::InviteTracking,
+                    serde_json::to_value(config).unwrap_or_default(),
+                );
+            }
+        });
+        
+        // Rebuild UI with updated state
+        if let Some(state) = data.setup.get_state(guild_id.get()) {
+            let config: crate::db::entities::module_configs::InviteTrackingModuleConfig = state.module_configs
+                .get(&ModuleType::InviteTracking)
+                .and_then(|v| serde_json::from_value(v.clone()).ok())
+                .unwrap_or_default();
+            let (content, components) = steps::module_config::invite_tracking::build_ui_with_config(
+                setup_id, 
+                &l10n,
+                &config
+            );
+            
+            interaction.edit_response(
+                &ctx.http,
+                serenity::EditInteractionResponse::new()
+                    .content(content)
+                    .components(components),
+            ).await?;
+        }
+    } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_ignore_bots_toggle_") {
+        // Invite Tracking: Toggle ignore_bots
+        interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
+        
+        data.setup.update_state(guild_id.get(), |state| {
+            if state.id == setup_id {
+                let mut config = crate::db::entities::module_configs::InviteTrackingModuleConfig::default();
+                if let Some(existing) = state.module_configs.get(&ModuleType::InviteTracking) {
+                    config = serde_json::from_value(existing.clone()).unwrap_or_default();
+                }
+                config.ignore_bots = !config.ignore_bots;
+                state.module_configs.insert(
+                    ModuleType::InviteTracking,
+                    serde_json::to_value(config).unwrap_or_default(),
+                );
+            }
+        });
+        
+        // Rebuild UI with updated state
+        if let Some(state) = data.setup.get_state(guild_id.get()) {
+            let config: crate::db::entities::module_configs::InviteTrackingModuleConfig = state.module_configs
+                .get(&ModuleType::InviteTracking)
+                .and_then(|v| serde_json::from_value(v.clone()).ok())
+                .unwrap_or_default();
+            let (content, components) = steps::module_config::invite_tracking::build_ui_with_config(
+                setup_id, 
+                &l10n,
+                &config
+            );
+            
+            interaction.edit_response(
+                &ctx.http,
+                serenity::EditInteractionResponse::new()
+                    .content(content)
+                    .components(components),
+            ).await?;
+        }
     } else if let Some(rest) = custom_id.strip_prefix("setup_module_next_") {
         let parts: Vec<&str> = rest.split('_').collect();
         if parts.len() < 2 { return Ok(()); }
@@ -436,6 +752,7 @@ async fn handle_apply(
                 ModuleType::ModerationProtection => "module-moderation-protection-name",
                 ModuleType::Logging => "module-logging-name",
                 ModuleType::StickyRoles => "module-sticky-roles-name",
+                ModuleType::InviteTracking => "module-invite-tracking-name",
             };
             details.push_str(&format!("- ✅ {}\n", l10n.t(name_key, None)));
         }

@@ -253,6 +253,7 @@ pub async fn build_module_menu(
         ModuleType::ModerationProtection => l10n.t("config-moderation-protection-label", None),
         ModuleType::Logging => l10n.t("config-logging-label", None),
         ModuleType::StickyRoles => l10n.t("config-sticky-roles-label", None),
+        ModuleType::InviteTracking => l10n.t("config-invite-tracking-label", None),
     };
 
     let mut inner_components = if module == ModuleType::Logging && page == 1 {
@@ -402,6 +403,13 @@ pub async fn build_module_menu(
             serenity::CreateSeparator::new(true),
         ));
         inner_components.extend(modules::sticky_roles::build_ui(&sr_config, l10n));
+    } else if module == ModuleType::InviteTracking {
+        let it_config: crate::db::entities::module_configs::InviteTrackingModuleConfig =
+            serde_json::from_value(m_config.config).unwrap_or_default();
+        inner_components.push(serenity::CreateContainerComponent::Separator(
+            serenity::CreateSeparator::new(true),
+        ));
+        inner_components.extend(modules::invite_tracking::build_ui(&it_config, l10n));
     }
 
     // Add pagination row for Logging
@@ -607,6 +615,9 @@ pub async fn handle_interaction(
     } else if modules::sticky_roles::handle_interaction(ctx, interaction, data, guild_id).await? {
         updated_reply =
             Some(build_module_menu(data, guild_id, ModuleType::StickyRoles, page, &l10n).await?);
+    } else if modules::invite_tracking::handle_interaction(ctx, interaction, data, guild_id).await? {
+        updated_reply =
+            Some(build_module_menu(data, guild_id, ModuleType::InviteTracking, page, &l10n).await?);
     } else {
         // Handle remaining whitelist interactions (non-modal ones like delete, navigation)
         match whitelist::handle_interaction(ctx, interaction, data).await? {
@@ -748,6 +759,7 @@ pub async fn handle_interaction(
                         "MemberPermissionProtection" => ModuleType::MemberPermissionProtection,
                         "BotAddingProtection" => ModuleType::BotAddingProtection,
                         "ModerationProtection" => ModuleType::ModerationProtection,
+                        "InviteTracking" => ModuleType::InviteTracking,
                         _ => return Ok(()),
                     };
 
@@ -786,6 +798,7 @@ pub async fn handle_interaction(
                         "MemberPermissionProtection" => ModuleType::MemberPermissionProtection,
                         "BotAddingProtection" => ModuleType::BotAddingProtection,
                         "ModerationProtection" => ModuleType::ModerationProtection,
+                        "InviteTracking" => ModuleType::InviteTracking,
                         _ => return Ok(()),
                     };
 
@@ -945,6 +958,7 @@ pub async fn handle_interaction(
                     ModuleType::ModerationProtection
                 }
                 "logging" | "Logging" => ModuleType::Logging,
+                "invite_tracking" | "InviteTracking" => ModuleType::InviteTracking,
                 _ => return Ok(()),
             };
 
@@ -961,7 +975,7 @@ pub async fn handle_interaction(
                     let am = module_configs::ActiveModel {
                         guild_id: Set(guild_id.get() as i64),
                         module_type: Set(module_type),
-                        enabled: Set(true),
+                        enabled: Set(false), // Start disabled by default if not exist
                         ..Default::default()
                     };
                     let entry = am.insert(&data.db).await?;
@@ -969,8 +983,20 @@ pub async fn handle_interaction(
                 }
             };
 
-            am.enabled = Set(!current_enabled);
+            let new_enabled = !current_enabled;
+            am.enabled = Set(new_enabled);
             am.update(&data.db).await?;
+
+            // If invite tracking is enabled, sync invites
+            if module_type == ModuleType::InviteTracking && new_enabled {
+                if let Err(e) = crate::modules::invite_tracking::tracking::sync_all_guild_invites(
+                    ctx, guild_id, data,
+                )
+                .await
+                {
+                    tracing::error!("Failed to sync invites on module enable: {:?}", e);
+                }
+            }
 
             updated_reply =
                 Some(build_module_menu(data, guild_id, module_type, page, &l10n).await?);

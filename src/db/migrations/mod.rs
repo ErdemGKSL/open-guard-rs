@@ -15,6 +15,7 @@ pub mod m000008_add_enabled_to_module_config;
 pub mod m000009_create_temp_bans;
 pub mod m000010_create_jails;
 pub mod m000011_create_member_roles_tracking;
+pub mod m000012_create_invite_tracking;
 
 use sea_orm_migration::prelude::*;
 
@@ -35,6 +36,7 @@ impl MigratorTrait for Migrator {
             Box::new(m000009_create_temp_bans::Migration),
             Box::new(m000010_create_jails::Migration),
             Box::new(m000011_create_member_roles_tracking::Migration),
+            Box::new(m000012_create_invite_tracking::Migration),
         ]
     }
 }

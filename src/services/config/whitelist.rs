@@ -145,6 +145,7 @@ pub async fn build_whitelist_menu(
             }
             ModuleType::Logging => l10n.t("config-whitelist-logging-header", None),
             ModuleType::StickyRoles => l10n.t("config-whitelist-sticky-roles-header", None),
+            ModuleType::InviteTracking => l10n.t("config-whitelist-invite-tracking-header", None),
         }
     } else {
         l10n.t("config-whitelist-global-header", None)

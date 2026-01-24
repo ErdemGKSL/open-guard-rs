@@ -2,7 +2,12 @@ use crate::db::entities::module_configs::ModuleType;
 use crate::services::localization::L10nProxy;
 use poise::serenity_prelude as serenity;
 
+pub mod channel_permission_protection;
+pub mod channel_protection;
+pub mod invite_tracking;
 pub mod logging;
+pub mod moderation_protection;
+pub mod role_protection;
 
 pub fn build_module_config_step(
     setup_id: &str,
@@ -12,6 +17,13 @@ pub fn build_module_config_step(
 ) -> (String, Vec<serenity::CreateComponent<'static>>) {
     match module {
         ModuleType::Logging => logging::build_ui(setup_id, l10n),
+        ModuleType::ChannelProtection => channel_protection::build_ui(setup_id, l10n),
+        ModuleType::ChannelPermissionProtection => {
+            channel_permission_protection::build_ui(setup_id, l10n)
+        }
+        ModuleType::RoleProtection => role_protection::build_ui(setup_id, l10n),
+        ModuleType::ModerationProtection => moderation_protection::build_ui(setup_id, l10n),
+        ModuleType::InviteTracking => invite_tracking::build_ui(setup_id, l10n),
         _ => build_generic_ui(setup_id, l10n, module, has_log_channel),
     }
 }
@@ -33,6 +45,7 @@ fn get_module_label(module: ModuleType, l10n: &L10nProxy) -> String {
         ModuleType::ModerationProtection => l10n.t("config-moderation-protection-label", None),
         ModuleType::Logging => l10n.t("config-logging-label", None),
         ModuleType::StickyRoles => l10n.t("config-sticky-roles-label", None),
+        ModuleType::InviteTracking => l10n.t("config-invite-tracking-label", None),
     }
 }
 
@@ -70,8 +83,8 @@ fn build_generic_ui(
         // Create channel section (only if no channel set)
         if !has_log_channel {
             components.push(serenity::CreateComponent::Container(
-                serenity::CreateContainer::new(vec![
-                    serenity::CreateContainerComponent::Section(serenity::CreateSection::new(
+                serenity::CreateContainer::new(vec![serenity::CreateContainerComponent::Section(
+                    serenity::CreateSection::new(
                         vec![serenity::CreateSectionComponent::TextDisplay(
                             serenity::CreateTextDisplay::new(l10n.t("setup-or-create", None)),
                         )],
@@ -83,8 +96,8 @@ fn build_generic_ui(
                             .emoji(serenity::ReactionType::Unicode('📝'.into()))
                             .style(serenity::ButtonStyle::Secondary),
                         ),
-                    )),
-                ]),
+                    ),
+                )]),
             ));
         }
     }

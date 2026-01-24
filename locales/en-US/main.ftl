@@ -404,3 +404,42 @@ setup-module-log-channel-title = **Log Channel for {$label}**
 setup-module-log-channel-desc = Select or create a dedicated log channel for this module.
 setup-module-log-channel-placeholder = Select log channel (Optional)...
 setup-or-create = Or create a new channel:
+
+# Channel Protection Setup
+setup-cp-desc = Configure when channel protection should trigger and whether to ignore private channels.
+setup-cp-punish-when-placeholder = Select which channel actions to protect against...
+setup-cp-punish-create = Channel Create
+setup-cp-punish-update = Channel Update
+setup-cp-punish-delete = Channel Delete
+
+# Channel Permission Protection Setup
+setup-cpp-desc = Configure when channel permission protection should trigger and whether to ignore private channels.
+setup-cpp-punish-when-placeholder = Select which permission actions to protect against...
+setup-cpp-punish-create = Permission Create
+setup-cpp-punish-update = Permission Update
+setup-cpp-punish-delete = Permission Delete
+
+# Role Protection Setup
+setup-rp-desc = Configure when role protection should trigger.
+setup-rp-punish-when-placeholder = Select which role actions to protect against...
+setup-rp-punish-create = Role Create
+setup-rp-punish-update = Role Update
+setup-rp-punish-delete = Role Delete
+
+# Moderation Protection Setup
+setup-mp-desc = Configure which moderation actions should trigger protection.
+setup-mp-punish-when-placeholder = Select which moderation actions to protect against...
+setup-mp-punish-ban = Ban
+setup-mp-punish-kick = Kick
+setup-mp-punish-timeout = Timeout
+
+# Invite Tracking Module
+module-invite-tracking-name = Invite Tracking
+module-invite-tracking-desc = Track server invites and see who invited whom
+config-invite-tracking-label = Invite Tracking
+config-it-vanity-label = Track Vanity URL Joins
+config-it-ignore-bots-label = Ignore Bot Invites
+config-whitelist-invite-tracking-header = Whitelist: Invite Tracking
+
+# Invite Tracking Setup
+setup-it-desc = Configure invite tracking settings. Track who invited whom and analyze server growth.

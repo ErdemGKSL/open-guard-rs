@@ -66,3 +66,24 @@ unjail:
 setup:
   name: "kurulum"
   desc: "Bot için hızlı kurulum sürecini başlatır"
+invites:
+  name: "davetler"
+  desc: "Davet takip komutları"
+  subcommands:
+    stats:
+      name: "istatistik"
+      desc: "Bir kullanıcının davet istatistiklerini görüntüle"
+      options:
+        user:
+          name: "kullanıcı"
+          desc: "Kontrol edilecek kullanıcı (varsayılan: siz)"
+    leaderboard:
+      name: "sıralama"
+      desc: "Sunucu davet sıralamasını görüntüle"
+      options:
+        limit:
+          name: "limit"
+          desc: "Gösterilecek kullanıcı sayısı (varsayılan: 10)"
+    codes:
+      name: "kodlar"
+      desc: "Aktif davet kodlarınızı görüntüleyin (Sadece yönetici)"

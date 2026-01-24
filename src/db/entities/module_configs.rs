@@ -34,6 +34,8 @@ pub enum ModuleType {
     Logging,
     #[sea_orm(string_value = "sticky_roles")]
     StickyRoles,
+    #[sea_orm(string_value = "invite_tracking")]
+    InviteTracking,
 }
 
 impl std::fmt::Display for ModuleType {
@@ -48,6 +50,7 @@ impl std::fmt::Display for ModuleType {
             ModuleType::ModerationProtection => write!(f, "moderation_protection"),
             ModuleType::Logging => write!(f, "logging"),
             ModuleType::StickyRoles => write!(f, "sticky_roles"),
+            ModuleType::InviteTracking => write!(f, "invite_tracking"),
         }
     }
 }
@@ -163,3 +166,26 @@ pub struct LoggingModuleConfig {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct StickyRolesModuleConfig {}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct InviteTrackingModuleConfig {
+    #[serde(default)]
+    pub track_vanity: bool,
+    #[serde(default)]
+    pub ignore_bots: bool,
+    #[serde(default)]
+    pub minimum_account_age_days: u32,
+    #[serde(default = "default_fake_threshold")]
+    pub fake_threshold_hours: u32,
+    #[serde(default = "default_leaderboard_limit")]
+    pub leaderboard_limit: u32,
+}
+
+fn default_fake_threshold() -> u32 {
+    24
+}
+
+fn default_leaderboard_limit() -> u32 {
+    25
+}

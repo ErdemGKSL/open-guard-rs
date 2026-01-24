@@ -1,4 +1,7 @@
 pub mod guild_configs;
+pub mod invite_events;
+pub mod invite_snapshots;
+pub mod invite_stats;
 pub mod jails;
 pub mod logging_guilds;
 pub mod member_old_roles;

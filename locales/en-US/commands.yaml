@@ -66,3 +66,24 @@ unjail:
 setup:
   name: "setup"
   desc: "Start the fast setup process for the bot"
+invites:
+  name: "invites"
+  desc: "Invite tracking commands"
+  subcommands:
+    stats:
+      name: "stats"
+      desc: "View invite statistics for a user"
+      options:
+        user:
+          name: "user"
+          desc: "User to check (defaults to you)"
+    leaderboard:
+      name: "leaderboard"
+      desc: "View server invite leaderboard"
+      options:
+        limit:
+          name: "limit"
+          desc: "Number of users to show (default: 10)"
+    codes:
+      name: "codes"
+      desc: "View your active invite codes (Admin only)"

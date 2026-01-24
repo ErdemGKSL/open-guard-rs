@@ -390,3 +390,42 @@ setup-module-log-channel-title = **{$label} için Kayıt Kanalı**
 setup-module-log-channel-desc = Bu modül için özel bir kayıt kanalı seçin veya oluşturun.
 setup-module-log-channel-placeholder = Kayıt kanalı seçin (İsteğe bağlı)...
 setup-or-create = Veya yeni bir kanal oluşturun:
+
+# Kanal Koruma Kurulumu
+setup-cp-desc = Kanal korumasının ne zaman tetikleneceğini ve özel kanalların göz ardı edilip edilmeyeceğini yapılandırın.
+setup-cp-punish-when-placeholder = Hangi kanal işlemlerine karşı koruma sağlanacağını seçin...
+setup-cp-punish-create = Kanal Oluşturma
+setup-cp-punish-update = Kanal Güncelleme
+setup-cp-punish-delete = Kanal Silme
+
+# Kanal İzin Koruma Kurulumu
+setup-cpp-desc = Kanal izin korumasının ne zaman tetikleneceğini ve özel kanalların göz ardı edilip edilmeyeceğini yapılandırın.
+setup-cpp-punish-when-placeholder = Hangi izin işlemlerine karşı koruma sağlanacağını seçin...
+setup-cpp-punish-create = İzin Oluşturma
+setup-cpp-punish-update = İzin Güncelleme
+setup-cpp-punish-delete = İzin Silme
+
+# Rol Koruma Kurulumu
+setup-rp-desc = Rol korumasının ne zaman tetikleneceğini yapılandırın.
+setup-rp-punish-when-placeholder = Hangi rol işlemlerine karşı koruma sağlanacağını seçin...
+setup-rp-punish-create = Rol Oluşturma
+setup-rp-punish-update = Rol Güncelleme
+setup-rp-punish-delete = Rol Silme
+
+# Moderasyon Koruma Kurulumu
+setup-mp-desc = Hangi moderasyon işlemlerinin koruma tetikleyeceğini yapılandırın.
+setup-mp-punish-when-placeholder = Hangi moderasyon işlemlerine karşı koruma sağlanacağını seçin...
+setup-mp-punish-ban = Yasaklama
+setup-mp-punish-kick = Atma
+setup-mp-punish-timeout = Susturma
+
+# Davet Takip Modülü
+module-invite-tracking-name = Davet Takibi
+module-invite-tracking-desc = Sunucu davetlerini takip edin ve kimin kimi davet ettiğini görün
+config-invite-tracking-label = Davet Takibi
+config-it-vanity-label = Vanity URL Katılımlarını Takip Et
+config-it-ignore-bots-label = Bot Davetlerini Yoksay
+config-whitelist-invite-tracking-header = Beyaz Liste: Davet Takibi
+
+# Davet Takip Kurulumu
+setup-it-desc = Davet takip ayarlarını yapılandırın. Kimin kimi davet ettiğini takip edin ve sunucu büyümesini analiz edin.

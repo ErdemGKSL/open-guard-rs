@@ -88,7 +88,8 @@ async fn main() -> anyhow::Result<()> {
         | serenity::GatewayIntents::AUTO_MODERATION_EXECUTION
         | serenity::GatewayIntents::MESSAGE_CONTENT
         | serenity::GatewayIntents::GUILD_MEMBERS
-        | serenity::GatewayIntents::GUILD_VOICE_STATES;
+        | serenity::GatewayIntents::GUILD_VOICE_STATES
+        | serenity::GatewayIntents::GUILD_INVITES;
 
     // Initialize localization manager
     let l10n = Arc::new(services::localization::LocalizationManager::new());
