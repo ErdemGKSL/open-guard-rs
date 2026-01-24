@@ -16,7 +16,8 @@ pub use builders::*;
     slash_command,
     install_context = "Guild",
     interaction_context = "Guild",
-    default_member_permissions = "ADMINISTRATOR"
+    default_member_permissions = "ADMINISTRATOR",
+    ephemeral
 )]
 pub async fn config(ctx: crate::Context<'_>) -> Result<(), Error> {
     let l10n = ctx.l10n_guild();

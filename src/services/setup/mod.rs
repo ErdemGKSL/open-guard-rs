@@ -11,8 +11,9 @@ use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, Iterable, QueryFilter,
 use state::SetupStep;
 
 /// Start the fast setup process for the bot.
-#[poise::command(slash_command, guild_only, required_permissions = "ADMINISTRATOR")]
+#[poise::command(slash_command, guild_only, default_member_permissions = "ADMINISTRATOR", ephemeral)]
 pub async fn setup(ctx: Context<'_>) -> Result<(), Error> {
+    let _ = ctx.defer_ephemeral().await;
     let guild_id = ctx.guild_id().unwrap();
     let setup_svc = &ctx.data().setup;
     let l10n = ctx.l10n_user();
