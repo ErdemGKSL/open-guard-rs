@@ -439,6 +439,9 @@ module-invite-tracking-desc = Track server invites and see who invited whom
 config-invite-tracking-label = Invite Tracking
 config-it-vanity-label = Track Vanity URL Joins
 config-it-ignore-bots-label = Ignore Bot Invites
+config-it-min-age-label = Minimum Account Age (Days): {$count}
+config-it-fake-threshold-label = Fake Member Threshold (Hours): {$count}
+config-it-leaderboard-limit-label = Leaderboard Limit: {$count}
 config-whitelist-invite-tracking-header = Whitelist: Invite Tracking
 
 # Invite Tracking Setup

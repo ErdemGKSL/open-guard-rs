@@ -125,8 +125,6 @@ pub fn find_used_invite(
                 return Some(UsedInviteInfo {
                     code: invite.code.to_string(),
                     inviter_id: invite.inviter.as_ref().map(|u| u.id),
-                    uses_before: old_uses,
-                    uses_after: current_uses,
                     invite_type: determine_invite_type(invite),
                 });
             }
@@ -141,8 +139,6 @@ pub fn find_used_invite(
 pub struct UsedInviteInfo {
     pub code: String,
     pub inviter_id: Option<serenity::UserId>,
-    pub uses_before: i32,
-    pub uses_after: i32,
     pub invite_type: String,
 }
 
@@ -171,6 +167,17 @@ pub async fn determine_special_join_type(
 
     // If we can't determine, mark as unknown
     Ok((None, "unknown".to_string(), None))
+}
+
+pub fn format_join_type(join_type: &str) -> String {
+    match join_type {
+        "normal" => "Regular Invite".to_string(),
+        "vanity" => "Vanity URL".to_string(),
+        "widget" => "Server Widget".to_string(),
+        "discovery" => "Server Discovery".to_string(),
+        "unknown" => "Unknown".to_string(),
+        _ => join_type.to_string(),
+    }
 }
 
 /// Delete invite snapshot

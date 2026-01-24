@@ -30,6 +30,26 @@ impl serenity::EventHandler for Handler {
                 if is_new.unwrap_or(false) {
                     info!("Joined new guild: {} ({})", guild.name, guild.id.get());
                 }
+
+                // Sync invites if invite tracking is enabled
+                let data = ctx.data::<Data>();
+                let guild_id = guild.id;
+                let ctx_clone = ctx.clone();
+                let data_clone = data.clone();
+                tokio::spawn(async move {
+                    if let Ok(Some(_)) =
+                        crate::modules::invite_tracking::tracking::get_config(guild_id, &data_clone)
+                            .await
+                    {
+                        if let Err(e) = crate::modules::invite_tracking::tracking::sync_all_guild_invites(
+                            &ctx_clone, guild_id, &data_clone,
+                        )
+                        .await
+                        {
+                            error!("Failed to sync invites for guild {}: {:?}", guild_id, e);
+                        }
+                    }
+                });
             }
             serenity::FullEvent::GuildDelete { incomplete, .. } => {
                 info!("Left guild: {}", incomplete.id.get());

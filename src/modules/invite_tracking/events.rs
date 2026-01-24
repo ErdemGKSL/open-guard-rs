@@ -1,7 +1,9 @@
-use crate::db::entities::invite_events;
+use crate::db::entities::{invite_events, module_configs::ModuleType};
 use crate::modules::invite_tracking::{stats, tracking};
+use crate::services::logger::LogLevel;
 use crate::{Data, Error};
 use chrono::Utc;
+use fluent_bundle::FluentArgs;
 use poise::serenity_prelude as serenity;
 use sea_orm::{ActiveModelTrait, Set};
 
@@ -148,6 +150,19 @@ async fn handle_member_join(
 
     tracing::info!("Member joined: {} in guild {}", member.user.id, guild_id);
 
+    // Check account age
+    let mut is_suspicious = false;
+    let mut suspicious_reason = None;
+
+    if config.minimum_account_age_days > 0 {
+        let created_at = member.user.id.created_at();
+        let age = Utc::now() - created_at.to_utc();
+        if age.num_days() < config.minimum_account_age_days as i64 {
+            is_suspicious = true;
+            suspicious_reason = Some(format!("Account age ({} days) is below threshold ({} days)", age.num_days(), config.minimum_account_age_days));
+        }
+    }
+
     // Fetch current invites
     let current_invites = match tracking::fetch_guild_invites(ctx, guild_id).await {
         Ok(invites) => invites,
@@ -183,6 +198,15 @@ async fn handle_member_join(
         };
 
     // Log event
+    let metadata = if is_suspicious {
+        Some(serde_json::json!({
+            "suspicious": true,
+            "reason": suspicious_reason
+        }))
+    } else {
+        None
+    };
+
     log_invite_event(
         guild_id,
         "member_join",
@@ -190,7 +214,7 @@ async fn handle_member_join(
         inviter_id,
         Some(member.user.id),
         Some(&join_type),
-        None,
+        metadata,
         data,
     )
     .await?;
@@ -201,11 +225,44 @@ async fn handle_member_join(
     // Sync invites again to update uses
     tracking::sync_invites_to_snapshots(guild_id, current_invites, data).await?;
 
+    // Log to audit log
+    let l10n = data.l10n.get_l10n_for_guild(guild_id, &data.db).await;
+    let mut fields = vec![("Join Type", tracking::format_join_type(&join_type))];
+
+    if let Some(inviter_id) = inviter_id {
+        fields.push(("Inviter", format!("<@{}>", inviter_id)));
+    }
+
+    if let Some(code) = invite_code {
+        fields.push(("Invite Code", format!("`{}`", code)));
+    }
+
+    if is_suspicious {
+        fields.push(("Suspicious", suspicious_reason.unwrap_or_else(|| "Unknown reason".to_string())));
+    }
+
+    let mut args = FluentArgs::new();
+    args.set("userId", member.user.id.get());
+
+    let _ = data
+        .logger
+        .log_action(
+            &ctx.http,
+            guild_id,
+            Some(ModuleType::InviteTracking),
+            None,
+            LogLevel::Info,
+            &l10n.t("log-member-join-title", None),
+            &l10n.t("log-member-join-desc", Some(&args)),
+            fields,
+        )
+        .await;
+
     Ok(())
 }
 
 async fn handle_member_leave(
-    _ctx: &serenity::Context,
+    ctx: &serenity::Context,
     guild_id: serenity::GuildId,
     user: &serenity::User,
     data: &Data,
@@ -249,6 +306,35 @@ async fn handle_member_leave(
         stats::StatsUpdate::Leave
     };
     stats::update_inviter_stats(guild_id, inviter_id, update_type, data).await?;
+
+    // Log to audit log
+    let l10n = data.l10n.get_l10n_for_guild(guild_id, &data.db).await;
+    let mut fields = vec![];
+
+    if let Some(inviter_id) = inviter_id {
+        fields.push(("Inviter", format!("<@{}>", inviter_id)));
+    }
+
+    if is_fake {
+        fields.push(("Suspicious", "Yes (Left quickly)".to_string()));
+    }
+
+    let mut args = FluentArgs::new();
+    args.set("userId", user.id.get());
+
+    let _ = data
+        .logger
+        .log_action(
+            &ctx.http,
+            guild_id,
+            Some(ModuleType::InviteTracking),
+            None,
+            LogLevel::Info,
+            &l10n.t("log-member-leave-title", None),
+            &l10n.t("log-member-leave-desc", Some(&args)),
+            fields,
+        )
+        .await;
 
     Ok(())
 }

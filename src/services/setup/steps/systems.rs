@@ -59,7 +59,7 @@ pub fn build_systems_step(
         },
     )
     .min_values(0)
-    .max_values(9)
+    .max_values(10)
     .placeholder(l10n.t("setup-systems-placeholder", None));
 
     (

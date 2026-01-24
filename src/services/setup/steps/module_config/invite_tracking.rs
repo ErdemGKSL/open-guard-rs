@@ -27,16 +27,12 @@ pub fn build_ui_with_config(
 
     let vanity_button =
         serenity::CreateButton::new(format!("setup_module_it_vanity_toggle_{}", setup_id))
-            .label(vanity_label)
+            .label(format!("Vanity: {}", vanity_label))
             .style(if config.track_vanity {
                 serenity::ButtonStyle::Success
             } else {
                 serenity::ButtonStyle::Secondary
             });
-
-    components.push(serenity::CreateComponent::ActionRow(
-        serenity::CreateActionRow::buttons(vec![vanity_button]),
-    ));
 
     // Ignore Bots Toggle
     let bots_label = if config.ignore_bots {
@@ -47,7 +43,7 @@ pub fn build_ui_with_config(
 
     let bots_button =
         serenity::CreateButton::new(format!("setup_module_it_ignore_bots_toggle_{}", setup_id))
-            .label(bots_label)
+            .label(format!("Bots: {}", bots_label))
             .style(if config.ignore_bots {
                 serenity::ButtonStyle::Success
             } else {
@@ -55,7 +51,70 @@ pub fn build_ui_with_config(
             });
 
     components.push(serenity::CreateComponent::ActionRow(
-        serenity::CreateActionRow::buttons(vec![bots_button]),
+        serenity::CreateActionRow::buttons(vec![vanity_button, bots_button]),
+    ));
+
+    // Minimum Account Age
+    let mut args = fluent_bundle::FluentArgs::new();
+    args.set("count", config.minimum_account_age_days);
+    let age_label = l10n.t("config-it-min-age-label", Some(&args));
+
+    let age_dec = serenity::CreateButton::new(format!("setup_module_it_min_age_dec_{}", setup_id))
+        .label("-")
+        .style(serenity::ButtonStyle::Secondary);
+    let age_display =
+        serenity::CreateButton::new(format!("setup_module_it_min_age_val_{}", setup_id))
+            .label(age_label)
+            .style(serenity::ButtonStyle::Secondary)
+            .disabled(true);
+    let age_inc = serenity::CreateButton::new(format!("setup_module_it_min_age_inc_{}", setup_id))
+        .label("+")
+        .style(serenity::ButtonStyle::Secondary);
+
+    components.push(serenity::CreateComponent::ActionRow(
+        serenity::CreateActionRow::buttons(vec![age_dec, age_display, age_inc]),
+    ));
+
+    // Fake Threshold
+    let mut args = fluent_bundle::FluentArgs::new();
+    args.set("count", config.fake_threshold_hours);
+    let fake_label = l10n.t("config-it-fake-threshold-label", Some(&args));
+
+    let fake_dec = serenity::CreateButton::new(format!("setup_module_it_fake_dec_{}", setup_id))
+        .label("-")
+        .style(serenity::ButtonStyle::Secondary);
+    let fake_display =
+        serenity::CreateButton::new(format!("setup_module_it_fake_val_{}", setup_id))
+            .label(fake_label)
+            .style(serenity::ButtonStyle::Secondary)
+            .disabled(true);
+    let fake_inc = serenity::CreateButton::new(format!("setup_module_it_fake_inc_{}", setup_id))
+        .label("+")
+        .style(serenity::ButtonStyle::Secondary);
+
+    components.push(serenity::CreateComponent::ActionRow(
+        serenity::CreateActionRow::buttons(vec![fake_dec, fake_display, fake_inc]),
+    ));
+
+    // Leaderboard Limit
+    let mut args = fluent_bundle::FluentArgs::new();
+    args.set("count", config.leaderboard_limit);
+    let limit_label = l10n.t("config-it-leaderboard-limit-label", Some(&args));
+
+    let limit_dec = serenity::CreateButton::new(format!("setup_module_it_limit_dec_{}", setup_id))
+        .label("-")
+        .style(serenity::ButtonStyle::Secondary);
+    let limit_display =
+        serenity::CreateButton::new(format!("setup_module_it_limit_val_{}", setup_id))
+            .label(limit_label)
+            .style(serenity::ButtonStyle::Secondary)
+            .disabled(true);
+    let limit_inc = serenity::CreateButton::new(format!("setup_module_it_limit_inc_{}", setup_id))
+        .label("+")
+        .style(serenity::ButtonStyle::Secondary);
+
+    components.push(serenity::CreateComponent::ActionRow(
+        serenity::CreateActionRow::buttons(vec![limit_dec, limit_display, limit_inc]),
     ));
 
     // Next Button

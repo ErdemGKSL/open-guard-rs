@@ -68,7 +68,7 @@ pub async fn stats(
             if let Some(inviter_id) = info.inviter_id {
                 response.push_str(&format!("👤 Invited by: <@{}>\n", inviter_id));
             }
-            response.push_str(&format!("🔗 Join type: {}\n", format_join_type(&info.join_type)));
+            response.push_str(&format!("🔗 Join type: {}\n", tracking::format_join_type(&info.join_type)));
             if let Some(code) = info.invite_code {
                 response.push_str(&format!("🎫 Invite code: `{}`\n", code));
             }
@@ -94,18 +94,22 @@ pub async fn leaderboard(
     limit: Option<u32>,
 ) -> Result<(), Error> {
     let guild_id = ctx.guild_id().unwrap();
-    let limit = limit.unwrap_or(10);
 
-    // Check if module is enabled
-    if tracking::get_config(guild_id, &ctx.data()).await?.is_none() {
-        ctx.send(
-            poise::CreateReply::default()
-                .content("Invite tracking is not enabled on this server.")
-                .ephemeral(true),
-        )
-        .await?;
-        return Ok(());
-    }
+    // Check if module is enabled and get config
+    let config = match tracking::get_config(guild_id, &ctx.data()).await? {
+        Some(c) => c,
+        None => {
+            ctx.send(
+                poise::CreateReply::default()
+                    .content("Invite tracking is not enabled on this server.")
+                    .ephemeral(true),
+            )
+            .await?;
+            return Ok(());
+        }
+    };
+
+    let limit = limit.unwrap_or(config.leaderboard_limit);
 
     ctx.defer().await?;
 
@@ -252,15 +256,4 @@ async fn find_user_join_info(
         join_type: e.join_type.unwrap_or_else(|| "unknown".to_string()),
         invite_code: e.invite_code,
     }))
-}
-
-fn format_join_type(join_type: &str) -> String {
-    match join_type {
-        "normal" => "Regular Invite".to_string(),
-        "vanity" => "Vanity URL".to_string(),
-        "widget" => "Server Widget".to_string(),
-        "discovery" => "Server Discovery".to_string(),
-        "unknown" => "Unknown".to_string(),
-        _ => join_type.to_string(),
-    }
 }

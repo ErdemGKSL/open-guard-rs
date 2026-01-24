@@ -198,6 +198,15 @@ pub async fn build_main_menu(
             "StickyRoles",
         )
         .description(l10n.t("config-sticky-roles-desc", None)),
+        serenity::CreateSelectMenuOption::new(
+            format!(
+                "{} - {}",
+                l10n.t("config-invite-tracking-label", None),
+                get_status(ModuleType::InviteTracking)
+            ),
+            "InviteTracking",
+        )
+        .description(l10n.t("module-invite-tracking-desc", None)),
     ];
 
     inner_components.push(create_select_menu_row(
@@ -649,6 +658,7 @@ pub async fn handle_interaction(
                 "moderation_protection" => ModuleType::ModerationProtection,
                 "logging" => ModuleType::Logging,
                 "sticky_roles" => ModuleType::StickyRoles,
+                "invite_tracking" => ModuleType::InviteTracking,
                 _ => return Ok(()),
             };
             updated_reply = Some(build_module_menu(data, guild_id, module_type, 0, &l10n).await?);
@@ -709,6 +719,7 @@ pub async fn handle_interaction(
                         "ModerationProtection" => ModuleType::ModerationProtection,
                         "Logging" => ModuleType::Logging,
                         "StickyRoles" => ModuleType::StickyRoles,
+                        "InviteTracking" => ModuleType::InviteTracking,
                         _ => return Ok(()),
                     };
                     updated_reply =
@@ -740,6 +751,7 @@ pub async fn handle_interaction(
                     }
                     "logging" | "Logging" => ModuleType::Logging,
                     "sticky_roles" | "StickyRoles" => ModuleType::StickyRoles,
+                    "invite_tracking" | "InviteTracking" => ModuleType::InviteTracking,
                     _ => return Ok(()),
                 };
                 updated_reply =
@@ -851,6 +863,7 @@ pub async fn handle_interaction(
                     ModuleType::ModerationProtection
                 }
                 "logging" | "Logging" => ModuleType::Logging,
+                "invite_tracking" | "InviteTracking" => ModuleType::InviteTracking,
                 _ => return Ok(()),
             };
 
@@ -900,6 +913,8 @@ pub async fn handle_interaction(
                 ModuleType::ModerationProtection
             } else if custom_id.contains("Logging") {
                 ModuleType::Logging
+            } else if custom_id.contains("InviteTracking") {
+                ModuleType::InviteTracking
             } else {
                 return Ok(());
             };

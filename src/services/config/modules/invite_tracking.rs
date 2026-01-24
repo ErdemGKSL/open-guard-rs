@@ -62,6 +62,81 @@ pub fn build_ui(
         ),
     ));
 
+    components.push(serenity::CreateContainerComponent::Separator(
+        serenity::CreateSeparator::new(true),
+    ));
+
+    // Minimum Account Age
+    let mut args = fluent_bundle::FluentArgs::new();
+    args.set("count", config.minimum_account_age_days);
+    components.push(serenity::CreateContainerComponent::TextDisplay(
+        serenity::CreateTextDisplay::new(l10n.t("config-it-min-age-label", Some(&args))),
+    ));
+
+    components.push(serenity::CreateContainerComponent::ActionRow(
+        serenity::CreateActionRow::Buttons(
+            vec![
+                serenity::CreateButton::new("config_it_min_age_dec")
+                    .label("-")
+                    .style(serenity::ButtonStyle::Secondary),
+                serenity::CreateButton::new("config_it_min_age_inc")
+                    .label("+")
+                    .style(serenity::ButtonStyle::Secondary),
+            ]
+            .into(),
+        ),
+    ));
+
+    components.push(serenity::CreateContainerComponent::Separator(
+        serenity::CreateSeparator::new(false),
+    ));
+
+    // Fake Threshold
+    let mut args = fluent_bundle::FluentArgs::new();
+    args.set("count", config.fake_threshold_hours);
+    components.push(serenity::CreateContainerComponent::TextDisplay(
+        serenity::CreateTextDisplay::new(l10n.t("config-it-fake-threshold-label", Some(&args))),
+    ));
+
+    components.push(serenity::CreateContainerComponent::ActionRow(
+        serenity::CreateActionRow::Buttons(
+            vec![
+                serenity::CreateButton::new("config_it_fake_dec")
+                    .label("-")
+                    .style(serenity::ButtonStyle::Secondary),
+                serenity::CreateButton::new("config_it_fake_inc")
+                    .label("+")
+                    .style(serenity::ButtonStyle::Secondary),
+            ]
+            .into(),
+        ),
+    ));
+
+    components.push(serenity::CreateContainerComponent::Separator(
+        serenity::CreateSeparator::new(false),
+    ));
+
+    // Leaderboard Limit
+    let mut args = fluent_bundle::FluentArgs::new();
+    args.set("count", config.leaderboard_limit);
+    components.push(serenity::CreateContainerComponent::TextDisplay(
+        serenity::CreateTextDisplay::new(l10n.t("config-it-leaderboard-limit-label", Some(&args))),
+    ));
+
+    components.push(serenity::CreateContainerComponent::ActionRow(
+        serenity::CreateActionRow::Buttons(
+            vec![
+                serenity::CreateButton::new("config_it_limit_dec")
+                    .label("-")
+                    .style(serenity::ButtonStyle::Secondary),
+                serenity::CreateButton::new("config_it_limit_inc")
+                    .label("+")
+                    .style(serenity::ButtonStyle::Secondary),
+            ]
+            .into(),
+        ),
+    ));
+
     components
 }
 
@@ -83,6 +158,48 @@ pub async fn handle_interaction(
     if custom_id == "config_it_ignore_bots_toggle" {
         let (config_active, mut config) = get_config(data, guild_id).await?;
         config.ignore_bots = !config.ignore_bots;
+        save_config(data, config_active, config).await?;
+        return Ok(true);
+    }
+
+    if custom_id == "config_it_min_age_inc" {
+        let (config_active, mut config) = get_config(data, guild_id).await?;
+        config.minimum_account_age_days += 1;
+        save_config(data, config_active, config).await?;
+        return Ok(true);
+    }
+
+    if custom_id == "config_it_min_age_dec" {
+        let (config_active, mut config) = get_config(data, guild_id).await?;
+        config.minimum_account_age_days = config.minimum_account_age_days.saturating_sub(1);
+        save_config(data, config_active, config).await?;
+        return Ok(true);
+    }
+
+    if custom_id == "config_it_fake_inc" {
+        let (config_active, mut config) = get_config(data, guild_id).await?;
+        config.fake_threshold_hours += 1;
+        save_config(data, config_active, config).await?;
+        return Ok(true);
+    }
+
+    if custom_id == "config_it_fake_dec" {
+        let (config_active, mut config) = get_config(data, guild_id).await?;
+        config.fake_threshold_hours = config.fake_threshold_hours.saturating_sub(1);
+        save_config(data, config_active, config).await?;
+        return Ok(true);
+    }
+
+    if custom_id == "config_it_limit_inc" {
+        let (config_active, mut config) = get_config(data, guild_id).await?;
+        config.leaderboard_limit = (config.leaderboard_limit + 5).min(100);
+        save_config(data, config_active, config).await?;
+        return Ok(true);
+    }
+
+    if custom_id == "config_it_limit_dec" {
+        let (config_active, mut config) = get_config(data, guild_id).await?;
+        config.leaderboard_limit = config.leaderboard_limit.saturating_sub(5).max(5);
         save_config(data, config_active, config).await?;
         return Ok(true);
     }

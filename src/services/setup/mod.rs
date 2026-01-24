@@ -67,6 +67,7 @@ pub async fn handle_interaction(
                 "ModerationProtection" => ModuleType::ModerationProtection,
                 "Logging" => ModuleType::Logging,
                 "StickyRoles" => ModuleType::StickyRoles,
+                "InviteTracking" => ModuleType::InviteTracking,
                 _ => unreachable!(),
             })
             .collect();
@@ -544,6 +545,108 @@ pub async fn handle_interaction(
                     .content(content)
                     .components(components),
             ).await?;
+        }
+    } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_min_age_inc_") {
+        interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
+        data.setup.update_state(guild_id.get(), |state| {
+            if state.id == setup_id {
+                let mut config = crate::db::entities::module_configs::InviteTrackingModuleConfig::default();
+                if let Some(existing) = state.module_configs.get(&ModuleType::InviteTracking) {
+                    config = serde_json::from_value(existing.clone()).unwrap_or_default();
+                }
+                config.minimum_account_age_days += 1;
+                state.module_configs.insert(ModuleType::InviteTracking, serde_json::to_value(config).unwrap_or_default());
+            }
+        });
+        if let Some(state) = data.setup.get_state(guild_id.get()) {
+            let config: crate::db::entities::module_configs::InviteTrackingModuleConfig = state.module_configs.get(&ModuleType::InviteTracking).and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
+            let (content, components) = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
+            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().content(content).components(components)).await?;
+        }
+    } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_min_age_dec_") {
+        interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
+        data.setup.update_state(guild_id.get(), |state| {
+            if state.id == setup_id {
+                let mut config = crate::db::entities::module_configs::InviteTrackingModuleConfig::default();
+                if let Some(existing) = state.module_configs.get(&ModuleType::InviteTracking) {
+                    config = serde_json::from_value(existing.clone()).unwrap_or_default();
+                }
+                config.minimum_account_age_days = config.minimum_account_age_days.saturating_sub(1);
+                state.module_configs.insert(ModuleType::InviteTracking, serde_json::to_value(config).unwrap_or_default());
+            }
+        });
+        if let Some(state) = data.setup.get_state(guild_id.get()) {
+            let config: crate::db::entities::module_configs::InviteTrackingModuleConfig = state.module_configs.get(&ModuleType::InviteTracking).and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
+            let (content, components) = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
+            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().content(content).components(components)).await?;
+        }
+    } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_fake_inc_") {
+        interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
+        data.setup.update_state(guild_id.get(), |state| {
+            if state.id == setup_id {
+                let mut config = crate::db::entities::module_configs::InviteTrackingModuleConfig::default();
+                if let Some(existing) = state.module_configs.get(&ModuleType::InviteTracking) {
+                    config = serde_json::from_value(existing.clone()).unwrap_or_default();
+                }
+                config.fake_threshold_hours += 1;
+                state.module_configs.insert(ModuleType::InviteTracking, serde_json::to_value(config).unwrap_or_default());
+            }
+        });
+        if let Some(state) = data.setup.get_state(guild_id.get()) {
+            let config: crate::db::entities::module_configs::InviteTrackingModuleConfig = state.module_configs.get(&ModuleType::InviteTracking).and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
+            let (content, components) = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
+            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().content(content).components(components)).await?;
+        }
+    } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_fake_dec_") {
+        interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
+        data.setup.update_state(guild_id.get(), |state| {
+            if state.id == setup_id {
+                let mut config = crate::db::entities::module_configs::InviteTrackingModuleConfig::default();
+                if let Some(existing) = state.module_configs.get(&ModuleType::InviteTracking) {
+                    config = serde_json::from_value(existing.clone()).unwrap_or_default();
+                }
+                config.fake_threshold_hours = config.fake_threshold_hours.saturating_sub(1);
+                state.module_configs.insert(ModuleType::InviteTracking, serde_json::to_value(config).unwrap_or_default());
+            }
+        });
+        if let Some(state) = data.setup.get_state(guild_id.get()) {
+            let config: crate::db::entities::module_configs::InviteTrackingModuleConfig = state.module_configs.get(&ModuleType::InviteTracking).and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
+            let (content, components) = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
+            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().content(content).components(components)).await?;
+        }
+    } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_limit_inc_") {
+        interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
+        data.setup.update_state(guild_id.get(), |state| {
+            if state.id == setup_id {
+                let mut config = crate::db::entities::module_configs::InviteTrackingModuleConfig::default();
+                if let Some(existing) = state.module_configs.get(&ModuleType::InviteTracking) {
+                    config = serde_json::from_value(existing.clone()).unwrap_or_default();
+                }
+                config.leaderboard_limit = (config.leaderboard_limit + 5).min(100);
+                state.module_configs.insert(ModuleType::InviteTracking, serde_json::to_value(config).unwrap_or_default());
+            }
+        });
+        if let Some(state) = data.setup.get_state(guild_id.get()) {
+            let config: crate::db::entities::module_configs::InviteTrackingModuleConfig = state.module_configs.get(&ModuleType::InviteTracking).and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
+            let (content, components) = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
+            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().content(content).components(components)).await?;
+        }
+    } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_limit_dec_") {
+        interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
+        data.setup.update_state(guild_id.get(), |state| {
+            if state.id == setup_id {
+                let mut config = crate::db::entities::module_configs::InviteTrackingModuleConfig::default();
+                if let Some(existing) = state.module_configs.get(&ModuleType::InviteTracking) {
+                    config = serde_json::from_value(existing.clone()).unwrap_or_default();
+                }
+                config.leaderboard_limit = config.leaderboard_limit.saturating_sub(5).max(5);
+                state.module_configs.insert(ModuleType::InviteTracking, serde_json::to_value(config).unwrap_or_default());
+            }
+        });
+        if let Some(state) = data.setup.get_state(guild_id.get()) {
+            let config: crate::db::entities::module_configs::InviteTrackingModuleConfig = state.module_configs.get(&ModuleType::InviteTracking).and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
+            let (content, components) = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
+            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().content(content).components(components)).await?;
         }
     } else if let Some(rest) = custom_id.strip_prefix("setup_module_next_") {
         let parts: Vec<&str> = rest.split('_').collect();

@@ -425,6 +425,9 @@ module-invite-tracking-desc = Sunucu davetlerini takip edin ve kimin kimi davet 
 config-invite-tracking-label = Davet Takibi
 config-it-vanity-label = Vanity URL Katılımlarını Takip Et
 config-it-ignore-bots-label = Bot Davetlerini Yoksay
+config-it-min-age-label = Minimum Hesap Yaşı (Gün): {$count}
+config-it-fake-threshold-label = Sahte Üye Eşiği (Saat): {$count}
+config-it-leaderboard-limit-label = Sıralama Limiti: {$count}
 config-whitelist-invite-tracking-header = Beyaz Liste: Davet Takibi
 
 # Davet Takip Kurulumu
