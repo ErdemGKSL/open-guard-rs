@@ -89,7 +89,7 @@ pub async fn handle_interaction(
                 serenity::CreateInteractionResponse::UpdateMessage(
                     serenity::CreateInteractionResponseMessage::new()
                         .components(components)
-                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
                 ),
             )
             .await?;
@@ -115,7 +115,7 @@ pub async fn handle_interaction(
                 serenity::CreateInteractionResponse::UpdateMessage(
                     serenity::CreateInteractionResponseMessage::new()
                         .components(components)
-                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
                 ),
             )
             .await?;
@@ -133,7 +133,7 @@ pub async fn handle_interaction(
                 serenity::CreateInteractionResponse::UpdateMessage(
                     serenity::CreateInteractionResponseMessage::new()
                         .components(components)
-                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
                 ),
             )
             .await?;
@@ -188,7 +188,7 @@ pub async fn handle_interaction(
                         serenity::CreateInteractionResponse::UpdateMessage(
                             serenity::CreateInteractionResponseMessage::new()
                                 .components(components)
-                                .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
+                                .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
                         ),
                     )
                     .await?;
@@ -201,7 +201,7 @@ pub async fn handle_interaction(
                         serenity::CreateInteractionResponse::UpdateMessage(
                             serenity::CreateInteractionResponseMessage::new()
                                 .components(components)
-                                .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
+                                .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
                         ),
                     )
                     .await?;
@@ -267,7 +267,7 @@ pub async fn handle_interaction(
                 &ctx.http,
                 serenity::EditInteractionResponse::new()
                     .components(components)
-                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
             ).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_cp_punish_when_") {
@@ -309,7 +309,7 @@ pub async fn handle_interaction(
                 &ctx.http,
                 serenity::EditInteractionResponse::new()
                     .components(components)
-                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
             ).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_cpp_ignore_private_toggle_") {
@@ -346,7 +346,7 @@ pub async fn handle_interaction(
                 &ctx.http,
                 serenity::EditInteractionResponse::new()
                     .components(components)
-                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
             ).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_cpp_punish_when_") {
@@ -388,7 +388,7 @@ pub async fn handle_interaction(
                 &ctx.http,
                 serenity::EditInteractionResponse::new()
                     .components(components)
-                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
             ).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_rp_punish_when_") {
@@ -430,7 +430,7 @@ pub async fn handle_interaction(
                 &ctx.http,
                 serenity::EditInteractionResponse::new()
                     .components(components)
-                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
             ).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_mp_punish_when_") {
@@ -472,7 +472,7 @@ pub async fn handle_interaction(
                 &ctx.http,
                 serenity::EditInteractionResponse::new()
                     .components(components)
-                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
             ).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_vanity_toggle_") {
@@ -509,7 +509,7 @@ pub async fn handle_interaction(
                 &ctx.http,
                 serenity::EditInteractionResponse::new()
                     .components(components)
-                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
             ).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_ignore_bots_toggle_") {
@@ -546,7 +546,7 @@ pub async fn handle_interaction(
                 &ctx.http,
                 serenity::EditInteractionResponse::new()
                     .components(components)
-                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
+                    .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
             ).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_min_age_inc_") {
@@ -564,7 +564,7 @@ pub async fn handle_interaction(
         if let Some(state) = data.setup.get_state(guild_id.get()) {
             let config: crate::db::entities::module_configs::InviteTrackingModuleConfig = state.module_configs.get(&ModuleType::InviteTracking).and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
             let components = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
-            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().components(components).flags(serenity::MessageFlags::IS_COMPONENTS_V2)).await?;
+            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().components(components).flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL)).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_min_age_dec_") {
         interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
@@ -581,7 +581,7 @@ pub async fn handle_interaction(
         if let Some(state) = data.setup.get_state(guild_id.get()) {
             let config: crate::db::entities::module_configs::InviteTrackingModuleConfig = state.module_configs.get(&ModuleType::InviteTracking).and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
             let components = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
-            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().components(components).flags(serenity::MessageFlags::IS_COMPONENTS_V2)).await?;
+            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().components(components).flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL)).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_fake_inc_") {
         interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
@@ -598,7 +598,7 @@ pub async fn handle_interaction(
         if let Some(state) = data.setup.get_state(guild_id.get()) {
             let config: crate::db::entities::module_configs::InviteTrackingModuleConfig = state.module_configs.get(&ModuleType::InviteTracking).and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
             let components = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
-            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().components(components).flags(serenity::MessageFlags::IS_COMPONENTS_V2)).await?;
+            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().components(components).flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL)).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_fake_dec_") {
         interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
@@ -615,7 +615,7 @@ pub async fn handle_interaction(
         if let Some(state) = data.setup.get_state(guild_id.get()) {
             let config: crate::db::entities::module_configs::InviteTrackingModuleConfig = state.module_configs.get(&ModuleType::InviteTracking).and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
             let components = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
-            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().components(components).flags(serenity::MessageFlags::IS_COMPONENTS_V2)).await?;
+            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().components(components).flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL)).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_limit_inc_") {
         interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
@@ -632,7 +632,7 @@ pub async fn handle_interaction(
         if let Some(state) = data.setup.get_state(guild_id.get()) {
             let config: crate::db::entities::module_configs::InviteTrackingModuleConfig = state.module_configs.get(&ModuleType::InviteTracking).and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
             let components = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
-            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().components(components).flags(serenity::MessageFlags::IS_COMPONENTS_V2)).await?;
+            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().components(components).flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL)).await?;
         }
     } else if let Some(setup_id) = custom_id.strip_prefix("setup_module_it_limit_dec_") {
         interaction.create_response(&ctx.http, serenity::CreateInteractionResponse::Acknowledge).await?;
@@ -649,7 +649,7 @@ pub async fn handle_interaction(
         if let Some(state) = data.setup.get_state(guild_id.get()) {
             let config: crate::db::entities::module_configs::InviteTrackingModuleConfig = state.module_configs.get(&ModuleType::InviteTracking).and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or_default();
             let components = steps::module_config::invite_tracking::build_ui_with_config(setup_id, &l10n, &config);
-            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().components(components).flags(serenity::MessageFlags::IS_COMPONENTS_V2)).await?;
+            interaction.edit_response(&ctx.http, serenity::EditInteractionResponse::new().components(components).flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL)).await?;
         }
     } else if let Some(rest) = custom_id.strip_prefix("setup_module_next_") {
         let parts: Vec<&str> = rest.split('_').collect();
@@ -682,7 +682,7 @@ pub async fn handle_interaction(
                         serenity::CreateInteractionResponse::UpdateMessage(
                             serenity::CreateInteractionResponseMessage::new()
                                 .components(components)
-                                .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
+                                .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
                         ),
                     )
                     .await?;
@@ -695,7 +695,7 @@ pub async fn handle_interaction(
                         serenity::CreateInteractionResponse::UpdateMessage(
                             serenity::CreateInteractionResponseMessage::new()
                                 .components(components)
-                                .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
+                                .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
                         ),
                     )
                     .await?;
@@ -717,7 +717,7 @@ pub async fn handle_interaction(
                                 serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(l10n.t("setup-cancelled", None)))
                             ])
                         )])
-                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
+                        .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
                 ),
             )
             .await?;
@@ -900,7 +900,7 @@ async fn handle_apply(
                         serenity::CreateContainerComponent::TextDisplay(serenity::CreateTextDisplay::new(details))
                     ])
                 )])
-                .flags(serenity::MessageFlags::IS_COMPONENTS_V2),
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
         )
         .await?;
 

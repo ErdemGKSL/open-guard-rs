@@ -1021,6 +1021,7 @@ pub async fn handle_interaction(
     if let Some(components) = updated_reply {
         let edit = serenity::EditInteractionResponse::new()
             .components(components)
+            .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL)
             .allowed_mentions(serenity::CreateAllowedMentions::new().empty_users().empty_roles());
         interaction.edit_response(&ctx.http, edit).await?;
     }

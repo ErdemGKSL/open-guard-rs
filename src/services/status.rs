@@ -32,7 +32,7 @@ pub async fn status(ctx: Context<'_>) -> Result<(), Error> {
 
     ctx.send(
         poise::CreateReply::default()
-            .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
+            .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL)
             .components(components),
     )
     .await?;
@@ -204,7 +204,9 @@ pub async fn handle_interaction(
     interaction
         .edit_response(
             &ctx.http,
-            serenity::EditInteractionResponse::new().components(components),
+            serenity::EditInteractionResponse::new()
+                .components(components)
+                .flags(serenity::MessageFlags::IS_COMPONENTS_V2 | serenity::MessageFlags::EPHEMERAL),
         )
         .await?;
 

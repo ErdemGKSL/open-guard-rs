@@ -230,6 +230,7 @@ async fn handle_interactions(ctx: &serenity::Context, interaction: &serenity::In
                         // Update the original message with the new components
                         let edit = serenity::EditInteractionResponse::new()
                             .components(components)
+                            .flags(serenity::MessageFlags::IS_COMPONENTS_V2)
                             .allowed_mentions(serenity::CreateAllowedMentions::new().empty_users().empty_roles());
                         if let Err(e) = modal_interaction.edit_response(&ctx.http, edit).await {
                             error!("Error updating response after modal submit: {:?}", e);
